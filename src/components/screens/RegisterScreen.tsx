@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { registerUser, getFirebaseErrorMessage } from '../../firebase/auth'
-import { saveUsernameLookup } from '../../firebase/firestore'
+import { saveUsernameLookup, checkUsernameExists } from '../../firebase/firestore'
 
 interface RegisterScreenProps {
   onNavigate: (screen: string) => void
@@ -35,12 +35,20 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
 
     setLoading(true)
     try {
+      const trimmedUsername = username.trim()
       const trimmedEmail = email.trim()
-      await registerUser(username.trim(), password, username.trim(), trimmedEmail || undefined)
-      // Save username → email mapping for password reset
-      if (trimmedEmail) {
-        await saveUsernameLookup(username.trim(), trimmedEmail)
+
+      // Check if username is already taken
+      const exists = await checkUsernameExists(trimmedUsername)
+      if (exists) {
+        setError('This username is already taken. Please choose another one.')
+        setLoading(false)
+        return
       }
+
+      await registerUser(trimmedUsername, password, trimmedUsername, trimmedEmail || undefined)
+      // Save username → email mapping (always save, even without email, to reserve the username)
+      await saveUsernameLookup(trimmedUsername, trimmedEmail || '')
       // Profile setup happens after auth state updates in AuthContext
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''

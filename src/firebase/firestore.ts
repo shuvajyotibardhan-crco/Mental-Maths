@@ -40,7 +40,23 @@ export async function saveUsernameLookup(username: string, email: string): Promi
 
 export async function getEmailByUsername(username: string): Promise<string | null> {
   const snap = await getDoc(doc(db, 'usernameLookup', username.toLowerCase()))
-  return snap.exists() ? (snap.data() as { email: string }).email : null
+  if (!snap.exists()) return null
+  const email = (snap.data() as { email: string }).email
+  return email || null  // Return null if email is empty string
+}
+
+export async function checkUsernameExists(username: string): Promise<boolean> {
+  // Check both usernameLookup and users collection
+  const lookupSnap = await getDoc(doc(db, 'usernameLookup', username.toLowerCase()))
+  if (lookupSnap.exists()) return true
+
+  // Also check users collection by querying username field
+  const q = query(
+    collection(db, 'users'),
+    where('username', '==', username.toLowerCase()),
+  )
+  const snap = await getDocs(q)
+  return !snap.empty
 }
 
 // ---- Sessions ----
