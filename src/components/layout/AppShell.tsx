@@ -24,8 +24,15 @@ export function AppShell() {
   useEffect(() => {
     if (!profile || purgedRef.current) return
     purgedRef.current = true
-    purgeOldSessions(profile.uid).catch(console.error)
+    purgeOldSessions(profile.uid).catch((err) => console.warn('Purge skipped:', err))
   }, [profile])
+
+  // Reset screen to home when user logs in (screen might be stuck on 'register' or 'login')
+  useEffect(() => {
+    if (user && profile && (screen === 'register' || screen === 'login')) {
+      setScreen('home')
+    }
+  }, [user, profile, screen])
 
   if (loading) {
     return (

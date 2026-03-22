@@ -27,8 +27,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       setUser(firebaseUser)
       if (firebaseUser) {
-        const p = await getUserProfile(firebaseUser.uid)
-        setProfile(p)
+        try {
+          const p = await getUserProfile(firebaseUser.uid)
+          setProfile(p)
+        } catch (err) {
+          console.error('Failed to load profile:', err)
+          setProfile(null)
+        }
       } else {
         setProfile(null)
       }
