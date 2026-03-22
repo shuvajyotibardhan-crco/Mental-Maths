@@ -9,6 +9,7 @@ import {
   where,
   orderBy,
   getDocs,
+  deleteDoc,
   Timestamp,
 } from 'firebase/firestore'
 import { db } from './config'
@@ -121,4 +122,62 @@ export async function checkAndUpdateHighScore(
   }
 
   return false
+}
+
+// ---- Global High Scores (across all users) ----
+
+export async function getGlobalHighScore(key: HighScoreKey): Promise<{ score: number } | null> {
+  const snap = await getDoc(doc(db, 'globalHighScores', key))
+  return snap.exists() ? (snap.data() as { score: number; date: number }) : null
+}
+
+export async function checkAndUpdateGlobalHighScore(
+  key: HighScoreKey,
+  score: number,
+): Promise<boolean> {
+  const existing = await getGlobalHighScore(key)
+
+  if (!existing || score > existing.score) {
+    await setDoc(doc(db, 'globalHighScores', key), {
+      score,
+      date: Date.now(),
+    })
+    return true
+  }
+
+  return false
+}
+
+// ---- Purge sessions older than 6 months ----
+
+export async function purgeOldSessions(userId: string): Promise<number> {
+  const sixMonthsAgo = new Date()
+  sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
+  const q = query(
+    collection(db, 'sessions'),
+    where('userId', '==', userId),
+  )
+
+  let snap
+  try {
+    snap = await getDocs(q)
+  } catch (err) {
+    console.error('Firestore purgeOldSessions error:', err)
+    return 0
+  }
+
+  let purged = 0
+  const cutoff = sixMonthsAgo.getTime()
+
+  for (const d of snap.docs) {
+    const data = d.data()
+    const ts = data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : data.timestamp
+    if (ts < cutoff) {
+      await deleteDoc(doc(db, 'sessions', d.id))
+      purged++
+    }
+  }
+
+  return purged
 }

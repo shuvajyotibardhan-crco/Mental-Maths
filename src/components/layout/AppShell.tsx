@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { purgeOldSessions } from '../../firebase/firestore'
 import { GameProvider } from '../../context/GameContext'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
@@ -17,6 +18,14 @@ import { SettingsScreen } from '../screens/SettingsScreen'
 export function AppShell() {
   const { user, profile, loading } = useAuth()
   const [screen, setScreen] = useState('home')
+  const purgedRef = useRef(false)
+
+  // Purge sessions older than 6 months on startup
+  useEffect(() => {
+    if (!profile || purgedRef.current) return
+    purgedRef.current = true
+    purgeOldSessions(profile.uid).catch(console.error)
+  }, [profile])
 
   if (loading) {
     return (

@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useGame } from '../../context/GameContext'
-import { saveSession, checkAndUpdateHighScore } from '../../firebase/firestore'
+import { saveSession, checkAndUpdateHighScore, checkAndUpdateGlobalHighScore, getHighScores, getGlobalHighScore } from '../../firebase/firestore'
 import { OPERATION_LABELS } from '../../constants/gradeConfig'
 import type { SessionRecord, HighScoreKey } from '../../types'
 
@@ -15,6 +15,8 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
   const [isHighScore, setIsHighScore] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveAttemptedRef = useRef(false)
+  const [userBest, setUserBest] = useState<number | null>(null)
+  const [globalBest, setGlobalBest] = useState<number | null>(null)
 
   const answered = state.answeredQuestions
   const correct = answered.filter((q) => q.isCorrect).length
@@ -55,6 +57,20 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
       const key: HighScoreKey = `${state.config!.grade}_${state.config!.operation}_${state.config!.difficulty}_${state.config!.mode}`
       const isNew = await checkAndUpdateHighScore(profile!.uid, key, state.score, sessionId)
       setIsHighScore(isNew)
+
+      // Update global high score
+      await checkAndUpdateGlobalHighScore(key, state.score)
+
+      // Fetch user's best and global best for this category
+      const userScores = await getHighScores(profile!.uid)
+      if (userScores[key]) {
+        setUserBest(userScores[key].score)
+      }
+      const globalEntry = await getGlobalHighScore(key)
+      if (globalEntry) {
+        setGlobalBest(globalEntry.score)
+      }
+
       setSaved(true)
     }
 
@@ -119,6 +135,24 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
         <div className="text-4xl">
           {accuracy >= 90 ? '⭐⭐⭐' : accuracy >= 70 ? '⭐⭐' : '⭐'}
         </div>
+
+        {/* High Scores */}
+        {(userBest !== null || globalBest !== null) && (
+          <div className="grid grid-cols-2 gap-3">
+            {userBest !== null && (
+              <div className="bg-amber-50 rounded-2xl p-4">
+                <p className="text-sm text-gray-500">Your Best</p>
+                <p className="text-2xl font-bold text-amber-600">🏆 {userBest}</p>
+              </div>
+            )}
+            {globalBest !== null && (
+              <div className="bg-indigo-50 rounded-2xl p-4">
+                <p className="text-sm text-gray-500">Top Score</p>
+                <p className="text-2xl font-bold text-indigo-600">🌟 {globalBest}</p>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Question Review */}
         <div className="text-left space-y-2">
