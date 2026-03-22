@@ -60,7 +60,7 @@ export function AppShell() {
 
   return (
     <GameProvider>
-      <div className="min-h-dvh flex flex-col">
+      <div className="h-dvh flex flex-col">
         {!isGameScreen && <Header onNavigate={setScreen} />}
         <main className="flex-1 overflow-y-auto">
           {screen === 'home' && <HomeScreen onNavigate={setScreen} />}
