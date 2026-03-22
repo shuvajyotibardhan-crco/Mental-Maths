@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { updateUserProfile } from '../../firebase/firestore'
 import { logoutUser } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
+import { maskEmail, hashEmail } from '../../utils/emailHash'
 import type { Grade } from '../../types'
 
 export function ProfileScreen() {
@@ -11,13 +12,16 @@ export function ProfileScreen() {
   const [name, setName] = useState(profile?.name ?? '')
   const [grade, setGrade] = useState<Grade>(profile?.grade ?? '3')
   const [avatar, setAvatar] = useState(profile?.avatar ?? AVATAR_OPTIONS[0]!)
-  const [email, setEmail] = useState(profile?.email ?? '')
+  const [email, setEmail] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
     if (!profile) return
     setSaving(true)
-    const updates = { name: name.trim(), grade, avatar, email: email.trim() || undefined }
+    const trimmedEmail = email.trim()
+    const emailMasked = trimmedEmail ? maskEmail(trimmedEmail) : undefined
+    const emailHashValue = trimmedEmail ? await hashEmail(trimmedEmail) : undefined
+    const updates = { name: name.trim(), grade, avatar, emailMasked, emailHash: emailHashValue }
     await updateUserProfile(profile.uid, updates)
     setProfile({ ...profile, ...updates })
     setEditing(false)
@@ -103,7 +107,7 @@ export function ProfileScreen() {
                   setName(profile.name)
                   setGrade(profile.grade)
                   setAvatar(profile.avatar)
-                  setEmail(profile.email ?? '')
+                  setEmail('')
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-2xl hover:bg-gray-200 cursor-pointer"
               >
@@ -116,8 +120,8 @@ export function ProfileScreen() {
             <div className="text-5xl">{profile.avatar}</div>
             <h3 className="text-xl font-bold text-gray-800">{profile.name}</h3>
             <p className="text-gray-500">Grade {profile.grade}</p>
-            {profile.email && (
-              <p className="text-sm text-gray-500">✉️ {profile.email}</p>
+            {profile.emailMasked && (
+              <p className="text-sm text-gray-500">✉️ {profile.emailMasked}</p>
             )}
             <p className="text-sm text-gray-400">@{profile.username}</p>
 
