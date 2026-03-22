@@ -15,6 +15,10 @@ export interface GradeConfig {
   difficulty: Record<Difficulty, DifficultyConfig>
 }
 
+// ──────────────────────────────────────────────
+// KG–1: Addition & Subtraction only
+// Baseline difficulty level
+// ──────────────────────────────────────────────
 const GRADES_KG_1: GradeConfig = {
   operations: ['addition', 'subtraction'],
   difficulty: {
@@ -42,14 +46,18 @@ const GRADES_KG_1: GradeConfig = {
   },
 }
 
+// ──────────────────────────────────────────────
+// 2–3: ~3× harder than KG–1
+// Introduces multiplication & division
+// ──────────────────────────────────────────────
 const GRADES_2_3: GradeConfig = {
   operations: ['addition', 'subtraction', 'multiplication', 'division'],
   difficulty: {
     easy: {
       timePerQuestion: 12,
       ranges: {
-        addition: { min: 1, max: 20 },
-        subtraction: { min: 1, max: 20 },
+        addition: { min: 1, max: 30 },
+        subtraction: { min: 1, max: 30 },
         multiplication: { min: 1, max: 5 },
         division: { min: 1, max: 5 },
       },
@@ -57,61 +65,200 @@ const GRADES_2_3: GradeConfig = {
     medium: {
       timePerQuestion: 10,
       ranges: {
-        addition: { min: 1, max: 50 },
-        subtraction: { min: 1, max: 50 },
-        multiplication: { min: 1, max: 10 },
-        division: { min: 1, max: 10 },
+        addition: { min: 1, max: 60 },
+        subtraction: { min: 1, max: 60 },
+        multiplication: { min: 2, max: 10 },
+        division: { min: 2, max: 10 },
       },
     },
     hard: {
       timePerQuestion: 8,
       ranges: {
-        addition: { min: 1, max: 100 },
-        subtraction: { min: 1, max: 100 },
-        multiplication: { min: 1, max: 12 },
-        division: { min: 1, max: 12 },
+        addition: { min: 1, max: 150 },
+        subtraction: { min: 1, max: 150 },
+        multiplication: { min: 2, max: 12 },
+        division: { min: 2, max: 12 },
       },
     },
   },
 }
 
-const GRADES_4_PLUS: GradeConfig = {
+// ──────────────────────────────────────────────
+// 4–5: ~3× harder than 2–3
+// Introduces percentage, square roots, powers
+// ──────────────────────────────────────────────
+const GRADES_4_5: GradeConfig = {
   operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
   difficulty: {
     easy: {
-      timePerQuestion: 12,
+      timePerQuestion: 10,
       ranges: {
-        addition: { min: 1, max: 50 },
-        subtraction: { min: 1, max: 50 },
-        multiplication: { min: 1, max: 10 },
-        division: { min: 1, max: 10 },
-        percentage: { min: 1, max: 1 }, // simple percentages
+        addition: { min: 1, max: 100 },
+        subtraction: { min: 1, max: 100 },
+        multiplication: { min: 2, max: 12 },
+        division: { min: 2, max: 12 },
+        percentage: { min: 1, max: 1 },
         squareRoot: { min: 1, max: 1 },
         power: { min: 1, max: 1 },
       },
     },
     medium: {
-      timePerQuestion: 10,
+      timePerQuestion: 8,
       ranges: {
-        addition: { min: 1, max: 100 },
-        subtraction: { min: 1, max: 100 },
-        multiplication: { min: 1, max: 12 },
-        division: { min: 1, max: 12 },
+        addition: { min: 1, max: 200 },
+        subtraction: { min: 1, max: 200 },
+        multiplication: { min: 2, max: 15 },
+        division: { min: 2, max: 15 },
         percentage: { min: 1, max: 2 },
         squareRoot: { min: 1, max: 2 },
         power: { min: 1, max: 2 },
       },
     },
     hard: {
+      timePerQuestion: 6,
+      ranges: {
+        addition: { min: 1, max: 500 },
+        subtraction: { min: 1, max: 500 },
+        multiplication: { min: 2, max: 20 },
+        division: { min: 2, max: 20 },
+        percentage: { min: 1, max: 3 },
+        squareRoot: { min: 1, max: 2 },
+        power: { min: 1, max: 2 },
+      },
+    },
+  },
+}
+
+// ──────────────────────────────────────────────
+// 6–8: ~3× harder than 4–5
+// ──────────────────────────────────────────────
+const GRADES_6_8: GradeConfig = {
+  operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
+  difficulty: {
+    easy: {
       timePerQuestion: 8,
       ranges: {
-        addition: { min: 1, max: 200 },
-        subtraction: { min: 1, max: 200 },
-        multiplication: { min: 1, max: 15 },
-        division: { min: 1, max: 15 },
+        addition: { min: 10, max: 300 },
+        subtraction: { min: 10, max: 300 },
+        multiplication: { min: 2, max: 20 },
+        division: { min: 2, max: 20 },
+        percentage: { min: 1, max: 2 },
+        squareRoot: { min: 1, max: 2 },
+        power: { min: 1, max: 2 },
+      },
+    },
+    medium: {
+      timePerQuestion: 7,
+      ranges: {
+        addition: { min: 10, max: 600 },
+        subtraction: { min: 10, max: 600 },
+        multiplication: { min: 3, max: 25 },
+        division: { min: 3, max: 25 },
         percentage: { min: 1, max: 3 },
         squareRoot: { min: 1, max: 3 },
         power: { min: 1, max: 3 },
+      },
+    },
+    hard: {
+      timePerQuestion: 5,
+      ranges: {
+        addition: { min: 10, max: 1500 },
+        subtraction: { min: 10, max: 1500 },
+        multiplication: { min: 3, max: 30 },
+        division: { min: 3, max: 30 },
+        percentage: { min: 1, max: 3 },
+        squareRoot: { min: 1, max: 3 },
+        power: { min: 1, max: 3 },
+      },
+    },
+  },
+}
+
+// ──────────────────────────────────────────────
+// 9–10: ~3× harder than 6–8
+// ──────────────────────────────────────────────
+const GRADES_9_10: GradeConfig = {
+  operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
+  difficulty: {
+    easy: {
+      timePerQuestion: 7,
+      ranges: {
+        addition: { min: 10, max: 1000 },
+        subtraction: { min: 10, max: 1000 },
+        multiplication: { min: 3, max: 30 },
+        division: { min: 3, max: 30 },
+        percentage: { min: 1, max: 3 },
+        squareRoot: { min: 1, max: 3 },
+        power: { min: 1, max: 3 },
+      },
+    },
+    medium: {
+      timePerQuestion: 6,
+      ranges: {
+        addition: { min: 50, max: 2000 },
+        subtraction: { min: 50, max: 2000 },
+        multiplication: { min: 5, max: 50 },
+        division: { min: 5, max: 30 },
+        percentage: { min: 1, max: 4 },
+        squareRoot: { min: 1, max: 4 },
+        power: { min: 1, max: 3 },
+      },
+    },
+    hard: {
+      timePerQuestion: 4,
+      ranges: {
+        addition: { min: 100, max: 5000 },
+        subtraction: { min: 100, max: 5000 },
+        multiplication: { min: 5, max: 50 },
+        division: { min: 5, max: 50 },
+        percentage: { min: 1, max: 4 },
+        squareRoot: { min: 1, max: 4 },
+        power: { min: 1, max: 4 },
+      },
+    },
+  },
+}
+
+// ──────────────────────────────────────────────
+// 11–12: ~3× harder than 9–10
+// ──────────────────────────────────────────────
+const GRADES_11_12: GradeConfig = {
+  operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
+  difficulty: {
+    easy: {
+      timePerQuestion: 6,
+      ranges: {
+        addition: { min: 50, max: 3000 },
+        subtraction: { min: 50, max: 3000 },
+        multiplication: { min: 5, max: 50 },
+        division: { min: 5, max: 50 },
+        percentage: { min: 1, max: 4 },
+        squareRoot: { min: 1, max: 4 },
+        power: { min: 1, max: 3 },
+      },
+    },
+    medium: {
+      timePerQuestion: 5,
+      ranges: {
+        addition: { min: 100, max: 5000 },
+        subtraction: { min: 100, max: 5000 },
+        multiplication: { min: 10, max: 100 },
+        division: { min: 5, max: 50 },
+        percentage: { min: 1, max: 4 },
+        squareRoot: { min: 1, max: 4 },
+        power: { min: 1, max: 4 },
+      },
+    },
+    hard: {
+      timePerQuestion: 3,
+      ranges: {
+        addition: { min: 100, max: 10000 },
+        subtraction: { min: 100, max: 10000 },
+        multiplication: { min: 10, max: 100 },
+        division: { min: 10, max: 100 },
+        percentage: { min: 1, max: 4 },
+        squareRoot: { min: 1, max: 4 },
+        power: { min: 1, max: 4 },
       },
     },
   },
@@ -125,8 +272,21 @@ export function getGradeConfig(grade: Grade): GradeConfig {
     case '2':
     case '3':
       return GRADES_2_3
+    case '4':
+    case '5':
+      return GRADES_4_5
+    case '6':
+    case '7':
+    case '8':
+      return GRADES_6_8
+    case '9':
+    case '10':
+      return GRADES_9_10
+    case '11':
+    case '12':
+      return GRADES_11_12
     default:
-      return GRADES_4_PLUS
+      return GRADES_4_5
   }
 }
 
