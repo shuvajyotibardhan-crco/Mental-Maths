@@ -6,6 +6,7 @@ import {
   updateProfile,
 } from 'firebase/auth'
 import { auth } from './config'
+import { getEmailByUsername } from './firestore'
 
 // Firebase Auth requires email, so we use username@mentalmaths.app as fallback
 const SYNTHETIC_DOMAIN = 'mentalmaths.app'
@@ -28,12 +29,23 @@ export async function registerUser(
 }
 
 export async function loginUser(username: string, password: string): Promise<string> {
+  // Try synthetic email first (accounts created without real email)
   const syntheticEmail = usernameToSyntheticEmail(username)
 
   try {
     const credential = await signInWithEmailAndPassword(auth, syntheticEmail, password)
     return credential.user.uid
   } catch {
+    // Synthetic email failed — try looking up real email from usernameLookup
+    try {
+      const realEmail = await getEmailByUsername(username)
+      if (realEmail) {
+        const credential = await signInWithEmailAndPassword(auth, realEmail, password)
+        return credential.user.uid
+      }
+    } catch {
+      // Fall through to error
+    }
     throw { code: 'auth/invalid-credential' }
   }
 }
