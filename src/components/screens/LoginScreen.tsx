@@ -1,8 +1,16 @@
 import { useState, type FormEvent } from 'react'
 import { loginUser, loginWithEmail, resetPassword, getFirebaseErrorMessage } from '../../firebase/auth'
+import { getEmailByUsername } from '../../firebase/firestore'
 
 interface LoginScreenProps {
   onNavigate: (screen: string) => void
+}
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  if (!local || !domain) return '****'
+  if (local.length <= 4) return '****@' + domain
+  return '****' + local.slice(-4) + '@' + domain
 }
 
 export function LoginScreen({ onNavigate }: LoginScreenProps) {
@@ -13,7 +21,7 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
 
   // Forgot password state
   const [showReset, setShowReset] = useState(false)
-  const [resetEmail, setResetEmail] = useState('')
+  const [resetUsername, setResetUsername] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
   const [resetMessage, setResetMessage] = useState('')
   const [resetError, setResetError] = useState('')
@@ -26,7 +34,6 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
     const input = username.trim()
 
     try {
-      // If input looks like an email, login with email directly
       if (input.includes('@')) {
         await loginWithEmail(input, password)
       } else {
@@ -45,23 +52,25 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
     setResetError('')
     setResetMessage('')
 
-    const email = resetEmail.trim()
-    if (!email) {
-      setResetError('Please enter your email address.')
+    const uname = resetUsername.trim()
+    if (!uname) {
+      setResetError('Please enter your username.')
       return
     }
 
     setResetLoading(true)
     try {
-      await resetPassword(email)
-      setResetMessage('Password reset email sent! Check your inbox.')
-    } catch (err: unknown) {
-      const code = (err as { code?: string }).code ?? ''
-      if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
-        setResetError('No account found with this email. Make sure you added an email to your profile.')
-      } else {
-        setResetError(getFirebaseErrorMessage(code))
+      const email = await getEmailByUsername(uname)
+
+      if (!email) {
+        setResetError('No email found for this username. Please contact support.')
+        return
       }
+
+      await resetPassword(email)
+      setResetMessage(`Reset email sent to ${maskEmail(email)}`)
+    } catch {
+      setResetError('Something went wrong. Please try again.')
     } finally {
       setResetLoading(false)
     }
@@ -80,16 +89,16 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address
+                  Username
                 </label>
                 <input
-                  type="email"
-                  value={resetEmail}
-                  onChange={(e) => setResetEmail(e.target.value)}
+                  type="text"
+                  value={resetUsername}
+                  onChange={(e) => setResetUsername(e.target.value)}
                   className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg"
-                  placeholder="Enter the email on your account"
+                  placeholder="Enter your username"
                   required
-                  autoComplete="email"
+                  autoComplete="username"
                 />
               </div>
 
@@ -106,7 +115,7 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
                 disabled={resetLoading}
                 className="w-full py-3 bg-primary text-white font-bold text-lg rounded-2xl hover:bg-primary-dark transition-colors disabled:opacity-50 cursor-pointer"
               >
-                {resetLoading ? 'Sending...' : 'Send Reset Email'}
+                {resetLoading ? 'Sending...' : 'Reset Password'}
               </button>
             </form>
 

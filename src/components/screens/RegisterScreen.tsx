@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { registerUser, getFirebaseErrorMessage } from '../../firebase/auth'
+import { saveUsernameLookup } from '../../firebase/firestore'
 
 interface RegisterScreenProps {
   onNavigate: (screen: string) => void
@@ -34,7 +35,12 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
 
     setLoading(true)
     try {
-      await registerUser(username.trim(), password, username.trim(), email.trim() || undefined)
+      const trimmedEmail = email.trim()
+      await registerUser(username.trim(), password, username.trim(), trimmedEmail || undefined)
+      // Save username → email mapping for password reset
+      if (trimmedEmail) {
+        await saveUsernameLookup(username.trim(), trimmedEmail)
+      }
       // Profile setup happens after auth state updates in AuthContext
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''

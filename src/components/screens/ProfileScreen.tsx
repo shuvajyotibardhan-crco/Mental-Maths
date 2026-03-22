@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { updateUserProfile } from '../../firebase/firestore'
+import { updateUserProfile, saveUsernameLookup } from '../../firebase/firestore'
 import { logoutUser, updateAuthEmail } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
@@ -23,9 +23,10 @@ export function ProfileScreen() {
     const trimmedEmail = email.trim()
 
     try {
-      // Update Firebase Auth email if changed
+      // Update Firebase Auth email and lookup if changed
       if (trimmedEmail && trimmedEmail !== profile.email) {
         await updateAuthEmail(trimmedEmail)
+        await saveUsernameLookup(profile.username, trimmedEmail)
       }
 
       const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || undefined }

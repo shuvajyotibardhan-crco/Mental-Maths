@@ -32,6 +32,17 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
   await updateDoc(doc(db, 'users', uid), data)
 }
 
+// ---- Username Lookup (publicly readable for password reset) ----
+
+export async function saveUsernameLookup(username: string, email: string): Promise<void> {
+  await setDoc(doc(db, 'usernameLookup', username.toLowerCase()), { email })
+}
+
+export async function getEmailByUsername(username: string): Promise<string | null> {
+  const snap = await getDoc(doc(db, 'usernameLookup', username.toLowerCase()))
+  return snap.exists() ? (snap.data() as { email: string }).email : null
+}
+
 // ---- Sessions ----
 
 export async function saveSession(session: SessionRecord): Promise<string> {
