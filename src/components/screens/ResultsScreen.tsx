@@ -14,7 +14,7 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
   const { state, resetGame } = useGame()
   const [isNewPersonalBest, setIsNewPersonalBest] = useState(false)
   const [isNewGlobalBest, setIsNewGlobalBest] = useState(false)
-  const [hadPreviousScore, setHadPreviousScore] = useState(false)
+  const [, setHadPreviousScore] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveAttemptedRef = useRef(false)
   const [userBest, setUserBest] = useState<number | null>(null)
