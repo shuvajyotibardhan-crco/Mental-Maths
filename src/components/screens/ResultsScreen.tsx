@@ -12,7 +12,9 @@ interface ResultsScreenProps {
 export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
   const { profile } = useAuth()
   const { state, resetGame } = useGame()
-  const [isHighScore, setIsHighScore] = useState(false)
+  const [isNewPersonalBest, setIsNewPersonalBest] = useState(false)
+  const [isNewGlobalBest, setIsNewGlobalBest] = useState(false)
+  const [hadPreviousScore, setHadPreviousScore] = useState(false)
   const [saved, setSaved] = useState(false)
   const saveAttemptedRef = useRef(false)
   const [userBest, setUserBest] = useState<number | null>(null)
@@ -53,15 +55,23 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
 
       const sessionId = await saveSession(session)
 
-      // Check high score
       const key: HighScoreKey = `${state.config!.grade}_${state.config!.operation}_${state.config!.difficulty}_${state.config!.mode}`
-      const isNew = await checkAndUpdateHighScore(profile!.uid, key, state.score, sessionId)
-      setIsHighScore(isNew)
 
-      // Update global high score
-      await checkAndUpdateGlobalHighScore(key, state.score)
+      // Check if there was a previous personal best before updating
+      const existingScores = await getHighScores(profile!.uid)
+      const hadPrevious = !!existingScores[key]
+      setHadPreviousScore(hadPrevious)
 
-      // Fetch user's best and global best for this category
+      // Check & update personal high score
+      const isNewPB = await checkAndUpdateHighScore(profile!.uid, key, state.score, sessionId)
+      setIsNewPersonalBest(isNewPB && hadPrevious) // Only celebrate if they beat a previous score
+
+      // Check & update global high score
+      const existingGlobal = await getGlobalHighScore(key)
+      const isNewGB = await checkAndUpdateGlobalHighScore(key, state.score)
+      setIsNewGlobalBest(isNewGB && !!existingGlobal) // Only celebrate if they beat someone else's score
+
+      // Fetch updated scores for display
       const userScores = await getHighScores(profile!.uid)
       if (userScores[key]) {
         setUserBest(userScores[key].score)
@@ -90,10 +100,15 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
   return (
     <div className="min-h-dvh flex items-center justify-center p-4">
       <div className="w-full max-w-md bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8 text-center space-y-6">
-        {/* High Score Banner */}
-        {isHighScore && (
+        {/* High Score Banners */}
+        {isNewGlobalBest && (
+          <div className="animate-bounce-in bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl p-4 shadow-md">
+            <p className="text-2xl font-bold">🌍 New #1 Global Score!</p>
+          </div>
+        )}
+        {isNewPersonalBest && !isNewGlobalBest && (
           <div className="animate-bounce-in bg-gradient-to-r from-amber-400 to-orange-400 text-white rounded-2xl p-4 shadow-md">
-            <p className="text-2xl font-bold">🏆 New High Score!</p>
+            <p className="text-2xl font-bold">🏆 New Personal Best!</p>
           </div>
         )}
 
@@ -141,14 +156,14 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
           <div className="grid grid-cols-2 gap-3">
             {userBest !== null && (
               <div className="bg-amber-50 rounded-2xl p-4">
-                <p className="text-sm text-gray-500">Your Best</p>
+                <p className="text-sm text-gray-500">Your Personal Best</p>
                 <p className="text-2xl font-bold text-amber-600">🏆 {userBest}</p>
               </div>
             )}
             {globalBest !== null && (
               <div className="bg-indigo-50 rounded-2xl p-4">
-                <p className="text-sm text-gray-500">Top Score</p>
-                <p className="text-2xl font-bold text-indigo-600">🌟 {globalBest}</p>
+                <p className="text-sm text-gray-500">Global #1 (All Players)</p>
+                <p className="text-2xl font-bold text-indigo-600">🌍 {globalBest}</p>
               </div>
             )}
           </div>
