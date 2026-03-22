@@ -63,7 +63,7 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
       const email = await getEmailByUsername(uname)
 
       if (!email) {
-        setResetError('No email found for this username. Please contact support.')
+        setResetError('No email linked to this account. If you signed up without an email, please create a new account.')
         return
       }
 

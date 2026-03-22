@@ -4,9 +4,6 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
-  updateEmail,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
 } from 'firebase/auth'
 import { auth } from './config'
 
@@ -31,15 +28,12 @@ export async function registerUser(
 }
 
 export async function loginUser(username: string, password: string): Promise<string> {
-  // Try synthetic email first (accounts without real email)
   const syntheticEmail = usernameToSyntheticEmail(username)
 
   try {
     const credential = await signInWithEmailAndPassword(auth, syntheticEmail, password)
     return credential.user.uid
   } catch {
-    // If synthetic email fails, the user may have registered with a real email
-    // They'll need to use the real email or we look it up from Firestore
     throw { code: 'auth/invalid-credential' }
   }
 }
@@ -55,16 +49,6 @@ export async function logoutUser(): Promise<void> {
 
 export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email)
-}
-
-export async function updateAuthEmail(newEmail: string, currentPassword: string): Promise<void> {
-  const user = auth.currentUser
-  if (!user || !user.email) throw { code: 'auth/user-not-found' }
-
-  // Re-authenticate before updating email
-  const credential = EmailAuthProvider.credential(user.email, currentPassword)
-  await reauthenticateWithCredential(user, credential)
-  await updateEmail(user, newEmail)
 }
 
 export function getFirebaseErrorMessage(code: string): string {
