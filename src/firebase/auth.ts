@@ -5,6 +5,8 @@ import {
   sendPasswordResetEmail,
   updateProfile,
   updateEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
 } from 'firebase/auth'
 import { auth } from './config'
 
@@ -55,11 +57,14 @@ export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email)
 }
 
-export async function updateAuthEmail(newEmail: string): Promise<void> {
+export async function updateAuthEmail(newEmail: string, currentPassword: string): Promise<void> {
   const user = auth.currentUser
-  if (user) {
-    await updateEmail(user, newEmail)
-  }
+  if (!user || !user.email) throw { code: 'auth/user-not-found' }
+
+  // Re-authenticate before updating email
+  const credential = EmailAuthProvider.credential(user.email, currentPassword)
+  await reauthenticateWithCredential(user, credential)
+  await updateEmail(user, newEmail)
 }
 
 export function getFirebaseErrorMessage(code: string): string {

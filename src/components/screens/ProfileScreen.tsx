@@ -12,31 +12,42 @@ export function ProfileScreen() {
   const [grade, setGrade] = useState<Grade>(profile?.grade ?? '3')
   const [avatar, setAvatar] = useState(profile?.avatar ?? AVATAR_OPTIONS[0]!)
   const [email, setEmail] = useState(profile?.email ?? '')
+  const [currentPassword, setCurrentPassword] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const emailChanged = email.trim() !== (profile?.email ?? '')
+
   async function handleSave() {
     if (!profile) return
-    setSaving(true)
-    setError('')
 
     const trimmedEmail = email.trim()
 
+    // Require password if email is being changed
+    if (trimmedEmail && emailChanged && !currentPassword) {
+      setError('Please enter your current password to update email.')
+      return
+    }
+
+    setSaving(true)
+    setError('')
+
     try {
       // Update Firebase Auth email and lookup if changed
-      if (trimmedEmail && trimmedEmail !== profile.email) {
-        await updateAuthEmail(trimmedEmail)
+      if (trimmedEmail && emailChanged) {
+        await updateAuthEmail(trimmedEmail, currentPassword)
         await saveUsernameLookup(profile.username, trimmedEmail)
       }
 
       const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || undefined }
       await updateUserProfile(profile.uid, updates)
       setProfile({ ...profile, ...updates })
+      setCurrentPassword('')
       setEditing(false)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
-      if (code === 'auth/requires-recent-login') {
-        setError('Please log out and log back in before changing your email.')
+      if (code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+        setError('Incorrect password. Please try again.')
       } else if (code === 'auth/email-already-in-use') {
         setError('This email is already used by another account.')
       } else {
@@ -92,6 +103,17 @@ export function ProfileScreen() {
               placeholder="Email (optional, for password reset)"
             />
 
+            {emailChanged && email.trim() && (
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary outline-none text-base text-center"
+                placeholder="Enter current password to confirm"
+                autoComplete="current-password"
+              />
+            )}
+
             {error && (
               <p className="text-wrong text-sm text-center bg-orange-50 rounded-xl p-2">{error}</p>
             )}
@@ -131,6 +153,7 @@ export function ProfileScreen() {
                   setGrade(profile.grade)
                   setAvatar(profile.avatar)
                   setEmail(profile.email ?? '')
+                  setCurrentPassword('')
                   setError('')
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-2xl hover:bg-gray-200 cursor-pointer"
