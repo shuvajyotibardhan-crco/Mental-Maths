@@ -37,7 +37,7 @@ export function ProfileScreen() {
         await saveUsernameLookup(profile.username, trimmedEmail)
       }
 
-      const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || undefined }
+      const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || '' }
       await updateUserProfile(profile.uid, updates)
       setProfile({ ...profile, ...updates })
       setEditing(false)
