@@ -135,14 +135,20 @@ export async function checkAndUpdateHighScore(
   key: HighScoreKey,
   score: number,
   sessionId: string,
+  timeTakenSeconds?: number,
 ): Promise<boolean> {
   const scores = await getHighScores(userId)
   const existing = scores[key]
 
-  if (!existing || score > existing.score) {
+  // New high score if: higher score, OR same score but faster time
+  const isBetter = !existing
+    || score > existing.score
+    || (score === existing.score && timeTakenSeconds !== undefined && existing.timeTakenSeconds !== undefined && timeTakenSeconds < existing.timeTakenSeconds)
+
+  if (isBetter) {
     await setDoc(
       doc(db, 'highScores', userId),
-      { [key]: { score, date: Date.now(), sessionId } },
+      { [key]: { score, date: Date.now(), sessionId, timeTakenSeconds: timeTakenSeconds ?? null } },
       { merge: true },
     )
     return true
@@ -161,13 +167,20 @@ export async function getGlobalHighScore(key: HighScoreKey): Promise<{ score: nu
 export async function checkAndUpdateGlobalHighScore(
   key: HighScoreKey,
   score: number,
+  timeTakenSeconds?: number,
 ): Promise<boolean> {
   const existing = await getGlobalHighScore(key)
 
-  if (!existing || score > existing.score) {
+  // New global best if: higher score, OR same score but faster time
+  const isBetter = !existing
+    || score > existing.score
+    || (score === existing.score && timeTakenSeconds !== undefined && (existing as { timeTakenSeconds?: number }).timeTakenSeconds !== undefined && timeTakenSeconds < ((existing as { timeTakenSeconds?: number }).timeTakenSeconds ?? Infinity))
+
+  if (isBetter) {
     await setDoc(doc(db, 'globalHighScores', key), {
       score,
       date: Date.now(),
+      timeTakenSeconds: timeTakenSeconds ?? null,
     })
     return true
   }

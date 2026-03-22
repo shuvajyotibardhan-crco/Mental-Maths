@@ -109,7 +109,6 @@ function generateArithmeticQuestion(
   operation: 'addition' | 'subtraction' | 'multiplication' | 'division',
   min: number,
   max: number,
-  timeAllotted: number,
   difficulty: Difficulty,
 ): Question {
   let operand1: number
@@ -157,11 +156,10 @@ function generateArithmeticQuestion(
     correctAnswer: answer!,
     operation,
     difficulty,
-    timeAllotted,
   }
 }
 
-function generatePercentageQuestion(grade: Grade, difficulty: Difficulty, timeAllotted: number): Question {
+function generatePercentageQuestion(grade: Grade, difficulty: Difficulty): Question {
   const key = `${gradeToKey(grade)}_${difficulty}`
   const config = PERCENT_CONFIGS[key] ?? PERCENT_CONFIGS['4_easy']!
   const percentage = config.percents[randomInt(0, config.percents.length - 1)]!
@@ -182,11 +180,10 @@ function generatePercentageQuestion(grade: Grade, difficulty: Difficulty, timeAl
     correctAnswer: answer,
     operation: 'percentage',
     difficulty,
-    timeAllotted,
   }
 }
 
-function generateSquareRootQuestion(grade: Grade, difficulty: Difficulty, timeAllotted: number): Question {
+function generateSquareRootQuestion(grade: Grade, difficulty: Difficulty): Question {
   const key = `${gradeToKey(grade)}_${difficulty}`
   const maxVal = SQRT_MAX[key] ?? 100
   const squares = getSquaresUpTo(maxVal)
@@ -199,11 +196,10 @@ function generateSquareRootQuestion(grade: Grade, difficulty: Difficulty, timeAl
     correctAnswer: answer,
     operation: 'squareRoot',
     difficulty,
-    timeAllotted,
   }
 }
 
-function generatePowerQuestion(grade: Grade, difficulty: Difficulty, timeAllotted: number): Question {
+function generatePowerQuestion(grade: Grade, difficulty: Difficulty): Question {
   const key = `${gradeToKey(grade)}_${difficulty}`
   const config = POWER_CONFIGS[key] ?? POWER_CONFIGS['4_easy']!
   const base = randomInt(config.minBase, config.maxBase)
@@ -216,7 +212,6 @@ function generatePowerQuestion(grade: Grade, difficulty: Difficulty, timeAllotte
     correctAnswer: answer,
     operation: 'power',
     difficulty,
-    timeAllotted,
   }
 }
 
@@ -227,7 +222,6 @@ export function generateQuestion(
 ): Question {
   const config = getGradeConfig(grade)
   const diffConfig = config.difficulty[difficulty]
-  const timeAllotted = diffConfig.timePerQuestion
 
   // If mix, pick a random operation from available ones
   let actualOperation = operation
@@ -242,16 +236,16 @@ export function generateQuestion(
     case 'multiplication':
     case 'division': {
       const range = diffConfig.ranges[actualOperation]!
-      return generateArithmeticQuestion(actualOperation, range.min, range.max, timeAllotted, difficulty)
+      return generateArithmeticQuestion(actualOperation, range.min, range.max, difficulty)
     }
     case 'percentage':
-      return generatePercentageQuestion(grade, difficulty, timeAllotted)
+      return generatePercentageQuestion(grade, difficulty)
     case 'squareRoot':
-      return generateSquareRootQuestion(grade, difficulty, timeAllotted)
+      return generateSquareRootQuestion(grade, difficulty)
     case 'power':
-      return generatePowerQuestion(grade, difficulty, timeAllotted)
+      return generatePowerQuestion(grade, difficulty)
     default:
       // Fallback to addition
-      return generateArithmeticQuestion('addition', 1, 10, timeAllotted, difficulty)
+      return generateArithmeticQuestion('addition', 1, 10, difficulty)
   }
 }

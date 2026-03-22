@@ -20,7 +20,6 @@ export interface Question {
   correctAnswer: number
   operation: OperationType
   difficulty: Difficulty
-  timeAllotted: number
 }
 
 export interface AnsweredQuestion extends Question {

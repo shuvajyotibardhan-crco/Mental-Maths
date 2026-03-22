@@ -24,9 +24,10 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
   const correct = answered.filter((q) => q.isCorrect).length
   const total = answered.length
   const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
-  const avgTimeMs = total > 0
-    ? Math.round(answered.reduce((sum, q) => sum + q.responseTimeMs, 0) / total)
-    : 0
+  const totalTimeMs = answered.reduce((sum, q) => sum + q.responseTimeMs, 0)
+  const avgTimeMs = total > 0 ? Math.round(totalTimeMs / total) : 0
+  const totalTimeSecs = Math.round(totalTimeMs / 1000)
+  const isFixedMode = state.config?.mode === 'fixed'
 
   // Save session to Firestore
   useEffect(() => {
@@ -56,19 +57,20 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
       const sessionId = await saveSession(session)
 
       const key: HighScoreKey = `${state.config!.grade}_${state.config!.operation}_${state.config!.difficulty}_${state.config!.mode}`
+      const timeForScoring = state.config!.mode === 'fixed' ? session.timeTakenSeconds : undefined
 
       // Check if there was a previous personal best before updating
       const existingScores = await getHighScores(profile!.uid)
       const hadPrevious = !!existingScores[key]
       setHadPreviousScore(hadPrevious)
 
-      // Check & update personal high score
-      const isNewPB = await checkAndUpdateHighScore(profile!.uid, key, state.score, sessionId)
+      // Check & update personal high score (pass time for fixed mode tiebreaking)
+      const isNewPB = await checkAndUpdateHighScore(profile!.uid, key, state.score, sessionId, timeForScoring)
       setIsNewPersonalBest(isNewPB && hadPrevious) // Only celebrate if they beat a previous score
 
       // Check & update global high score
       const existingGlobal = await getGlobalHighScore(key)
-      const isNewGB = await checkAndUpdateGlobalHighScore(key, state.score)
+      const isNewGB = await checkAndUpdateGlobalHighScore(key, state.score, timeForScoring)
       setIsNewGlobalBest(isNewGB && !!existingGlobal) // Only celebrate if they beat someone else's score
 
       // Fetch updated scores for display
@@ -153,8 +155,13 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
             <p className="text-2xl font-bold text-orange-600">🔥 {state.bestStreak}</p>
           </div>
           <div className="bg-purple-50 rounded-2xl p-4">
-            <p className="text-sm text-gray-500">Avg Time</p>
-            <p className="text-2xl font-bold text-purple-600">{(avgTimeMs / 1000).toFixed(1)}s</p>
+            <p className="text-sm text-gray-500">{isFixedMode ? 'Total Time' : 'Avg Time'}</p>
+            <p className="text-2xl font-bold text-purple-600">
+              {isFixedMode
+                ? `${Math.floor(totalTimeSecs / 60)}:${(totalTimeSecs % 60).toString().padStart(2, '0')}`
+                : `${(avgTimeMs / 1000).toFixed(1)}s`
+              }
+            </p>
           </div>
         </div>
 

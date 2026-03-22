@@ -75,7 +75,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         answeredAt: Date.now(),
       }
 
-      const points = calculateQuestionScore(answered, newStreak)
+      const points = calculateQuestionScore(answered, newStreak, state.config.mode)
       const newScore = state.score + points
       const newAnswered = [...state.answeredQuestions, answered]
       const newCount = state.questionCount + 1

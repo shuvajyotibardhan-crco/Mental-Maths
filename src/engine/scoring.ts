@@ -1,4 +1,4 @@
-import type { Difficulty, AnsweredQuestion } from '../types'
+import type { Difficulty, AnsweredQuestion, GameMode } from '../types'
 
 const BASE_POINTS: Record<Difficulty, number> = {
   easy: 10,
@@ -9,20 +9,28 @@ const BASE_POINTS: Record<Difficulty, number> = {
 export function calculateQuestionScore(
   question: AnsweredQuestion,
   currentStreak: number,
+  mode: GameMode,
 ): number {
   if (!question.isCorrect) return 0
 
   const base = BASE_POINTS[question.difficulty]
-  const speedMultiplier = getSpeedMultiplier(question.responseTimeMs, question.timeAllotted * 1000)
   const streakMultiplier = getStreakMultiplier(currentStreak)
 
-  return Math.floor(base * speedMultiplier * streakMultiplier)
+  // Timed mode: reward speed (more answers in less time = higher score)
+  // Fixed mode: no speed bonus — score is purely correctness + streak
+  if (mode === 'timed') {
+    const speedMultiplier = getTimedSpeedMultiplier(question.responseTimeMs)
+    return Math.floor(base * speedMultiplier * streakMultiplier)
+  }
+
+  return Math.floor(base * streakMultiplier)
 }
 
-function getSpeedMultiplier(responseTimeMs: number, allottedTimeMs: number): number {
-  const ratio = responseTimeMs / allottedTimeMs
-  if (ratio < 0.3) return 2.0
-  if (ratio < 0.5) return 1.5
+// For timed mode: faster answers get bonus points
+function getTimedSpeedMultiplier(responseTimeMs: number): number {
+  const seconds = responseTimeMs / 1000
+  if (seconds < 3) return 2.0
+  if (seconds < 5) return 1.5
   return 1.0
 }
 
@@ -32,14 +40,14 @@ function getStreakMultiplier(streak: number): number {
   return 1.0
 }
 
-export function calculateSessionScore(questions: AnsweredQuestion[]): number {
+export function calculateSessionScore(questions: AnsweredQuestion[], mode: GameMode): number {
   let score = 0
   let streak = 0
 
   for (const q of questions) {
     if (q.isCorrect) {
       streak++
-      score += calculateQuestionScore(q, streak)
+      score += calculateQuestionScore(q, streak, mode)
     } else {
       streak = 0
     }

@@ -21,6 +21,7 @@ export interface HighScoreEntry {
   score: number
   date: number
   sessionId: string
+  timeTakenSeconds?: number // for fixed mode tiebreaking (lower = better)
 }
 
 export type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
