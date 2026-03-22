@@ -97,9 +97,21 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
     onNavigate('home')
   }
 
+  // Show loading until all data is saved and fetched
+  if (!saved) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="text-center space-y-3">
+          <div className="text-4xl animate-spin">⭐</div>
+          <p className="text-lg font-medium text-gray-500">Calculating results...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-dvh flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8 text-center space-y-6">
+    <div className="p-4 pb-8">
+      <div className="w-full max-w-md mx-auto bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8 text-center space-y-6">
         {/* High Score Banners */}
         {isNewGlobalBest && (
           <div className="animate-bounce-in bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl p-4 shadow-md">
