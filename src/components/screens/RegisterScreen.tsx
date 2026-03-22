@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { registerUser, getFirebaseErrorMessage } from '../../firebase/auth'
-import { saveUsernameLookup, checkUsernameExists } from '../../firebase/firestore'
+import { saveUsernameLookup } from '../../firebase/firestore'
 
 interface RegisterScreenProps {
   onNavigate: (screen: string) => void
@@ -38,14 +38,8 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
       const trimmedUsername = username.trim()
       const trimmedEmail = email.trim()
 
-      // Check if username is already taken
-      const exists = await checkUsernameExists(trimmedUsername)
-      if (exists) {
-        setError('This username is already taken. Please choose another one.')
-        setLoading(false)
-        return
-      }
-
+      // registerUser will fail with 'auth/email-already-in-use' if
+      // the synthetic or real email is already taken (i.e. username taken)
       await registerUser(trimmedUsername, password, trimmedUsername, trimmedEmail || undefined)
       // Save username → email mapping (always save, even without email, to reserve the username)
       await saveUsernameLookup(trimmedUsername, trimmedEmail || '')
