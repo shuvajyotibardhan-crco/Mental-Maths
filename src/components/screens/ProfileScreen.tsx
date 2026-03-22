@@ -1,9 +1,16 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { updateUserProfile, saveUsernameLookup } from '../../firebase/firestore'
-import { logoutUser } from '../../firebase/auth'
+import { updateUserProfile, saveUsernameLookup, getEmailByUsername } from '../../firebase/firestore'
+import { logoutUser, resetPassword } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  if (!local || !domain) return '****'
+  if (local.length <= 4) return '****@' + domain
+  return '****' + local.slice(-4) + '@' + domain
+}
 
 export function ProfileScreen() {
   const { profile, setProfile } = useAuth()
@@ -14,6 +21,8 @@ export function ProfileScreen() {
   const [email, setEmail] = useState(profile?.email ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetMessage, setResetMessage] = useState('')
 
   async function handleSave() {
     if (!profile) return
@@ -36,6 +45,27 @@ export function ProfileScreen() {
       setError('Failed to save profile. Please try again.')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!profile) return
+    setResetLoading(true)
+    setResetMessage('')
+
+    try {
+      const email = await getEmailByUsername(profile.username)
+      if (!email) {
+        setResetMessage('No email linked to your account. Add an email first via Edit Profile.')
+        return
+      }
+      await resetPassword(email)
+      const masked = maskEmail(email)
+      setResetMessage(`Reset email sent to ${masked}`)
+    } catch {
+      setResetMessage('Failed to send reset email. Please try again.')
+    } finally {
+      setResetLoading(false)
     }
   }
 
@@ -150,6 +180,22 @@ export function ProfileScreen() {
           </>
         )}
       </div>
+
+      <button
+        onClick={handleResetPassword}
+        disabled={resetLoading}
+        className="w-full py-3 bg-white/80 text-primary font-medium rounded-2xl hover:bg-primary/10 cursor-pointer disabled:opacity-50"
+      >
+        {resetLoading ? 'Sending...' : '🔒 Reset Password'}
+      </button>
+
+      {resetMessage && (
+        <p className={`text-sm text-center rounded-xl p-2 ${
+          resetMessage.startsWith('Reset email') ? 'text-success bg-green-50' : 'text-wrong bg-orange-50'
+        }`}>
+          {resetMessage}
+        </p>
+      )}
 
       <button
         onClick={handleLogout}
