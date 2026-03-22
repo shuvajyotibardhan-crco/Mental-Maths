@@ -55,8 +55,8 @@ export function AppShell() {
     return <ProfileSetupScreen />
   }
 
-  // Game screens don't show nav
-  const isGameScreen = screen === 'game' || screen === 'results'
+  // Only hide nav during active gameplay
+  const isGameScreen = screen === 'game'
 
   return (
     <GameProvider>
