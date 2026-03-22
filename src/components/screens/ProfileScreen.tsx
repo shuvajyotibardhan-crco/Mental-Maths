@@ -11,12 +11,13 @@ export function ProfileScreen() {
   const [name, setName] = useState(profile?.name ?? '')
   const [grade, setGrade] = useState<Grade>(profile?.grade ?? '3')
   const [avatar, setAvatar] = useState(profile?.avatar ?? AVATAR_OPTIONS[0]!)
+  const [email, setEmail] = useState(profile?.email ?? '')
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
     if (!profile) return
     setSaving(true)
-    const updates = { name: name.trim(), grade, avatar }
+    const updates = { name: name.trim(), grade, avatar, email: email.trim() || undefined }
     await updateUserProfile(profile.uid, updates)
     setProfile({ ...profile, ...updates })
     setEditing(false)
@@ -57,6 +58,15 @@ export function ProfileScreen() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary outline-none text-lg text-center"
+              placeholder="Display Name"
+            />
+
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary outline-none text-base text-center"
+              placeholder="Email (optional)"
             />
 
             <div>
@@ -93,6 +103,7 @@ export function ProfileScreen() {
                   setName(profile.name)
                   setGrade(profile.grade)
                   setAvatar(profile.avatar)
+                  setEmail(profile.email ?? '')
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-2xl hover:bg-gray-200 cursor-pointer"
               >
@@ -105,6 +116,9 @@ export function ProfileScreen() {
             <div className="text-5xl">{profile.avatar}</div>
             <h3 className="text-xl font-bold text-gray-800">{profile.name}</h3>
             <p className="text-gray-500">Grade {profile.grade}</p>
+            {profile.email && (
+              <p className="text-sm text-gray-500">✉️ {profile.email}</p>
+            )}
             <p className="text-sm text-gray-400">@{profile.username}</p>
 
             <button
