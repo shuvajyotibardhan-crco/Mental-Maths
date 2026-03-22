@@ -22,6 +22,7 @@ export function ProfileSetupScreen() {
       name: name.trim(),
       grade,
       avatar,
+      email: user.email?.endsWith('@mentalmaths.app') ? undefined : user.email ?? undefined,
       createdAt: Date.now(),
     }
 

@@ -6,7 +6,6 @@ export interface UserProfile {
   name: string
   grade: Grade
   avatar: string
-  emailMasked?: string
-  emailHash?: string
+  email?: string
   createdAt: number
 }

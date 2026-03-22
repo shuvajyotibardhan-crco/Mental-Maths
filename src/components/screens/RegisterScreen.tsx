@@ -34,7 +34,7 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
 
     setLoading(true)
     try {
-      await registerUser(username.trim(), password, username.trim())
+      await registerUser(username.trim(), password, username.trim(), email.trim() || undefined)
       // Profile setup happens after auth state updates in AuthContext
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''

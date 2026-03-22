@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { updateUserProfile } from '../../firebase/firestore'
-import { logoutUser } from '../../firebase/auth'
+import { logoutUser, updateAuthEmail } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
-import { maskEmail, hashEmail } from '../../utils/emailHash'
 import type { Grade } from '../../types'
 
 export function ProfileScreen() {
@@ -12,20 +11,39 @@ export function ProfileScreen() {
   const [name, setName] = useState(profile?.name ?? '')
   const [grade, setGrade] = useState<Grade>(profile?.grade ?? '3')
   const [avatar, setAvatar] = useState(profile?.avatar ?? AVATAR_OPTIONS[0]!)
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(profile?.email ?? '')
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
 
   async function handleSave() {
     if (!profile) return
     setSaving(true)
+    setError('')
+
     const trimmedEmail = email.trim()
-    const emailMasked = trimmedEmail ? maskEmail(trimmedEmail) : undefined
-    const emailHashValue = trimmedEmail ? await hashEmail(trimmedEmail) : undefined
-    const updates = { name: name.trim(), grade, avatar, emailMasked, emailHash: emailHashValue }
-    await updateUserProfile(profile.uid, updates)
-    setProfile({ ...profile, ...updates })
-    setEditing(false)
-    setSaving(false)
+
+    try {
+      // Update Firebase Auth email if changed
+      if (trimmedEmail && trimmedEmail !== profile.email) {
+        await updateAuthEmail(trimmedEmail)
+      }
+
+      const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || undefined }
+      await updateUserProfile(profile.uid, updates)
+      setProfile({ ...profile, ...updates })
+      setEditing(false)
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? ''
+      if (code === 'auth/requires-recent-login') {
+        setError('Please log out and log back in before changing your email.')
+      } else if (code === 'auth/email-already-in-use') {
+        setError('This email is already used by another account.')
+      } else {
+        setError('Failed to update email. Please try again.')
+      }
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleLogout() {
@@ -70,8 +88,12 @@ export function ProfileScreen() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary outline-none text-base text-center"
-              placeholder="Email (optional)"
+              placeholder="Email (optional, for password reset)"
             />
+
+            {error && (
+              <p className="text-wrong text-sm text-center bg-orange-50 rounded-xl p-2">{error}</p>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Grade</label>
@@ -107,7 +129,8 @@ export function ProfileScreen() {
                   setName(profile.name)
                   setGrade(profile.grade)
                   setAvatar(profile.avatar)
-                  setEmail('')
+                  setEmail(profile.email ?? '')
+                  setError('')
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-2xl hover:bg-gray-200 cursor-pointer"
               >
@@ -120,8 +143,8 @@ export function ProfileScreen() {
             <div className="text-5xl">{profile.avatar}</div>
             <h3 className="text-xl font-bold text-gray-800">{profile.name}</h3>
             <p className="text-gray-500">Grade {profile.grade}</p>
-            {profile.emailMasked && (
-              <p className="text-sm text-gray-500">✉️ {profile.emailMasked}</p>
+            {profile.email && (
+              <p className="text-sm text-gray-500">✉️ {profile.email}</p>
             )}
             <p className="text-sm text-gray-400">@{profile.username}</p>
 
