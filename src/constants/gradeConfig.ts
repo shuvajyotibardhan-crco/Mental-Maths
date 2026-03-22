@@ -28,30 +28,32 @@ export interface GradeConfig {
 //   4-5: 15, 30, 60  |  6-8: 45, 90, 180
 //   9-10: 135, 270, 540  |  11-12: 405, 810, 1620
 //
-// Time (seconds): decreases gradually per group
+// Time (seconds): Hard gets MORE time (bigger numbers need more thinking)
+//   Within group: Med = 1.5× Easy time, Hard = 2× Easy time
+//   Across groups: time stays same (difficulty comes from number size)
 // ══════════════════════════════════════════════
 
 // ── KG–1: Addition & Subtraction only ──
-// Add/Sub: E=10, M=20, H=40
+// Add/Sub: E=10, M=20, H=40 | Time: E=10s, M=15s, H=20s
 const GRADES_KG_1: GradeConfig = {
   operations: ['addition', 'subtraction'],
   difficulty: {
     easy: {
-      timePerQuestion: 15,
+      timePerQuestion: 10,
       ranges: {
         addition: { min: 1, max: 10 },
         subtraction: { min: 1, max: 10 },
       },
     },
     medium: {
-      timePerQuestion: 12,
+      timePerQuestion: 15,
       ranges: {
         addition: { min: 1, max: 20 },
         subtraction: { min: 1, max: 20 },
       },
     },
     hard: {
-      timePerQuestion: 10,
+      timePerQuestion: 20,
       ranges: {
         addition: { min: 1, max: 40 },
         subtraction: { min: 1, max: 40 },
@@ -62,11 +64,12 @@ const GRADES_KG_1: GradeConfig = {
 
 // ── 2–3: 3× KG-1 — Introduces ×, ÷ ──
 // Add/Sub: E=30, M=60, H=120  |  Mul/Div: E=5, M=10, H=20
+// Time: E=10s, M=15s, H=20s
 const GRADES_2_3: GradeConfig = {
   operations: ['addition', 'subtraction', 'multiplication', 'division'],
   difficulty: {
     easy: {
-      timePerQuestion: 12,
+      timePerQuestion: 10,
       ranges: {
         addition: { min: 1, max: 30 },
         subtraction: { min: 1, max: 30 },
@@ -75,7 +78,7 @@ const GRADES_2_3: GradeConfig = {
       },
     },
     medium: {
-      timePerQuestion: 10,
+      timePerQuestion: 15,
       ranges: {
         addition: { min: 1, max: 60 },
         subtraction: { min: 1, max: 60 },
@@ -84,7 +87,7 @@ const GRADES_2_3: GradeConfig = {
       },
     },
     hard: {
-      timePerQuestion: 8,
+      timePerQuestion: 20,
       ranges: {
         addition: { min: 1, max: 120 },
         subtraction: { min: 1, max: 120 },
@@ -97,6 +100,7 @@ const GRADES_2_3: GradeConfig = {
 
 // ── 4–5: 3× of 2-3 — Introduces %, √, ^ ──
 // Add/Sub: E=90, M=180, H=360  |  Mul/Div: E=15, M=30, H=60
+// Time: E=10s, M=15s, H=20s
 const GRADES_4_5: GradeConfig = {
   operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
   difficulty: {
@@ -113,7 +117,7 @@ const GRADES_4_5: GradeConfig = {
       },
     },
     medium: {
-      timePerQuestion: 8,
+      timePerQuestion: 15,
       ranges: {
         addition: { min: 1, max: 180 },
         subtraction: { min: 1, max: 180 },
@@ -125,7 +129,7 @@ const GRADES_4_5: GradeConfig = {
       },
     },
     hard: {
-      timePerQuestion: 6,
+      timePerQuestion: 20,
       ranges: {
         addition: { min: 1, max: 360 },
         subtraction: { min: 1, max: 360 },
@@ -141,11 +145,12 @@ const GRADES_4_5: GradeConfig = {
 
 // ── 6–8: 3× of 4-5 ──
 // Add/Sub: E=270, M=540, H=1080  |  Mul/Div: E=45, M=90, H=180
+// Time: E=10s, M=15s, H=20s
 const GRADES_6_8: GradeConfig = {
   operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
   difficulty: {
     easy: {
-      timePerQuestion: 8,
+      timePerQuestion: 10,
       ranges: {
         addition: { min: 10, max: 270 },
         subtraction: { min: 10, max: 270 },
@@ -157,7 +162,7 @@ const GRADES_6_8: GradeConfig = {
       },
     },
     medium: {
-      timePerQuestion: 6,
+      timePerQuestion: 15,
       ranges: {
         addition: { min: 10, max: 540 },
         subtraction: { min: 10, max: 540 },
@@ -169,7 +174,7 @@ const GRADES_6_8: GradeConfig = {
       },
     },
     hard: {
-      timePerQuestion: 5,
+      timePerQuestion: 20,
       ranges: {
         addition: { min: 10, max: 1080 },
         subtraction: { min: 10, max: 1080 },
@@ -185,11 +190,12 @@ const GRADES_6_8: GradeConfig = {
 
 // ── 9–10: 3× of 6-8 ──
 // Add/Sub: E=810, M=1620, H=3240  |  Mul/Div: E=135, M=270, H=540
+// Time: E=10s, M=15s, H=20s
 const GRADES_9_10: GradeConfig = {
   operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
   difficulty: {
     easy: {
-      timePerQuestion: 7,
+      timePerQuestion: 10,
       ranges: {
         addition: { min: 10, max: 810 },
         subtraction: { min: 10, max: 810 },
@@ -201,7 +207,7 @@ const GRADES_9_10: GradeConfig = {
       },
     },
     medium: {
-      timePerQuestion: 5,
+      timePerQuestion: 15,
       ranges: {
         addition: { min: 50, max: 1620 },
         subtraction: { min: 50, max: 1620 },
@@ -213,7 +219,7 @@ const GRADES_9_10: GradeConfig = {
       },
     },
     hard: {
-      timePerQuestion: 4,
+      timePerQuestion: 20,
       ranges: {
         addition: { min: 100, max: 3240 },
         subtraction: { min: 100, max: 3240 },
@@ -229,11 +235,12 @@ const GRADES_9_10: GradeConfig = {
 
 // ── 11–12: 3× of 9-10 ──
 // Add/Sub: E=2430, M=4860, H=9720  |  Mul/Div: E=405, M=810, H=1620
+// Time: E=10s, M=15s, H=20s
 const GRADES_11_12: GradeConfig = {
   operations: ['addition', 'subtraction', 'multiplication', 'division', 'percentage', 'squareRoot', 'power'],
   difficulty: {
     easy: {
-      timePerQuestion: 6,
+      timePerQuestion: 10,
       ranges: {
         addition: { min: 50, max: 2430 },
         subtraction: { min: 50, max: 2430 },
@@ -245,7 +252,7 @@ const GRADES_11_12: GradeConfig = {
       },
     },
     medium: {
-      timePerQuestion: 4,
+      timePerQuestion: 15,
       ranges: {
         addition: { min: 100, max: 4860 },
         subtraction: { min: 100, max: 4860 },
@@ -257,7 +264,7 @@ const GRADES_11_12: GradeConfig = {
       },
     },
     hard: {
-      timePerQuestion: 3,
+      timePerQuestion: 20,
       ranges: {
         addition: { min: 100, max: 9720 },
         subtraction: { min: 100, max: 9720 },

@@ -9,32 +9,100 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 10)
 }
 
-// Percentage configs by tier (range value from gradeConfig)
-// Tier 1 (4-5 easy): simple percentages of round numbers
-// Tier 2 (4-5 med, 6-8 easy): wider percentages, more bases
-// Tier 3 (4-5 hard, 6-8 med, 9-10 easy): varied percentages
-// Tier 4 (6-8 hard, 9-10 med+, 11-12): any percentage, large bases
-const PERCENT_TIERS: Record<number, { percents: number[]; bases: number[] }> = {
-  1: { percents: [10, 25, 50], bases: [10, 20, 40, 50, 100, 200] },
-  2: { percents: [5, 10, 15, 20, 25, 30, 40, 50, 75], bases: [10, 20, 30, 40, 50, 60, 80, 100, 200] },
-  3: { percents: [5, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75], bases: [20, 30, 50, 60, 80, 100, 150, 200, 300, 500] },
-  4: { percents: [1, 2, 3, 5, 8, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75, 80, 90], bases: [50, 80, 100, 120, 150, 200, 250, 300, 400, 500, 600, 800, 1000] },
+// ══════════════════════════════════════════════
+// PERCENTAGE, SQUARE ROOT, POWER configs
+// Follow same 2×/3× scaling as arithmetic:
+//   Within group: Medium = 2× Easy, Hard = 2× Medium
+//   Across groups: Next group = 3× previous group
+//
+// For %, "harder" = more % values × larger bases (answer scales)
+// For √, "harder" = larger perfect squares (√ of bigger numbers)
+// For ^, "harder" = larger bases and/or higher exponents
+//
+// Key format: "{gradeGroup}_{difficulty}"
+// ══════════════════════════════════════════════
+
+interface PercentConfig { percents: number[]; maxBase: number }
+interface PowerConfig { minBase: number; maxBase: number; minExp: number; maxExp: number }
+
+// Percentage: base answer ≈ maxBase × avg% / 100
+// 4-5 Easy baseline: simple %, base up to 100 → answers ~10-50
+// 2× within: bases double. 3× across: bases triple.
+const PERCENT_CONFIGS: Record<string, PercentConfig> = {
+  // 4-5: Easy base=100, Med=200, Hard=400
+  '4_easy':   { percents: [10, 25, 50], maxBase: 100 },
+  '4_medium': { percents: [5, 10, 20, 25, 50, 75], maxBase: 200 },
+  '4_hard':   { percents: [5, 10, 15, 20, 25, 30, 40, 50, 75], maxBase: 400 },
+  // 6-8: 3× of 4-5 → Easy=300, Med=600, Hard=1200
+  '6_easy':   { percents: [5, 10, 15, 20, 25, 50, 75], maxBase: 300 },
+  '6_medium': { percents: [5, 10, 12, 15, 20, 25, 30, 40, 50, 75], maxBase: 600 },
+  '6_hard':   { percents: [2, 5, 8, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75], maxBase: 1200 },
+  // 9-10: 3× of 6-8 → Easy=900, Med=1800, Hard=3600
+  '9_easy':   { percents: [5, 10, 12, 15, 20, 25, 30, 40, 50, 75], maxBase: 900 },
+  '9_medium': { percents: [2, 5, 8, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75], maxBase: 1800 },
+  '9_hard':   { percents: [1, 2, 3, 5, 8, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75, 80], maxBase: 3600 },
+  // 11-12: 3× of 9-10 → Easy=2700, Med=5400, Hard=10800
+  '11_easy':  { percents: [2, 5, 8, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75], maxBase: 2700 },
+  '11_medium':{ percents: [1, 2, 3, 5, 8, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75, 80, 90], maxBase: 5400 },
+  '11_hard':  { percents: [1, 2, 3, 4, 5, 8, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 75, 80, 90], maxBase: 10800 },
 }
 
-// Perfect squares by tier
-const SQUARE_TIERS: Record<number, number[]> = {
-  1: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100],
-  2: [1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144],
-  3: [4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400],
-  4: [9, 16, 25, 36, 49, 64, 81, 100, 121, 144, 169, 196, 225, 256, 289, 324, 361, 400, 441, 484, 529, 576, 625, 729, 784, 841, 900],
+// Square roots: max perfect square scales 2×/3×
+// 4-5 Easy baseline: √1 to √100 (roots 1-10)
+// 2× → up to √200, 3× → up to √300, etc.
+// We use perfect squares up to the max value
+function getSquaresUpTo(maxVal: number): number[] {
+  const squares: number[] = []
+  for (let i = 1; i * i <= maxVal; i++) {
+    squares.push(i * i)
+  }
+  return squares
 }
 
-// Power configs by tier: [minBase, maxBase, minExp, maxExp]
-const POWER_TIERS: Record<number, [number, number, number, number]> = {
-  1: [2, 5, 2, 2],      // 2²–5²
-  2: [2, 8, 2, 3],      // 2²–8³
-  3: [2, 12, 2, 3],     // 2²–12³
-  4: [2, 15, 2, 4],     // 2²–15⁴ (capped to reasonable mental math)
+// Max square value per group/difficulty
+// 4-5: E=100, M=200, H=400
+// 6-8: E=300, M=600, H=1200
+// 9-10: E=900, M=1800, H=3600
+// 11-12: E=2700, M=5400, H=10800
+const SQRT_MAX: Record<string, number> = {
+  '4_easy': 100, '4_medium': 200, '4_hard': 400,
+  '6_easy': 300, '6_medium': 600, '6_hard': 1200,
+  '9_easy': 900, '9_medium': 1800, '9_hard': 3600,
+  '11_easy': 2700, '11_medium': 5400, '11_hard': 10800,
+}
+
+// Powers: max answer scales 2×/3×
+// 4-5 Easy baseline: 2²–5² (answers 4–25)
+// 2× within: double max answer → larger bases/exponents
+// 3× across: triple max answer
+const POWER_CONFIGS: Record<string, PowerConfig> = {
+  // 4-5: answers ~4-25, ~4-125, ~4-500
+  '4_easy':   { minBase: 2, maxBase: 5, minExp: 2, maxExp: 2 },
+  '4_medium': { minBase: 2, maxBase: 5, minExp: 2, maxExp: 3 },
+  '4_hard':   { minBase: 2, maxBase: 8, minExp: 2, maxExp: 3 },
+  // 6-8: 3× answers → larger bases
+  '6_easy':   { minBase: 2, maxBase: 8, minExp: 2, maxExp: 3 },
+  '6_medium': { minBase: 2, maxBase: 12, minExp: 2, maxExp: 3 },
+  '6_hard':   { minBase: 3, maxBase: 15, minExp: 2, maxExp: 3 },
+  // 9-10: 3× again
+  '9_easy':   { minBase: 3, maxBase: 12, minExp: 2, maxExp: 3 },
+  '9_medium': { minBase: 3, maxBase: 15, minExp: 2, maxExp: 4 },
+  '9_hard':   { minBase: 5, maxBase: 20, minExp: 2, maxExp: 4 },
+  // 11-12: 3× again
+  '11_easy':  { minBase: 5, maxBase: 15, minExp: 2, maxExp: 4 },
+  '11_medium':{ minBase: 5, maxBase: 20, minExp: 2, maxExp: 4 },
+  '11_hard':  { minBase: 5, maxBase: 25, minExp: 2, maxExp: 5 },
+}
+
+// Map grade to config key prefix
+function gradeToKey(grade: Grade): string {
+  switch (grade) {
+    case '4': case '5': return '4'
+    case '6': case '7': case '8': return '6'
+    case '9': case '10': return '9'
+    case '11': case '12': return '11'
+    default: return '4'
+  }
 }
 
 function generateArithmeticQuestion(
@@ -93,16 +161,16 @@ function generateArithmeticQuestion(
   }
 }
 
-function generatePercentageQuestion(tier: number, difficulty: Difficulty, timeAllotted: number): Question {
-  const clampedTier = Math.min(tier, 4) as 1 | 2 | 3 | 4
-  const config = PERCENT_TIERS[clampedTier]!
+function generatePercentageQuestion(grade: Grade, difficulty: Difficulty, timeAllotted: number): Question {
+  const key = `${gradeToKey(grade)}_${difficulty}`
+  const config = PERCENT_CONFIGS[key] ?? PERCENT_CONFIGS['4_easy']!
   const percentage = config.percents[randomInt(0, config.percents.length - 1)]!
-  let base = config.bases[randomInt(0, config.bases.length - 1)]!
 
-  // Ensure whole number result
+  // Pick a random base up to maxBase, ensure whole number result
+  let base = randomInt(1, Math.floor(config.maxBase / 10)) * 10  // round bases
   let attempts = 0
   while ((base * percentage) % 100 !== 0 && attempts < 50) {
-    base = config.bases[randomInt(0, config.bases.length - 1)]!
+    base = randomInt(1, Math.floor(config.maxBase / 10)) * 10
     attempts++
   }
 
@@ -118,9 +186,10 @@ function generatePercentageQuestion(tier: number, difficulty: Difficulty, timeAl
   }
 }
 
-function generateSquareRootQuestion(tier: number, difficulty: Difficulty, timeAllotted: number): Question {
-  const clampedTier = Math.min(tier, 4) as 1 | 2 | 3 | 4
-  const squares = SQUARE_TIERS[clampedTier]!
+function generateSquareRootQuestion(grade: Grade, difficulty: Difficulty, timeAllotted: number): Question {
+  const key = `${gradeToKey(grade)}_${difficulty}`
+  const maxVal = SQRT_MAX[key] ?? 100
+  const squares = getSquaresUpTo(maxVal)
   const square = squares[randomInt(0, squares.length - 1)]!
   const answer = Math.sqrt(square)
 
@@ -134,11 +203,11 @@ function generateSquareRootQuestion(tier: number, difficulty: Difficulty, timeAl
   }
 }
 
-function generatePowerQuestion(tier: number, difficulty: Difficulty, timeAllotted: number): Question {
-  const clampedTier = Math.min(tier, 4) as 1 | 2 | 3 | 4
-  const [minBase, maxBase, minExp, maxExp] = POWER_TIERS[clampedTier]!
-  const base = randomInt(minBase, maxBase)
-  const exponent = randomInt(minExp, maxExp)
+function generatePowerQuestion(grade: Grade, difficulty: Difficulty, timeAllotted: number): Question {
+  const key = `${gradeToKey(grade)}_${difficulty}`
+  const config = POWER_CONFIGS[key] ?? POWER_CONFIGS['4_easy']!
+  const base = randomInt(config.minBase, config.maxBase)
+  const exponent = randomInt(config.minExp, config.maxExp)
   const answer = Math.pow(base, exponent)
 
   return {
@@ -175,18 +244,12 @@ export function generateQuestion(
       const range = diffConfig.ranges[actualOperation]!
       return generateArithmeticQuestion(actualOperation, range.min, range.max, timeAllotted, difficulty)
     }
-    case 'percentage': {
-      const pctTier = diffConfig.ranges['percentage']?.max ?? 1
-      return generatePercentageQuestion(pctTier, difficulty, timeAllotted)
-    }
-    case 'squareRoot': {
-      const sqrtTier = diffConfig.ranges['squareRoot']?.max ?? 1
-      return generateSquareRootQuestion(sqrtTier, difficulty, timeAllotted)
-    }
-    case 'power': {
-      const powTier = diffConfig.ranges['power']?.max ?? 1
-      return generatePowerQuestion(powTier, difficulty, timeAllotted)
-    }
+    case 'percentage':
+      return generatePercentageQuestion(grade, difficulty, timeAllotted)
+    case 'squareRoot':
+      return generateSquareRootQuestion(grade, difficulty, timeAllotted)
+    case 'power':
+      return generatePowerQuestion(grade, difficulty, timeAllotted)
     default:
       // Fallback to addition
       return generateArithmeticQuestion('addition', 1, 10, timeAllotted, difficulty)
