@@ -10,8 +10,6 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [email, setEmail] = useState('')
-  const [parentEmail, setParentEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -38,14 +36,8 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
     setLoading(true)
     try {
       const trimmedUsername = username.trim()
-      const trimmedEmail = email.trim()
-
-      // registerUser will fail with 'auth/email-already-in-use' if
-      // the synthetic or real email is already taken (i.e. username taken)
-      await registerUser(trimmedUsername, password, trimmedUsername, trimmedEmail || undefined)
-      // Save username → email mapping (always save, even without email, to reserve the username)
-      await saveUsernameLookup(trimmedUsername, trimmedEmail || '', parentEmail.trim() || undefined)
-      // Profile setup happens after auth state updates in AuthContext
+      await registerUser(trimmedUsername, password, trimmedUsername)
+      await saveUsernameLookup(trimmedUsername)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
       setError(getFirebaseErrorMessage(code))
@@ -77,37 +69,6 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email <span className="text-gray-400">(optional, for password reset)</span>
-            </label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg"
-              placeholder="your@email.com"
-              autoComplete="email"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Parent / Guardian Email <span className="text-gray-400">(optional)</span>
-            </label>
-            <input
-              type="email"
-              value={parentEmail}
-              onChange={(e) => setParentEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg"
-              placeholder="parent@email.com"
-              autoComplete="email"
-            />
-            <p className="text-xs text-orange-500 mt-1">
-              Required if the account email above is a child's Google account — password reset emails cannot be delivered to child accounts.
-            </p>
-          </div>
-
-          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
             <div className="relative">
               <input
@@ -131,17 +92,15 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Confirm Password *</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg pr-16"
-                placeholder="Type password again"
-                required
-                autoComplete="new-password"
-              />
-            </div>
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg"
+              placeholder="Type password again"
+              required
+              autoComplete="new-password"
+            />
           </div>
 
           {error && (
