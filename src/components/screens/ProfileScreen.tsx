@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { updateUserProfile, saveUsernameLookup, getEmailByUsername } from '../../firebase/firestore'
-import { logoutUser, resetPassword, updateAuthEmail } from '../../firebase/auth'
+import { logoutUser, resetPassword } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
 
@@ -22,7 +22,6 @@ export function ProfileScreen() {
   const [parentEmail, setParentEmail] = useState(profile?.parentEmail ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const [saveMessage, setSaveMessage] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
   const [resetMessage, setResetMessage] = useState('')
 
@@ -33,25 +32,17 @@ export function ProfileScreen() {
 
     const trimmedEmail = email.trim()
     const trimmedParentEmail = parentEmail.trim()
-    const emailChanged = trimmedEmail && trimmedEmail !== profile.email
-    const parentEmailChanged = trimmedParentEmail !== (profile.parentEmail ?? '')
+    const lookupChanged = trimmedEmail !== (profile.email ?? '') || trimmedParentEmail !== (profile.parentEmail ?? '')
 
     try {
-      if (emailChanged || parentEmailChanged) {
+      if (lookupChanged) {
         await saveUsernameLookup(profile.username, trimmedEmail || profile.email || '', trimmedParentEmail || undefined)
-      }
-      // Update Firebase Auth email if account email changed
-      if (emailChanged) {
-        await updateAuthEmail(trimmedEmail)
       }
 
       const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || '', parentEmail: trimmedParentEmail || '' }
       await updateUserProfile(profile.uid, updates)
       setProfile({ ...profile, ...updates })
       setEditing(false)
-      if (emailChanged) {
-        setSaveMessage(`Check your inbox at ${trimmedEmail} and click the verification link to activate password reset.`)
-      }
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
       if (code === 'auth/requires-recent-login') {
@@ -222,11 +213,6 @@ export function ProfileScreen() {
         {resetLoading ? 'Sending...' : '🔒 Reset Password'}
       </button>
 
-      {saveMessage && (
-        <p className="text-sm text-center rounded-xl p-2 text-primary bg-blue-50">
-          {saveMessage}
-        </p>
-      )}
 
       {resetMessage && (
         <p className={`text-sm text-center rounded-xl p-2 ${
