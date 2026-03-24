@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { updateUserProfile, saveUsernameLookup, getEmailByUsername } from '../../firebase/firestore'
-import { logoutUser, resetPassword } from '../../firebase/auth'
+import { logoutUser, resetPassword, updateAuthEmail } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
 
@@ -19,8 +19,10 @@ export function ProfileScreen() {
   const [grade, setGrade] = useState<Grade>(profile?.grade ?? '3')
   const [avatar, setAvatar] = useState(profile?.avatar ?? AVATAR_OPTIONS[0]!)
   const [email, setEmail] = useState(profile?.email ?? '')
+  const [parentEmail, setParentEmail] = useState(profile?.parentEmail ?? '')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [saveMessage, setSaveMessage] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
   const [resetMessage, setResetMessage] = useState('')
 
@@ -30,19 +32,33 @@ export function ProfileScreen() {
     setError('')
 
     const trimmedEmail = email.trim()
+    const trimmedParentEmail = parentEmail.trim()
+    const emailChanged = trimmedEmail && trimmedEmail !== profile.email
+    const parentEmailChanged = trimmedParentEmail !== (profile.parentEmail ?? '')
 
     try {
-      // Save email in Firestore profile and username lookup (for password reset)
-      if (trimmedEmail && trimmedEmail !== profile.email) {
-        await saveUsernameLookup(profile.username, trimmedEmail)
+      if (emailChanged || parentEmailChanged) {
+        await saveUsernameLookup(profile.username, trimmedEmail || profile.email || '', trimmedParentEmail || undefined)
+      }
+      // Update Firebase Auth email if account email changed
+      if (emailChanged) {
+        await updateAuthEmail(trimmedEmail)
       }
 
-      const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || '' }
+      const updates = { name: name.trim(), grade, avatar, email: trimmedEmail || '', parentEmail: trimmedParentEmail || '' }
       await updateUserProfile(profile.uid, updates)
       setProfile({ ...profile, ...updates })
       setEditing(false)
-    } catch {
-      setError('Failed to save profile. Please try again.')
+      if (emailChanged) {
+        setSaveMessage(`Check your inbox at ${trimmedEmail} and click the verification link to activate password reset.`)
+      }
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? ''
+      if (code === 'auth/requires-recent-login') {
+        setError('For security, please log out and log back in before changing your email.')
+      } else {
+        setError('Failed to save profile. Please try again.')
+      }
     } finally {
       setSaving(false)
     }
@@ -114,6 +130,19 @@ export function ProfileScreen() {
               placeholder="Email (optional, for password reset)"
             />
 
+            <div>
+              <input
+                type="email"
+                value={parentEmail}
+                onChange={(e) => setParentEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary outline-none text-base text-center"
+                placeholder="Parent/guardian email (optional)"
+              />
+              <p className="text-xs text-orange-500 mt-1 text-center">
+                Required if the account email is a child's Google account.
+              </p>
+            </div>
+
             {error && (
               <p className="text-wrong text-sm text-center bg-orange-50 rounded-xl p-2">{error}</p>
             )}
@@ -153,6 +182,7 @@ export function ProfileScreen() {
                   setGrade(profile.grade)
                   setAvatar(profile.avatar)
                   setEmail(profile.email ?? '')
+                  setParentEmail(profile.parentEmail ?? '')
                   setError('')
                 }}
                 className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-2xl hover:bg-gray-200 cursor-pointer"
@@ -168,6 +198,9 @@ export function ProfileScreen() {
             <p className="text-gray-500">Grade {profile.grade}</p>
             {profile.email && (
               <p className="text-sm text-gray-500">✉️ {profile.email}</p>
+            )}
+            {profile.parentEmail && (
+              <p className="text-sm text-gray-500">👪 {profile.parentEmail}</p>
             )}
             <p className="text-sm text-gray-400">@{profile.username}</p>
 
@@ -188,6 +221,12 @@ export function ProfileScreen() {
       >
         {resetLoading ? 'Sending...' : '🔒 Reset Password'}
       </button>
+
+      {saveMessage && (
+        <p className="text-sm text-center rounded-xl p-2 text-primary bg-blue-50">
+          {saveMessage}
+        </p>
+      )}
 
       {resetMessage && (
         <p className={`text-sm text-center rounded-xl p-2 ${

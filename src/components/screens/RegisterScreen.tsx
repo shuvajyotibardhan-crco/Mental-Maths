@@ -11,6 +11,7 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [email, setEmail] = useState('')
+  const [parentEmail, setParentEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -43,7 +44,7 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
       // the synthetic or real email is already taken (i.e. username taken)
       await registerUser(trimmedUsername, password, trimmedUsername, trimmedEmail || undefined)
       // Save username → email mapping (always save, even without email, to reserve the username)
-      await saveUsernameLookup(trimmedUsername, trimmedEmail || '')
+      await saveUsernameLookup(trimmedUsername, trimmedEmail || '', parentEmail.trim() || undefined)
       // Profile setup happens after auth state updates in AuthContext
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
@@ -87,6 +88,23 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
               placeholder="your@email.com"
               autoComplete="email"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Parent / Guardian Email <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="email"
+              value={parentEmail}
+              onChange={(e) => setParentEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg"
+              placeholder="parent@email.com"
+              autoComplete="email"
+            />
+            <p className="text-xs text-orange-500 mt-1">
+              Required if the account email above is a child's Google account — password reset emails cannot be delivered to child accounts.
+            </p>
           </div>
 
           <div>

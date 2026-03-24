@@ -33,15 +33,19 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
 
 // ---- Username Lookup (publicly readable for password reset) ----
 
-export async function saveUsernameLookup(username: string, email: string): Promise<void> {
-  await setDoc(doc(db, 'usernameLookup', username.toLowerCase()), { email })
+export async function saveUsernameLookup(username: string, email: string, parentEmail?: string): Promise<void> {
+  await setDoc(doc(db, 'usernameLookup', username.toLowerCase()), {
+    email,
+    parentEmail: parentEmail ?? '',
+  })
 }
 
 export async function getEmailByUsername(username: string): Promise<string | null> {
   const snap = await getDoc(doc(db, 'usernameLookup', username.toLowerCase()))
   if (!snap.exists()) return null
-  const email = (snap.data() as { email: string }).email
-  return email || null  // Return null if email is empty string
+  const data = snap.data() as { email: string; parentEmail?: string }
+  // Use parentEmail for reset if set (handles child Google accounts)
+  return data.parentEmail || data.email || null
 }
 
 export async function checkUsernameExists(username: string): Promise<boolean> {

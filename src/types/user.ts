@@ -7,5 +7,6 @@ export interface UserProfile {
   grade: Grade
   avatar: string
   email?: string
+  parentEmail?: string
   createdAt: number
 }

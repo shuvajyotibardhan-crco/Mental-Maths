@@ -4,6 +4,7 @@ import {
   signOut,
   sendPasswordResetEmail,
   updateProfile,
+  verifyBeforeUpdateEmail,
 } from 'firebase/auth'
 import { auth } from './config'
 import { getEmailByUsername } from './firestore'
@@ -61,6 +62,12 @@ export async function logoutUser(): Promise<void> {
 
 export async function resetPassword(email: string): Promise<void> {
   await sendPasswordResetEmail(auth, email)
+}
+
+export async function updateAuthEmail(newEmail: string): Promise<void> {
+  const user = auth.currentUser
+  if (!user) throw new Error('No authenticated user')
+  await verifyBeforeUpdateEmail(user, newEmail)
 }
 
 export function getFirebaseErrorMessage(code: string): string {
