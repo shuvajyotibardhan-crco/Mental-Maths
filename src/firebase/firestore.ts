@@ -33,8 +33,17 @@ export async function updateUserProfile(uid: string, data: Partial<UserProfile>)
 
 // ---- Username Lookup (reserves username at registration) ----
 
-export async function saveUsernameLookup(username: string): Promise<void> {
-  await setDoc(doc(db, 'usernameLookup', username.toLowerCase()), { reserved: true })
+export async function saveUsernameLookup(username: string, recoveryEmail?: string): Promise<void> {
+  await setDoc(doc(db, 'usernameLookup', username.toLowerCase()), {
+    reserved: true,
+    ...(recoveryEmail ? { recoveryEmail: recoveryEmail.toLowerCase().trim() } : {}),
+  })
+}
+
+export async function getRecoveryEmailByUsername(username: string): Promise<string | null> {
+  const snap = await getDoc(doc(db, 'usernameLookup', username.toLowerCase()))
+  if (!snap.exists()) return null
+  return (snap.data() as { recoveryEmail?: string }).recoveryEmail ?? null
 }
 
 export async function checkUsernameExists(username: string): Promise<boolean> {

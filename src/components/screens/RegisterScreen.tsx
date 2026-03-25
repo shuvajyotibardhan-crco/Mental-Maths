@@ -10,6 +10,7 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [recoveryEmail, setRecoveryEmail] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -36,8 +37,9 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
     setLoading(true)
     try {
       const trimmedUsername = username.trim()
-      await registerUser(trimmedUsername, password, trimmedUsername)
-      await saveUsernameLookup(trimmedUsername)
+      const trimmedRecoveryEmail = recoveryEmail.trim() || undefined
+      await registerUser(trimmedUsername, password, trimmedUsername, trimmedRecoveryEmail)
+      await saveUsernameLookup(trimmedUsername, trimmedRecoveryEmail)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
       setError(getFirebaseErrorMessage(code))
@@ -101,6 +103,19 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
               required
               autoComplete="new-password"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Recovery Email <span className="text-gray-400 font-normal">(optional)</span></label>
+            <input
+              type="email"
+              value={recoveryEmail}
+              onChange={(e) => setRecoveryEmail(e.target.value)}
+              className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg"
+              placeholder="your@email.com"
+              autoComplete="email"
+            />
+            <p className="text-xs text-gray-400 mt-1 ml-1">Used only to reset your password if you forget it. Must be an adult email account — do not use a child's Google account or an email already linked to another account in this app.</p>
           </div>
 
           {error && (

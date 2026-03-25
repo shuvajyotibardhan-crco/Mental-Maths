@@ -1,5 +1,13 @@
 import { useState, type FormEvent } from 'react'
-import { loginUser, getFirebaseErrorMessage } from '../../firebase/auth'
+import { loginUser, resetPasswordByUsername, getFirebaseErrorMessage } from '../../firebase/auth'
+import { getRecoveryEmailByUsername } from '../../firebase/firestore'
+
+function maskEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  if (!local || !domain) return '****'
+  if (local.length <= 4) return '****@' + domain
+  return '****' + local.slice(-4) + '@' + domain
+}
 
 interface LoginScreenProps {
   onNavigate: (screen: string) => void
@@ -12,19 +20,109 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
+  const [showReset, setShowReset] = useState(false)
+  const [resetUsername, setResetUsername] = useState('')
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetMessage, setResetMessage] = useState('')
+  const [resetError, setResetError] = useState('')
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
-      await loginUser(username.trim(), password)
+      const uname = username.trim()
+      const recoveryEmail = await getRecoveryEmailByUsername(uname)
+      await loginUser(uname, password, recoveryEmail ?? undefined)
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
       setError(getFirebaseErrorMessage(code))
     } finally {
       setLoading(false)
     }
+  }
+
+  async function handleReset(e: FormEvent) {
+    e.preventDefault()
+    setResetError('')
+    setResetMessage('')
+    setResetLoading(true)
+    try {
+      const recoveryEmail = await getRecoveryEmailByUsername(resetUsername.trim())
+      if (!recoveryEmail) {
+        setResetError('No recovery email found for this username. If this is a child\'s account, ask a parent to reset the password from inside the app.')
+        return
+      }
+      await resetPasswordByUsername(recoveryEmail)
+      setResetMessage(`Password reset link sent! Check ${maskEmail(recoveryEmail)}.`)
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? ''
+      setResetError(getFirebaseErrorMessage(code))
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
+  if (showReset) {
+    return (
+      <div className="min-h-dvh flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold text-primary-dark mb-2">Reset Password</h1>
+            <p className="text-gray-500">Enter your username to reset your password.</p>
+          </div>
+
+          {resetMessage ? (
+            <div className="text-center space-y-4">
+              <p className="text-green-600 bg-green-50 rounded-xl p-3 text-sm">{resetMessage}</p>
+              <button
+                onClick={() => { setShowReset(false); setResetMessage(''); setResetUsername('') }}
+                className="text-primary font-medium hover:underline cursor-pointer"
+              >
+                ← Back to Login
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleReset} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                <input
+                  type="text"
+                  value={resetUsername}
+                  onChange={(e) => setResetUsername(e.target.value)}
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none text-lg"
+                  placeholder="Enter your username"
+                  required
+                  autoComplete="username"
+                />
+              </div>
+
+              {resetError && (
+                <p className="text-wrong text-sm text-center bg-orange-50 rounded-xl p-2">{resetError}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={resetLoading}
+                className="w-full py-3 bg-primary text-white font-bold text-lg rounded-2xl hover:bg-primary-dark transition-colors disabled:opacity-50 cursor-pointer"
+              >
+                {resetLoading ? 'Sending...' : 'Reset Password'}
+              </button>
+
+              <p className="text-center">
+                <button
+                  type="button"
+                  onClick={() => setShowReset(false)}
+                  className="text-gray-500 hover:underline cursor-pointer text-sm"
+                >
+                  ← Back to Login
+                </button>
+              </p>
+            </form>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -84,7 +182,16 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
           </button>
         </form>
 
-        <p className="text-center text-gray-500 mt-4">
+        <p className="text-center mt-3">
+          <button
+            onClick={() => setShowReset(true)}
+            className="text-sm text-gray-400 hover:text-primary hover:underline cursor-pointer"
+          >
+            Forgot Password?
+          </button>
+        </p>
+
+        <p className="text-center text-gray-500 mt-3">
           Don't have an account?{' '}
           <button
             onClick={() => onNavigate('register')}

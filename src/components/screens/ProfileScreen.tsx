@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { updateUserProfile } from '../../firebase/firestore'
-import { logoutUser, changePassword, getFirebaseErrorMessage } from '../../firebase/auth'
+import { updateUserProfile, getRecoveryEmailByUsername, saveUsernameLookup } from '../../firebase/firestore'
+import { logoutUser, changePassword, setRecoveryEmailOnAuth, getFirebaseErrorMessage } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
 
@@ -13,6 +13,21 @@ export function ProfileScreen() {
   const [avatar, setAvatar] = useState(profile?.avatar ?? AVATAR_OPTIONS[0]!)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const [recoveryEmail, setRecoveryEmail] = useState('')
+  const [editingRecovery, setEditingRecovery] = useState(false)
+  const [recoveryEmailInput, setRecoveryEmailInput] = useState('')
+  const [recoverySaving, setRecoverySaving] = useState(false)
+  const [recoveryError, setRecoveryError] = useState('')
+  const [recoverySuccess, setRecoverySuccess] = useState('')
+
+  useEffect(() => {
+    if (profile?.username) {
+      getRecoveryEmailByUsername(profile.username).then((email) => {
+        setRecoveryEmail(email ?? '')
+      })
+    }
+  }, [profile?.username])
 
   const [changingPassword, setChangingPassword] = useState(false)
   const [newPassword, setNewPassword] = useState('')
@@ -67,6 +82,32 @@ export function ProfileScreen() {
       }
     } finally {
       setPasswordLoading(false)
+    }
+  }
+
+  async function handleSaveRecoveryEmail() {
+    if (!profile) return
+    setRecoveryError('')
+    setRecoverySuccess('')
+    setRecoverySaving(true)
+    try {
+      const trimmed = recoveryEmailInput.trim() || undefined
+      if (trimmed) await setRecoveryEmailOnAuth(trimmed)
+      await saveUsernameLookup(profile.username, trimmed)
+      setRecoveryEmail(trimmed ?? '')
+      setEditingRecovery(false)
+      setRecoverySuccess(trimmed ? 'Check your inbox — click the verification link to activate this recovery email.' : 'Recovery email removed.')
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? ''
+      if (code === 'auth/requires-recent-login') {
+        setRecoveryError('Please log out and log back in before updating your recovery email.')
+      } else if (code === 'auth/email-already-in-use') {
+        setRecoveryError('This email is already linked to another account.')
+      } else {
+        setRecoveryError('Failed to save. Please try again.')
+      }
+    } finally {
+      setRecoverySaving(false)
     }
   }
 
@@ -237,6 +278,53 @@ export function ProfileScreen() {
 
       {passwordSuccess && (
         <p className="text-success text-sm text-center bg-green-50 rounded-xl p-2">{passwordSuccess}</p>
+      )}
+
+      {/* Recovery Email */}
+      {editingRecovery ? (
+        <div className="bg-white/90 rounded-3xl p-6 space-y-3">
+          <h3 className="text-base font-semibold text-gray-700">Recovery Email</h3>
+          <input
+            type="email"
+            value={recoveryEmailInput}
+            onChange={(e) => setRecoveryEmailInput(e.target.value)}
+            className="w-full px-4 py-3 rounded-2xl border border-gray-200 focus:border-primary outline-none text-base"
+            placeholder="your@email.com"
+            autoComplete="email"
+          />
+          <p className="text-xs text-gray-400">Used only to reset your password if you forget it. Must be an adult email account — do not use a child's Google account or an email already linked to another account in this app.</p>
+
+          {recoveryError && (
+            <p className="text-wrong text-sm text-center bg-orange-50 rounded-xl p-2">{recoveryError}</p>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleSaveRecoveryEmail}
+              disabled={recoverySaving}
+              className="flex-1 py-3 bg-primary text-white font-bold rounded-2xl hover:bg-primary-dark disabled:opacity-50 cursor-pointer"
+            >
+              {recoverySaving ? 'Saving...' : 'Save'}
+            </button>
+            <button
+              onClick={() => { setEditingRecovery(false); setRecoveryEmailInput(''); setRecoveryError('') }}
+              className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-2xl hover:bg-gray-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => { setEditingRecovery(true); setRecoveryEmailInput(recoveryEmail); setRecoverySuccess('') }}
+          className="w-full py-3 bg-white/80 text-primary font-medium rounded-2xl hover:bg-primary/10 cursor-pointer"
+        >
+          {recoveryEmail ? 'Update Recovery Email' : 'Add Recovery Email'}
+        </button>
+      )}
+
+      {recoverySuccess && (
+        <p className="text-success text-sm text-center bg-green-50 rounded-xl p-2">{recoverySuccess}</p>
       )}
 
       <button
