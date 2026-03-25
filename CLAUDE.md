@@ -43,11 +43,5 @@ A mental maths practice app for kids/students. Vite + React + **TypeScript** + T
 Login / Register → ProfileSetup (first time) → Home → GameSetup → Game → Results → History
 
 ## .env (not in git)
-```
-VITE_FIREBASE_API_KEY=AIzaSyCecJXga_apwcTsFM6XePqB7oAHqBCWrX0
-VITE_FIREBASE_AUTH_DOMAIN=mental-maths-fabc3.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=mental-maths-fabc3
-VITE_FIREBASE_STORAGE_BUCKET=mental-maths-fabc3.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=372362770055
-VITE_FIREBASE_APP_ID=1:372362770055:web:00befc847b910b2a576a22
-```
+See `.env.example` for required variable names. Never commit actual credentials.
+Firebase project: `mental-maths-fabc3` — get config from Firebase Console → Project Settings → Your apps.
