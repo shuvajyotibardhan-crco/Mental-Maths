@@ -6,3 +6,4 @@ dist
 *.tsbuildinfo
 .claude/
 serviceAccount.json
+*-adminsdk-*.json
