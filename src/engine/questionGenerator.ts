@@ -215,6 +215,30 @@ function generatePowerQuestion(grade: Grade, difficulty: Difficulty): Question {
   }
 }
 
+export function generateQuestionBatch(
+  grade: Grade,
+  operation: OperationType,
+  difficulty: Difficulty,
+  count: number,
+): Question[] {
+  const seen = new Set<string>()
+  const questions: Question[] = []
+
+  for (let i = 0; i < count; i++) {
+    let q = generateQuestion(grade, operation, difficulty)
+    // Retry up to 5 times to avoid duplicate displayStrings
+    let retries = 0
+    while (seen.has(q.displayString) && retries < 5) {
+      q = generateQuestion(grade, operation, difficulty)
+      retries++
+    }
+    seen.add(q.displayString)
+    questions.push(q)
+  }
+
+  return questions
+}
+
 export function generateQuestion(
   grade: Grade,
   operation: OperationType,

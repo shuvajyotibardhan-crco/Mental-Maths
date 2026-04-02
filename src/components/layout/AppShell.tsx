@@ -14,10 +14,16 @@ import { ResultsScreen } from '../screens/ResultsScreen'
 import { HistoryScreen } from '../screens/HistoryScreen'
 import { ProfileScreen } from '../screens/ProfileScreen'
 import { SettingsScreen } from '../screens/SettingsScreen'
+import { ChallengeCreateScreen } from '../screens/ChallengeCreateScreen'
+import { JoinChallengeScreen } from '../screens/JoinChallengeScreen'
+import { ChallengeLobbyScreen } from '../screens/ChallengeLobbyScreen'
+import { ChallengeGameScreen } from '../screens/ChallengeGameScreen'
+import { ChallengeResultsScreen } from '../screens/ChallengeResultsScreen'
 
 export function AppShell() {
   const { user, profile, loading } = useAuth()
   const [screen, setScreen] = useState('home')
+  const [challengeCode, setChallengeCode] = useState<string | null>(null)
   const purgedRef = useRef(false)
 
   // Purge sessions older than 6 months on startup
@@ -56,7 +62,17 @@ export function AppShell() {
   }
 
   // Only hide nav during active gameplay
-  const isGameScreen = screen === 'game'
+  const isGameScreen = screen === 'game' || screen === 'challenge-game'
+
+  function handleChallengeCreated(gameCode: string) {
+    setChallengeCode(gameCode)
+    setScreen('challenge-lobby')
+  }
+
+  function handleChallengeJoined(gameCode: string) {
+    setChallengeCode(gameCode)
+    setScreen('challenge-lobby')
+  }
 
   return (
     <GameProvider>
@@ -70,6 +86,21 @@ export function AppShell() {
           {screen === 'history' && <HistoryScreen />}
           {screen === 'profile' && <ProfileScreen />}
           {screen === 'settings' && <SettingsScreen />}
+          {screen === 'challenge-create' && (
+            <ChallengeCreateScreen onNavigate={setScreen} onChallengeCreated={handleChallengeCreated} />
+          )}
+          {screen === 'challenge-join' && (
+            <JoinChallengeScreen onNavigate={setScreen} onChallengeJoined={handleChallengeJoined} />
+          )}
+          {screen === 'challenge-lobby' && challengeCode && (
+            <ChallengeLobbyScreen gameCode={challengeCode} onNavigate={setScreen} />
+          )}
+          {screen === 'challenge-game' && challengeCode && (
+            <ChallengeGameScreen gameCode={challengeCode} onNavigate={setScreen} />
+          )}
+          {screen === 'challenge-results' && challengeCode && (
+            <ChallengeResultsScreen gameCode={challengeCode} onNavigate={setScreen} />
+          )}
         </main>
         {!isGameScreen && <BottomNav currentScreen={screen} onNavigate={setScreen} />}
       </div>

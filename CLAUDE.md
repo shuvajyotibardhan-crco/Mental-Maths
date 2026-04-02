@@ -31,6 +31,18 @@ A mental maths practice app for kids/students. Vite + React + **TypeScript** + T
 - `src/components/layout/AppShell.tsx` — top-level router/shell
 - `scripts/` — admin/seeding scripts using firebase-admin
 
+## Multiplayer Challenge
+- `src/types/challenge.ts` — Challenge, ChallengePlayer, ChallengeConfig types
+- `src/firebase/challenge.ts` — Firestore CRUD for challenges collection
+- `src/engine/gameCode.ts` — 7-char alphanumeric code generator
+- `src/hooks/useChallengeListener.ts` — onSnapshot wrapper for live challenge state
+- `src/hooks/useChallengeGame.ts` — multiplayer game logic hook
+- `src/components/screens/Challenge*.tsx` — 5 challenge screens (Create, Join, Lobby, Game, Results)
+- Firestore collection: `challenges/{gameCode}` — single doc per challenge with config, questions, players map
+- All players answer same pre-generated questions in same order
+- Live leaderboard during gameplay via Firestore onSnapshot
+- Sessions saved to personal history with `challengeId` field for "Multiplayer" badge
+
 ## Key rules / decisions
 - **TypeScript** throughout — unlike Bingo which is plain JSX
 - Auth is real Firebase Auth (email/password) — username/password login, in-app change password
@@ -41,6 +53,10 @@ A mental maths practice app for kids/students. Vite + React + **TypeScript** + T
 
 ## Screen flow
 Login / Register → ProfileSetup (first time) → Home → GameSetup → Game → Results → History
+
+### Multiplayer flow
+Home → ChallengeCreate → ChallengeLobby → ChallengeGame → ChallengeResults
+Home → JoinChallenge → ChallengeLobby → ChallengeGame → ChallengeResults
 
 ## .env (not in git)
 Firebase project: `mental-maths-fabc3` — get real values from Firebase Console → Project Settings → Your apps.

@@ -27,6 +27,21 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           Start Playing
         </button>
 
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => onNavigate('challenge-create')}
+            className="py-4 bg-purple-500 text-white font-semibold text-base rounded-3xl shadow hover:bg-purple-600 hover:shadow-md active:scale-95 transition-all cursor-pointer"
+          >
+            Challenge Friends
+          </button>
+          <button
+            onClick={() => onNavigate('challenge-join')}
+            className="py-4 bg-indigo-500 text-white font-semibold text-base rounded-3xl shadow hover:bg-indigo-600 hover:shadow-md active:scale-95 transition-all cursor-pointer"
+          >
+            Join Challenge
+          </button>
+        </div>
+
         <button
           onClick={() => onNavigate('history')}
           className="w-full py-4 bg-white/80 text-primary-dark font-semibold text-lg rounded-3xl shadow hover:shadow-md active:scale-95 transition-all cursor-pointer"

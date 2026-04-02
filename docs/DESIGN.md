@@ -29,15 +29,23 @@ Browser
   │     HistoryScreen ──────────────────────────────────  │
   │     ProfileScreen ──────────────────────────────────  │
   │     SettingsScreen                                    │
+  │     ChallengeCreateScreen ───────────────────────── │
+  │     JoinChallengeScreen ─────────────────────────── │
+  │     ChallengeLobbyScreen ────── onSnapshot listener │
+  │     ChallengeGameScreen ──→ useChallengeGame,       │
+  │                               QuestionCard, etc.    │
+  │     ChallengeResultsScreen                          │
   │                                                       │
   ├── Engine (src/engine/)                                │
   │     questionGenerator.ts   (pure function)            ▼
   │     scoring.ts             (pure function)       Firestore
+  │     gameCode.ts            (code generator)         │
   │                                                       │
   ├── Firebase (src/firebase/)                            │
   │     config.ts ────────────────────────────────────── │
   │     auth.ts   ──────────────────────────────── Auth  │
   │     firestore.ts ──────────────────────── Firestore  │
+  │     challenge.ts ─────────────────────── Firestore  │
   │                                                       │
   └── Context (src/context/)                             │
         AuthContext.tsx ────── reads profile ────────────┘
@@ -70,14 +78,26 @@ Single setting (sound toggle) persisted to `localStorage` under the key `mm_soun
 ### `src/hooks/useTimer.ts`
 Reusable timer supporting both countdown (timed mode) and elapsed (fixed mode) directions. Returns formatted display string, raw seconds, progress ratio, and start/stop/reset controls. Calls `onComplete` when countdown reaches zero.
 
+### `src/firebase/challenge.ts`
+All Firestore operations for the multiplayer challenge system. Functions: `createChallenge`, `joinChallenge`, `startChallenge`, `updatePlayerProgress`, `markPlayerReady`, `finishChallenge`, `subscribeToChallenge` (onSnapshot wrapper). Uses a single `challenges/{gameCode}` collection where the game code serves as the document ID.
+
 ### `src/engine/questionGenerator.ts`
-Pure function — no side effects, no imports. Generates a `Question` given grade, operation, and difficulty. Operand ranges are defined per grade group in `gradeConfig.ts` and scale at approximately 2×–3× per group. Special cases handled: division always produces integer results, square root uses only perfect squares, percentage uses meaningful base/percent combinations.
+Pure function — no side effects, no imports. Generates a `Question` given grade, operation, and difficulty. Also exports `generateQuestionBatch()` for pre-generating sets of questions (used by multiplayer challenges). Operand ranges are defined per grade group in `gradeConfig.ts` and scale at approximately 2×–3× per group. Special cases handled: division always produces integer results, square root uses only perfect squares, percentage uses meaningful base/percent combinations.
 
 ### `src/engine/scoring.ts`
 Pure functions. `calculateQuestionScore` applies base points (10/20/30 by difficulty), a streak multiplier (1×/1.5×/2×), and a speed multiplier (1×/1.5×/2× in timed mode only). `calculateSessionScore` sums across all correctly answered questions.
 
+### `src/engine/gameCode.ts`
+Generates 7-character alphanumeric game codes for multiplayer challenges. Uses a restricted alphabet (excludes ambiguous characters like 0/O, 1/I/L).
+
+### `src/hooks/useChallengeListener.ts`
+Wraps Firestore `onSnapshot` for a challenge document. Returns the live `Challenge` state and a loading flag. Used by lobby, game, and results screens.
+
+### `src/hooks/useChallengeGame.ts`
+Game logic hook for multiplayer. Steps through pre-generated questions from the challenge document, tracks score/streak locally, and writes progress to Firestore after each answer. Mirrors the solo GameContext reducer pattern but decoupled from it.
+
 ### `src/components/layout/AppShell.tsx`
-Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount.
+Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows.
 
 ### `src/components/screens/*`
 One file per screen. Each receives `onNavigate` and accesses shared state via context hooks. No screen imports from another screen.
@@ -103,6 +123,12 @@ Game state has many interdependent fields (score, streak, current question, stat
 
 **Why Tailwind CSS v4?**
 Tailwind v4 integrates with Vite as a native plugin (no PostCSS config), uses CSS custom properties for theming, and produces smaller bundles. The child-friendly colour palette and rounded components are expressed directly in className strings, keeping styling co-located with markup.
+
+**Why a separate game hook for multiplayer instead of extending GameContext?**
+The existing GameContext generates questions lazily and has no Firestore integration. Multiplayer needs pre-generated questions (for fairness), real-time Firestore writes (for live leaderboards), and multi-player awareness. A separate `useChallengeGame` hook keeps the solo path simple and avoids conditional complexity in the reducer.
+
+**Why a single Firestore document per challenge?**
+For a kids' math app with 2–8 players, all data (config, 20–60 questions, player progress) fits comfortably in one document (~10–50 KB, well under the 1 MB limit). A single document simplifies real-time sync (one `onSnapshot` listener covers everything) and avoids subcollection query complexity.
 
 **Why no state management library (Redux/Zustand)?**
 Three contexts (auth, game, settings) cover all shared state. The game context uses a reducer pattern where needed. A third-party library would add overhead without benefit at this scale.

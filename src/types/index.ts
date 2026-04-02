@@ -14,3 +14,10 @@ export type {
   HighScoreEntry,
   HighScoreKey,
 } from './session'
+
+export type {
+  Challenge,
+  ChallengePlayer,
+  ChallengeConfig,
+  ChallengeStatus,
+} from './challenge'

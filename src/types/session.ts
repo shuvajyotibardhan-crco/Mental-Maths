@@ -15,6 +15,7 @@ export interface SessionRecord {
   timeTakenSeconds: number
   bestStreak: number
   isHighScore: boolean
+  challengeId?: string
 }
 
 export interface HighScoreEntry {

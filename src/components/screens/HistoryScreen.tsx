@@ -130,6 +130,11 @@ export function HistoryScreen() {
                   <span className="font-semibold text-gray-800">
                     {OPERATION_LABELS[s.operation]}
                   </span>
+                  {s.challengeId && (
+                    <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">
+                      Multiplayer
+                    </span>
+                  )}
                   {s.isHighScore && <span className="text-sm">🏆</span>}
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">

@@ -70,6 +70,52 @@ interface SessionRecord {
   timeTakenSeconds: number
   bestStreak: number
   isHighScore: boolean     // true if personal best at time of save
+  challengeId?: string     // game code if from multiplayer challenge
+}
+```
+
+### Challenge
+Stored in Firestore collection `challenges`, document ID = 7-char game code.
+
+```typescript
+interface Challenge {
+  gameCode: string              // 7-char alphanumeric, doc ID
+  hostId: string                // Firebase UID of creator
+  status: ChallengeStatus       // 'waiting' | 'playing' | 'finished'
+  createdAt: number             // Date.now()
+  startedAt: number | null
+  finishedAt: number | null
+  config: ChallengeConfig
+  questions: Question[]         // pre-generated (20 for fixed, 60 for timed)
+  players: Record<string, ChallengePlayer>
+}
+```
+
+### ChallengePlayer
+Nested in Challenge.players map, keyed by Firebase UID.
+
+```typescript
+interface ChallengePlayer {
+  username: string
+  name: string
+  avatar: string
+  ready: boolean              // true once loaded into lobby
+  score: number               // updated after each answer
+  correctAnswers: number
+  totalAnswered: number
+  bestStreak: number
+  finished: boolean           // true when game complete
+  timeTakenSeconds: number | null
+}
+```
+
+### ChallengeConfig
+```typescript
+interface ChallengeConfig {
+  grade: Grade
+  operation: OperationType
+  difficulty: Difficulty
+  mode: GameMode
 }
 ```
 
@@ -106,6 +152,7 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 | `sessions` | auto | SessionRecord fields |
 | `highScores` | Firebase UID | Map of HighScoreKey → HighScoreEntry |
 | `globalHighScores` | HighScoreKey | HighScoreEntry |
+| `challenges` | 7-char game code | Challenge (config, questions, players map) |
 
 ### localStorage
 
@@ -225,6 +272,38 @@ checkAndUpdateHighScore(userId, key, score, sessionId, timeTakenSeconds?):
   return isNew
 ```
 
+### Challenge Lifecycle
+```
+createChallenge(config, host):
+  gameCode = generate 7-char alphanumeric code (exclude 0/O/1/I/L)
+  questions = generateQuestionBatch(config.grade, config.operation, config.difficulty, count)
+    count = 20 for fixed mode, 60 for timed mode
+  write { gameCode, hostId, status:'waiting', config, questions, players:{[host.uid]:...} }
+  return gameCode
+
+joinChallenge(gameCode, profile):
+  read challenges/{gameCode}
+  if not found: throw "not found"
+  if status != 'waiting': throw "already started"
+  add profile to players map via updateDoc
+
+startChallenge(gameCode):    // host only
+  set status='playing', startedAt=Date.now()
+  all clients detect via onSnapshot → navigate to game
+
+during game:
+  each player steps through questions[0..N] locally
+  after each answer: updateDoc players.{uid}.{score,correctAnswers,totalAnswered,bestStreak}
+  on finish: set players.{uid}.finished=true, timeTakenSeconds
+
+finishChallenge(gameCode):   // any client, when all players finished
+  set status='finished', finishedAt=Date.now()
+
+results:
+  each player saves SessionRecord with challengeId=gameCode
+  personal/global high score checks run as normal
+```
+
 ### Session Purge
 ```
 purgeOldSessions(userId):
@@ -314,12 +393,14 @@ Mental Maths/
     │   ├── index.ts              # Re-exports all types
     │   ├── question.ts           # OperationType, Difficulty, Grade, GameMode, Question, AnsweredQuestion
     │   ├── session.ts            # SessionRecord, HighScoreEntry, HighScoreKey
-    │   └── user.ts               # UserProfile
+    │   ├── user.ts               # UserProfile
+    │   └── challenge.ts          # Challenge, ChallengePlayer, ChallengeConfig, ChallengeStatus
     │
     ├── firebase/
     │   ├── config.ts             # Firebase app init; exports app, auth, db
     │   ├── auth.ts               # Auth helpers; synthetic email system
-    │   └── firestore.ts          # All Firestore CRUD
+    │   ├── firestore.ts          # All Firestore CRUD (users, sessions, high scores)
+    │   └── challenge.ts          # Challenge CRUD + onSnapshot subscription
     │
     ├── context/
     │   ├── AuthContext.tsx       # onAuthStateChanged → profile fetch
@@ -327,11 +408,14 @@ Mental Maths/
     │   └── SettingsContext.tsx   # Sound toggle (localStorage)
     │
     ├── hooks/
-    │   └── useTimer.ts           # countdown/elapsed timer with onComplete
+    │   ├── useTimer.ts              # countdown/elapsed timer with onComplete
+    │   ├── useChallengeListener.ts  # onSnapshot wrapper for challenge doc
+    │   └── useChallengeGame.ts      # Multiplayer game logic (pre-gen questions + Firestore sync)
     │
     ├── engine/
-    │   ├── questionGenerator.ts  # Pure: grade+op+diff → Question
-    │   └── scoring.ts            # Pure: score, streak multipliers
+    │   ├── questionGenerator.ts  # Pure: grade+op+diff → Question, generateQuestionBatch
+    │   ├── scoring.ts            # Pure: score, streak multipliers
+    │   └── gameCode.ts           # 7-char alphanumeric game code generator
     │
     ├── constants/
     │   └── gradeConfig.ts        # Operand ranges, avatar list, grade options
@@ -355,7 +439,12 @@ Mental Maths/
         │   ├── ResultsScreen.tsx       # Score, stars, high scores, review
         │   ├── HistoryScreen.tsx       # Session list with filters
         │   ├── ProfileScreen.tsx       # Edit profile, password, recovery email
-        │   └── SettingsScreen.tsx      # Sound toggle, version
+        │   ├── SettingsScreen.tsx           # Sound toggle, version
+        │   ├── ChallengeCreateScreen.tsx   # Host configures and creates challenge
+        │   ├── JoinChallengeScreen.tsx      # Enter 7-digit code to join
+        │   ├── ChallengeLobbyScreen.tsx     # Waiting room with player list
+        │   ├── ChallengeGameScreen.tsx      # Multiplayer gameplay + live leaderboard
+        │   └── ChallengeResultsScreen.tsx   # Leaderboard + stats + session save
         │
         └── game/
             ├── QuestionCard.tsx  # Question text + correct/wrong feedback

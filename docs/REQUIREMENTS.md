@@ -18,7 +18,6 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 ### Out of Scope
 - Native iOS/Android app (future)
 - Email-based reset for child Google accounts via Cloud Functions (future)
-- Multiplayer or head-to-head modes
 - Teacher/parent dashboard
 - In-app purchase or subscriptions
 
@@ -269,3 +268,41 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Toggle sound off, play a game | No sound effects during gameplay |
 | Reload app | Sound preference retained |
 | Open Settings | Version number visible |
+
+---
+
+## Feature 11 — Multiplayer Challenge Mode
+
+**User story:** As a player, I want to challenge my friends to a maths competition so that we can see who scores the highest on the same set of questions.
+
+**Acceptance Criteria:**
+1. Home screen shall provide "Challenge Friends" and "Join Challenge" buttons.
+2. Creating a challenge shall allow the host to configure grade, operation, difficulty, and mode (same options as solo play).
+3. On creation, the system shall generate a unique 7-character alphanumeric game code.
+4. The code shall be displayed prominently in the lobby for sharing.
+5. Friends shall join by entering the code on the Join Challenge screen.
+6. The lobby shall show all joined players with their avatars and names in real time.
+7. The host must have a "Start Game" button that is enabled only when at least 2 players have joined and all are ready.
+8. All players shall answer the same pre-generated questions in the same order.
+9. During gameplay, a live mini-leaderboard shall show all players' scores in real time.
+10. When a player finishes (timer expires or all questions answered), they shall see a waiting screen until all players are done.
+11. Once all players finish, a leaderboard screen shall rank players by score (tiebreak by time in fixed mode).
+12. Each player's session shall be saved to their personal history with a "Multiplayer" badge.
+13. Personal and global high scores shall be checked and updated as normal.
+14. Challenge sessions in History shall display a "Multiplayer" badge.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Tap "Challenge Friends" on Home | ChallengeCreateScreen opens with game config options |
+| Configure and create challenge | 7-digit code displayed, lobby screen shown |
+| Friend enters code on Join screen | Friend appears in lobby in real time |
+| Host taps Start with 1 player | Button disabled — need at least 2 |
+| Host taps Start with 2+ ready players | All players navigate to game screen simultaneously |
+| Answer questions during challenge | Same questions shown to all players in same order |
+| Check leaderboard during game | Live scores update as players answer |
+| Finish game (timer or all questions) | Waiting screen shown until all players finish |
+| All players finish | Leaderboard shows rankings with scores and stats |
+| Beat personal best in challenge | "New Personal Best!" banner shown |
+| View History after challenge | Session shows "Multiplayer" badge |
