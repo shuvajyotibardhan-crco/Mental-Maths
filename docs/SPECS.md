@@ -502,9 +502,6 @@ The template must define these variables and set "To Email" to `app_admin@divel.
 | `{{contact_email}}` | User's reply-to email |
 | `{{from_name}}` | User's display name |
 | `{{username}}` | User's app username |
-| `{{attachments_summary}}` | Comma-separated list of attached filenames |
-| `{{attachment_name}}` | First attachment filename (if any) |
-| `{{attachment}}` | First attachment as base64 string (if any) |
 
 ### Password Reset Email Sender
 To send password reset emails from `app_admin@divel.me`:

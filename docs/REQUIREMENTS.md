@@ -319,12 +319,12 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 2. The contact form must include a subject line (required, max 120 characters).
 3. The contact form must include a description field (required, max 500 words; a live word counter shall be shown).
 4. The contact form must include a contact email field (required, valid email format).
-5. The contact form shall allow optional file attachments (images: JPG, PNG, GIF, WebP; documents: PDF, Word, TXT; max 5MB per file).
+5. File attachments are not supported (Firebase Storage requires Blaze plan; deferred to future).
 6. On submission, an email shall be sent to `app_admin@divel.me` with the subject formatted as `[user subject] | Mental Maths`.
 7. Email content shall include the description, contact email, display name, and username.
 8. On successful send, a confirmation screen shall be shown.
 9. On failure, a clear error message shall be displayed with the admin email as fallback.
-10. Password reset emails shall be sent from `app_admin@divel.me` (configured via Firebase Console email templates).
+10. Password reset emails shall be sent from `app_admin@divel.me` (configured via Firebase Console email templates; pending domain verification).
 
 **Test Plan:**
 
@@ -336,8 +336,5 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Submit without description | Validation error shown for description |
 | Enter description and count words to 500 | Word counter turns red; further typing truncated |
 | Enter invalid email format | Validation error shown |
-| Attach a valid image file | File listed with name and size |
-| Attach a file > 5MB | Error message shown, file not added |
-| Attach a file of unsupported type | Error message shown, file not added |
 | Submit valid form | Success screen shown; email delivered to admin |
 | Tap "Back to Settings" on success screen | Returns to Settings |

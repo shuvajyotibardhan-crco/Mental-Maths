@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import emailjs from '@emailjs/browser'
 import { useAuth } from '../../context/AuthContext'
 
@@ -11,26 +11,9 @@ const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID as string
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as string
 
 const MAX_WORDS = 500
-const ALLOWED_TYPES = [
-  'image/jpeg', 'image/png', 'image/gif', 'image/webp',
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'text/plain',
-]
-const MAX_FILE_SIZE_MB = 5
 
 function countWords(text: string): number {
   return text.trim() === '' ? 0 : text.trim().split(/\s+/).length
-}
-
-function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve((reader.result as string).split(',')[1])
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
 }
 
 export function ContactScreen({ onNavigate }: ContactScreenProps) {
@@ -39,10 +22,8 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [contactEmail, setContactEmail] = useState('')
-  const [attachments, setAttachments] = useState<File[]>([])
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const wordCount = countWords(description)
   const wordLimitReached = wordCount >= MAX_WORDS
@@ -53,44 +34,9 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
     if (words <= MAX_WORDS) {
       setDescription(value)
     } else {
-      // Trim to MAX_WORDS words
       const trimmed = value.trim().split(/\s+/).slice(0, MAX_WORDS).join(' ')
       setDescription(trimmed)
     }
-  }
-
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? [])
-    const valid: File[] = []
-    const errors: string[] = []
-
-    for (const file of files) {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        errors.push(`${file.name}: unsupported file type`)
-        continue
-      }
-      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
-        errors.push(`${file.name}: exceeds ${MAX_FILE_SIZE_MB}MB limit`)
-        continue
-      }
-      valid.push(file)
-    }
-
-    if (errors.length > 0) {
-      setErrorMsg(errors.join(', '))
-    }
-
-    setAttachments((prev) => {
-      const names = new Set(prev.map((f) => f.name))
-      return [...prev, ...valid.filter((f) => !names.has(f.name))]
-    })
-
-    // Reset input so same file can be re-selected after removal
-    if (fileInputRef.current) fileInputRef.current.value = ''
-  }
-
-  function removeAttachment(index: number) {
-    setAttachments((prev) => prev.filter((_, i) => i !== index))
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -113,35 +59,13 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
     setStatus('sending')
 
     try {
-      // Convert attachments to base64
-      const attachmentData = await Promise.all(
-        attachments.map(async (file) => ({
-          name: file.name,
-          data: await fileToBase64(file),
-          type: file.type,
-        }))
-      )
-
-      const templateParams: Record<string, string> = {
+      await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
         subject: `${subject.trim()} | Mental Maths`,
         description: description.trim(),
         contact_email: contactEmail.trim(),
-        from_name: profile?.displayName ?? 'App User',
+        from_name: profile?.name ?? 'App User',
         username: profile?.username ?? 'unknown',
-        attachments_summary:
-          attachmentData.length > 0
-            ? attachmentData.map((a) => a.name).join(', ')
-            : 'None',
-      }
-
-      // EmailJS supports one attachment via attachment_name + attachment (base64)
-      // For multiple files we include them as text summary; first file sent as attachment
-      if (attachmentData.length > 0) {
-        templateParams.attachment_name = attachmentData[0].name
-        templateParams.attachment = attachmentData[0].data
-      }
-
-      await emailjs.send(SERVICE_ID, TEMPLATE_ID, templateParams, PUBLIC_KEY)
+      }, PUBLIC_KEY)
       setStatus('success')
     } catch (err) {
       console.error('EmailJS error:', err)
@@ -227,58 +151,6 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
             placeholder="we'll reply here"
             className="w-full rounded-2xl border border-gray-200 bg-white/90 px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
-        </div>
-
-        {/* Attachments */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-700">Attachments (optional)</label>
-          <p className="text-xs text-gray-400">
-            Images (JPG, PNG, GIF, WebP) or documents (PDF, Word, TXT) — max {MAX_FILE_SIZE_MB}MB each
-          </p>
-
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-2 rounded-2xl border-2 border-dashed border-gray-200 bg-white/60 px-4 py-3 text-sm text-gray-500 hover:border-primary hover:text-primary transition-colors cursor-pointer w-full justify-center"
-          >
-            <span className="text-lg">📎</span>
-            Add file
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*,.pdf,.doc,.docx,.txt"
-            multiple
-            onChange={handleFileChange}
-            className="hidden"
-          />
-
-          {attachments.length > 0 && (
-            <ul className="space-y-1">
-              {attachments.map((file, i) => (
-                <li
-                  key={i}
-                  className="flex items-center justify-between bg-white/80 rounded-xl px-3 py-2 text-sm"
-                >
-                  <span className="truncate text-gray-700 flex-1 mr-2">
-                    {file.type.startsWith('image/') ? '🖼️ ' : '📄 '}
-                    {file.name}
-                  </span>
-                  <span className="text-xs text-gray-400 mr-2 shrink-0">
-                    {(file.size / 1024).toFixed(0)}KB
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removeAttachment(i)}
-                    className="text-gray-400 hover:text-red-500 transition-colors cursor-pointer shrink-0"
-                    aria-label="Remove"
-                  >
-                    ✕
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
         </div>
 
         {/* Error */}
