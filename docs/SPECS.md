@@ -478,3 +478,36 @@ Target: evergreen browsers (Chrome, Firefox, Safari, Edge — current versions).
 - The `scripts/reset.mjs` admin utility requires a `serviceAccount.json` (git-ignored); it must never be committed.
 - Global high scores are written from the client without server-side validation — cheating is possible. Accepted trade-off for a private family app at this stage.
 - `NODE_TLS_REJECT_UNAUTHORIZED=0` is set only in the dev-only reset script; it is never set in the app itself.
+
+---
+
+## Contact Form
+
+### EmailJS Configuration
+The contact form uses [EmailJS](https://www.emailjs.com) (client-side email service). Three environment variables are required:
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_EMAILJS_SERVICE_ID` | EmailJS service ID (e.g. `service_abc123`) |
+| `VITE_EMAILJS_TEMPLATE_ID` | EmailJS template ID (e.g. `template_xyz789`) |
+| `VITE_EMAILJS_PUBLIC_KEY` | EmailJS public key from Account → API Keys |
+
+### EmailJS Template Variables
+The template must define these variables and set "To Email" to `app_admin@divel.me`:
+
+| Variable | Content |
+|----------|---------|
+| `{{subject}}` | `[user subject] | Mental Maths` |
+| `{{description}}` | Problem description (≤500 words) |
+| `{{contact_email}}` | User's reply-to email |
+| `{{from_name}}` | User's display name |
+| `{{username}}` | User's app username |
+| `{{attachments_summary}}` | Comma-separated list of attached filenames |
+| `{{attachment_name}}` | First attachment filename (if any) |
+| `{{attachment}}` | First attachment as base64 string (if any) |
+
+### Password Reset Email Sender
+To send password reset emails from `app_admin@divel.me`:
+1. Firebase Console → Authentication → Email Templates → Password reset → Edit
+2. Set "From" email to `app_admin@divel.me`
+3. Firebase must verify the domain or use custom SMTP (Firebase Blaze plan + Email Trigger extension)

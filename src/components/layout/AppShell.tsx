@@ -19,6 +19,7 @@ import { JoinChallengeScreen } from '../screens/JoinChallengeScreen'
 import { ChallengeLobbyScreen } from '../screens/ChallengeLobbyScreen'
 import { ChallengeGameScreen } from '../screens/ChallengeGameScreen'
 import { ChallengeResultsScreen } from '../screens/ChallengeResultsScreen'
+import { ContactScreen } from '../screens/ContactScreen'
 
 export function AppShell() {
   const { user, profile, loading } = useAuth()
@@ -85,7 +86,8 @@ export function AppShell() {
           {screen === 'results' && <ResultsScreen onNavigate={setScreen} />}
           {screen === 'history' && <HistoryScreen />}
           {screen === 'profile' && <ProfileScreen />}
-          {screen === 'settings' && <SettingsScreen />}
+          {screen === 'settings' && <SettingsScreen onNavigate={setScreen} />}
+          {screen === 'contact' && <ContactScreen onNavigate={setScreen} />}
           {screen === 'challenge-create' && (
             <ChallengeCreateScreen onNavigate={setScreen} onChallengeCreated={handleChallengeCreated} />
           )}

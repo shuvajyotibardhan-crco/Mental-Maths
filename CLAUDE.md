@@ -58,6 +58,16 @@ Login / Register → ProfileSetup (first time) → Home → GameSetup → Game �
 Home → ChallengeCreate → ChallengeLobby → ChallengeGame → ChallengeResults
 Home → JoinChallenge → ChallengeLobby → ChallengeGame → ChallengeResults
 
+## Contact Form
+- `src/components/screens/ContactScreen.tsx` — contact/support form screen
+- Accessible via Settings screen → "Contact Support" button
+- Sends email to `app_admin@divel.me` via EmailJS (`@emailjs/browser`)
+- Subject formatted as `[user subject] | Mental Maths`
+- Supports file attachments (image/document, max 5MB, first file sent as base64 attachment)
+- Word limit: 500 words on description field
+- Requires 3 env vars: `VITE_EMAILJS_SERVICE_ID`, `VITE_EMAILJS_TEMPLATE_ID`, `VITE_EMAILJS_PUBLIC_KEY`
+- Password reset email sender (`app_admin@divel.me`) configured in Firebase Console → Auth → Email Templates
+
 ## .env (not in git)
 Firebase project: `mental-maths-fabc3` — get real values from Firebase Console → Project Settings → Your apps.
 ```
@@ -67,4 +77,9 @@ VITE_FIREBASE_PROJECT_ID=your-project-id
 VITE_FIREBASE_STORAGE_BUCKET=your-project.firebasestorage.app
 VITE_FIREBASE_MESSAGING_SENDER_ID=your-sender-id
 VITE_FIREBASE_APP_ID=your-app-id
+
+# EmailJS — contact form
+VITE_EMAILJS_SERVICE_ID=your-service-id
+VITE_EMAILJS_TEMPLATE_ID=your-template-id
+VITE_EMAILJS_PUBLIC_KEY=your-public-key
 ```

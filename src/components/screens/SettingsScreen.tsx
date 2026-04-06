@@ -1,6 +1,10 @@
 import { useSettings } from '../../context/SettingsContext'
 
-export function SettingsScreen() {
+interface SettingsScreenProps {
+  onNavigate: (screen: string) => void
+}
+
+export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
   const { soundEnabled, setSoundEnabled } = useSettings()
 
   return (
@@ -26,6 +30,19 @@ export function SettingsScreen() {
             />
           </button>
         </div>
+      </div>
+
+      <div className="bg-white/90 rounded-3xl p-6 space-y-3">
+        <button
+          onClick={() => onNavigate('contact')}
+          className="w-full flex items-center justify-between text-left cursor-pointer hover:opacity-80 transition-opacity"
+        >
+          <div>
+            <p className="font-medium text-gray-800">Contact Support</p>
+            <p className="text-sm text-gray-500">Report a problem or send feedback</p>
+          </div>
+          <span className="text-gray-400 text-lg">→</span>
+        </button>
       </div>
 
       <div className="bg-white/90 rounded-3xl p-6">
