@@ -100,7 +100,7 @@ Game logic hook for multiplayer. Steps through pre-generated questions from the 
 Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows.
 
 ### `src/components/screens/ContactScreen.tsx`
-Contact support form. Collects subject, description (≤500 words with live counter), contact email, and optional file attachments. On submission, converts the first attachment to base64 and sends all fields to EmailJS, which delivers the email to `app_admin@divel.me`. Displays a confirmation screen on success and an inline error with fallback admin email on failure.
+Contact support form. Collects subject, description (≤500 words with live counter), and contact email. On submission, sends all fields to EmailJS, which delivers the email to `app_admin@divel.me`. Displays a confirmation screen on success and an inline error with fallback admin email on failure. File attachments are not supported (Firebase Storage requires the Blaze plan).
 
 ### `src/components/screens/*`
 One file per screen. Each receives `onNavigate` and accesses shared state via context hooks. No screen imports from another screen.
@@ -134,7 +134,7 @@ The existing GameContext generates questions lazily and has no Firestore integra
 For a kids' math app with 2–8 players, all data (config, 20–60 questions, player progress) fits comfortably in one document (~10–50 KB, well under the 1 MB limit). A single document simplifies real-time sync (one `onSnapshot` listener covers everything) and avoids subcollection query complexity.
 
 **Why EmailJS for the contact form?**
-The contact form needs to send emails from the browser without a backend. EmailJS is a client-side email SDK that works with any SMTP provider via a configured service/template. It supports base64 file attachments, requires no server deployment, and the free tier is sufficient for a low-volume support form. The trade-off is that the public key is exposed in the bundle, but EmailJS public keys are intended to be client-visible (rate limiting and domain allowlisting are the security controls on the EmailJS side).
+The contact form needs to send emails from the browser without a backend. EmailJS is a client-side email SDK that works with any SMTP provider via a configured service/template. It requires no server deployment and the free tier is sufficient for a low-volume support form. The trade-off is that the public key is exposed in the bundle, but EmailJS public keys are intended to be client-visible (rate limiting and domain allowlisting are the security controls on the EmailJS side). File attachments were considered but dropped — Firebase Storage (needed to host uploaded files) requires the Blaze plan.
 
 **Why no state management library (Redux/Zustand)?**
 Three contexts (auth, game, settings) cover all shared state. The game context uses a reducer pattern where needed. A third-party library would add overhead without benefit at this scale.
