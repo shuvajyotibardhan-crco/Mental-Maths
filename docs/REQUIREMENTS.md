@@ -153,10 +153,11 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 6. Negative answers must be supported (minus key).
 7. Correct answers shall show green feedback for 500ms then advance to next question.
 8. Wrong answers shall show orange feedback including the correct answer for 1500ms.
-9. Score and current streak shall update in real time.
-10. Streak indicator shall only appear when streak ≥ 3.
-11. An "End Game" button must be available to finish early.
-12. On timer expiry (timed mode) or last question (fixed mode), game shall end automatically.
+9. A sound effect shall play when the player answers incorrectly (if sound is enabled).
+10. Score and current streak shall update in real time.
+11. Streak indicator shall only appear when streak ≥ 3.
+12. An "End Game" button must be available to finish early.
+13. On timer expiry (timed mode) or last question (fixed mode), game shall end automatically.
 
 **Test Plan:**
 
@@ -164,7 +165,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 |------|----------------|
 | Start timed game | 2:00 countdown begins, progress bar full |
 | Answer correctly | Green feedback, score increases, streak increments |
-| Answer incorrectly | Orange feedback with correct answer, streak resets |
+| Answer incorrectly | Orange feedback with correct answer, streak resets; wrong-answer sound plays |
 | Timer reaches 0 | Game ends, Results screen shown |
 | Answer 20th question in fixed mode | Game ends, Results screen shown |
 | Press End Game early | Game ends, Results screen shown with questions answered so far |
@@ -187,6 +188,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 7. Session shall be automatically saved to Firestore.
 8. "Play Again" shall start a new game with the same config.
 9. "Home" shall return to the Home screen.
+10. A sound effect shall play when results are shown (if sound is enabled): global best → grand fanfare; personal best → fanfare; otherwise → completion chime. Only one sound plays per session.
 
 **Test Plan:**
 
@@ -194,7 +196,8 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 |------|----------------|
 | Complete game with > 80% accuracy | 3-star rating shown |
 | Beat personal best | "🏆 Personal Best!" banner displayed |
-| Beat global best | "🌍 Global #1!" banner displayed |
+| Beat personal best | "🏆 Personal Best!" banner displayed; fanfare sound plays |
+| Beat global best | "🌍 Global #1!" banner displayed; grand fanfare sound plays |
 | Scroll question list | All answered questions visible with correct/wrong colour |
 | Tap Play Again | New game starts with same settings |
 | Tap Home | Home screen shown |
@@ -260,12 +263,17 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 1. Settings screen shall have a sound effects toggle.
 2. Sound preference shall persist across sessions (localStorage).
 3. App version number shall be shown on the Settings screen.
+4. When sound is enabled, four distinct sounds shall play: wrong answer (descending buzz), quiz completion (ascending chime), personal best (4-note fanfare), global best (5-note grand fanfare).
 
 **Test Plan:**
 
 | Step | Expected Result |
 |------|----------------|
-| Toggle sound off, play a game | No sound effects during gameplay |
+| Toggle sound off, play a game | No sound effects during gameplay or on results screen |
+| Toggle sound on, answer incorrectly | Descending buzz plays |
+| Toggle sound on, complete a game (no high score) | Ascending chime plays on results screen |
+| Toggle sound on, beat personal best | 4-note fanfare plays on results screen |
+| Toggle sound on, beat global best | 5-note grand fanfare plays on results screen |
 | Reload app | Sound preference retained |
 | Open Settings | Version number visible |
 
@@ -324,7 +332,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 7. Email content shall include the description, contact email, display name, and username.
 8. On successful send, a confirmation screen shall be shown.
 9. On failure, a clear error message shall be displayed with the admin email as fallback.
-10. Password reset emails shall be sent from `app_admin@divel.me` (configured via Firebase Console email templates; pending domain verification).
+10. Password reset emails shall be sent from `app_admin@divel.me` (configured via Firebase Console → Authentication → Email Templates; `divel.me` domain verified).
 
 **Test Plan:**
 

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useGame } from '../../context/GameContext'
 import { useTimer } from '../../hooks/useTimer'
+import { useSound } from '../../hooks/useSound'
 import { QuestionCard } from '../game/QuestionCard'
 import { NumberPad } from '../game/NumberPad'
 import { Timer } from '../game/Timer'
@@ -12,6 +13,7 @@ interface GameScreenProps {
 
 export function GameScreen({ onNavigate }: GameScreenProps) {
   const { state, submitAnswer, finishGame } = useGame()
+  const { play } = useSound()
   const [inputValue, setInputValue] = useState('')
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -76,6 +78,7 @@ export function GameScreen({ onNavigate }: GameScreenProps) {
 
     const isCorrect = answer === state.currentQuestion.correctAnswer
     setFeedback(isCorrect ? 'correct' : 'wrong')
+    if (!isCorrect) play('wrong')
 
     // Clear any existing timeout
     if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current)

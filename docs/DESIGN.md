@@ -67,7 +67,7 @@ All Firebase Authentication logic. Uses a **synthetic email system**: since Fire
 All Firestore read/write operations grouped by domain: user profiles, username lookup (for uniqueness + password reset routing), game sessions, and high scores. The `usernameLookup` collection stores the recovery email alongside the username and is publicly readable to support the "forgot password" flow (unauthenticated lookup).
 
 ### `src/context/AuthContext.tsx`
-Subscribes to `onAuthStateChanged` and fetches the Firestore `UserProfile` when a user is signed in. Exposes `user`, `profile`, `loading`, and `setProfile` (for in-place profile updates without a Firestore re-fetch).
+Subscribes to `onAuthStateChanged` and fetches the Firestore `UserProfile` when a user is signed in. Exposes `user`, `profile`, `loading`, and `setProfile` (for in-place profile updates without a Firestore re-fetch). `setLoading(true)` is called at the top of the callback — before the async profile fetch — so the loading spinner is shown during re-login, preventing a flash of ProfileSetupScreen for existing users.
 
 ### `src/context/GameContext.tsx`
 Reducer-based state machine for a game session. States: `idle → playing → finished`. Handles question generation (calls engine), answer submission, scoring, streak tracking, and response timing. Provides `startGame`, `submitAnswer`, `skipQuestion`, `finishGame`, `resetGame` actions.
@@ -89,6 +89,9 @@ Pure functions. `calculateQuestionScore` applies base points (10/20/30 by diffic
 
 ### `src/engine/gameCode.ts`
 Generates 7-character alphanumeric game codes for multiplayer challenges. Uses a restricted alphabet (excludes ambiguous characters like 0/O, 1/I/L).
+
+### `src/hooks/useSound.ts`
+Provides a `play(sound: SoundType)` function that synthesises audio using the Web Audio API — no audio files required. Four named sounds: `wrong` (descending square-wave buzz), `complete` (ascending sine chime), `personalBest` (4-note triangle fanfare), `globalBest` (5-note grand fanfare). All sounds are no-ops when `soundEnabled` is false in SettingsContext. Each call creates and immediately closes its own `AudioContext` to avoid browser auto-suspension.
 
 ### `src/hooks/useChallengeListener.ts`
 Wraps Firestore `onSnapshot` for a challenge document. Returns the live `Challenge` state and a loading flag. Used by lobby, game, and results screens.
@@ -136,6 +139,9 @@ For a kids' math app with 2–8 players, all data (config, 20–60 questions, pl
 **Why EmailJS for the contact form?**
 The contact form needs to send emails from the browser without a backend. EmailJS is a client-side email SDK that works with any SMTP provider via a configured service/template. It requires no server deployment and the free tier is sufficient for a low-volume support form. The trade-off is that the public key is exposed in the bundle, but EmailJS public keys are intended to be client-visible (rate limiting and domain allowlisting are the security controls on the EmailJS side). File attachments were considered but dropped — Firebase Storage (needed to host uploaded files) requires the Blaze plan.
 
+**Why Web Audio API for sounds instead of audio files?**
+Audio files require hosting, fetching, and cache management, and add to the bundle. The Web Audio API can synthesise simple tones (oscillators + gain envelopes) entirely in JavaScript with no assets. For a kids' math app needing four short sound cues, this is simpler, faster, and dependency-free. The trade-off is that sounds are synthetic rather than recorded, but this is appropriate for the use case.
+
 **Why no state management library (Redux/Zustand)?**
 Three contexts (auth, game, settings) cover all shared state. The game context uses a reducer pattern where needed. A third-party library would add overhead without benefit at this scale.
 
@@ -180,7 +186,7 @@ GitHub repo: https://github.com/shuvajyotibardhan-crco/Mental-Maths
 | Child Google accounts | Firebase password reset emails are blocked by Google Family Link. Recovery email must be an adult Gmail account. A Cloud Function–based solution is deferred to the native app. |
 | Password reset requires recovery email | Users who did not set a recovery email cannot self-serve reset. They must contact the app admin. |
 | `verifyBeforeUpdateEmail` delay | When a recovery email is updated via Profile, it is not active until the user clicks the verification link in their inbox. |
-| Single bundle | The JS bundle is ~595 KB (177 KB gzipped). Code splitting is not implemented; acceptable for current scale. |
+| Single bundle | The JS bundle is ~630 KB (186 KB gzipped). Code splitting is not implemented; acceptable for current scale. |
 | No offline support | Firestore offline persistence is not enabled. App requires an active internet connection. |
 | Sessions capped at 6 months | Older sessions are auto-purged on startup. Long-term historical analysis is not supported. |
 | Global high scores unverified | High scores are written from the client. There is no server-side validation against cheating. |

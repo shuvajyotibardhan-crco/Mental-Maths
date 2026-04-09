@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useGame } from '../../context/GameContext'
+import { useSound } from '../../hooks/useSound'
 import { saveSession, checkAndUpdateHighScore, checkAndUpdateGlobalHighScore, getHighScores, getGlobalHighScore } from '../../firebase/firestore'
 import { OPERATION_LABELS } from '../../constants/gradeConfig'
 import type { SessionRecord, HighScoreKey } from '../../types'
@@ -12,6 +13,7 @@ interface ResultsScreenProps {
 export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
   const { profile } = useAuth()
   const { state, resetGame } = useGame()
+  const { play } = useSound()
   const [isNewPersonalBest, setIsNewPersonalBest] = useState(false)
   const [isNewGlobalBest, setIsNewGlobalBest] = useState(false)
   const [, setHadPreviousScore] = useState(false)
@@ -88,6 +90,14 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
 
     save().catch(console.error)
   }, [profile, state, saved, total, correct, accuracy, answered])
+
+  // Play sound once results are ready
+  useEffect(() => {
+    if (!saved) return
+    if (isNewGlobalBest) play('globalBest')
+    else if (isNewPersonalBest) play('personalBest')
+    else play('complete')
+  }, [saved]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handlePlayAgain() {
     resetGame()

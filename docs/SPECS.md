@@ -409,6 +409,7 @@ Mental Maths/
     │
     ├── hooks/
     │   ├── useTimer.ts              # countdown/elapsed timer with onComplete
+    │   ├── useSound.ts              # Web Audio API sound synthesis (wrong/complete/personalBest/globalBest)
     │   ├── useChallengeListener.ts  # onSnapshot wrapper for challenge doc
     │   └── useChallengeGame.ts      # Multiplayer game logic (pre-gen questions + Firestore sync)
     │
@@ -464,6 +465,7 @@ Mental Maths/
 | `dvh` units | Chrome 108+, Firefox 110+, Safari 15.4+ |
 | Firebase SDK v12 | Same as ES Module support |
 | localStorage | All modern browsers |
+| Web Audio API | Chrome 35+, Firefox 25+, Safari 14.1+ |
 
 Target: evergreen browsers (Chrome, Firefox, Safari, Edge — current versions).
 
@@ -478,6 +480,21 @@ Target: evergreen browsers (Chrome, Firefox, Safari, Edge — current versions).
 - The `scripts/reset.mjs` admin utility requires a `serviceAccount.json` (git-ignored); it must never be committed.
 - Global high scores are written from the client without server-side validation — cheating is possible. Accepted trade-off for a private family app at this stage.
 - `NODE_TLS_REJECT_UNAUTHORIZED=0` is set only in the dev-only reset script; it is never set in the app itself.
+
+---
+
+## Sound Effects
+
+Sounds are synthesised via the Web Audio API in `src/hooks/useSound.ts`. No audio files are used. All sounds are no-ops when `soundEnabled` is false.
+
+| Sound | Trigger | Tones | Wave | Notes |
+|-------|---------|-------|------|-------|
+| `wrong` | Wrong answer in GameScreen | 280 Hz → 180 Hz | square | Descending buzz, ~360 ms total |
+| `complete` | Results shown, no high score | C5 → E5 → G5 | sine | Ascending chime, ~540 ms total |
+| `personalBest` | New personal best on Results | C5 → E5 → G5 → C6 | triangle | 4-note fanfare, ~780 ms total |
+| `globalBest` | New global best on Results | C5 → E5 → G5 → C6 → E6 | triangle | 5-note grand fanfare, ~980 ms total |
+
+Priority: if `isNewGlobalBest`, play `globalBest`; else if `isNewPersonalBest`, play `personalBest`; else play `complete`. Only one sound plays per results screen.
 
 ---
 
@@ -504,7 +521,7 @@ The template must define these variables and set "To Email" to `app_admin@divel.
 | `{{username}}` | User's app username |
 
 ### Password Reset Email Sender
-To send password reset emails from `app_admin@divel.me`:
+Password reset emails are sent from `app_admin@divel.me`. Configuration:
 1. Firebase Console → Authentication → Email Templates → Password reset → Edit
-2. Set "From" email to `app_admin@divel.me`
-3. Firebase must verify the domain or use custom SMTP (Firebase Blaze plan + Email Trigger extension)
+2. "From" set to `app_admin` with custom domain `@divel.me`
+3. Custom domain `divel.me` is verified — active in production.
