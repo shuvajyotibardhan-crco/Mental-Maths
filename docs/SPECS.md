@@ -553,7 +553,15 @@ The template must define these variables and set "To Email" to `app_admin@divel.
 | `{{username}}` | User's app username |
 
 ### Password Reset Email Sender
-Password reset emails are sent from `app_admin@divel.me`. Configuration:
+Self-service password reset emails (triggered by users from the login screen) are sent from `app_admin@divel.me`. Configuration:
 1. Firebase Console → Authentication → Email Templates → Password reset → Edit
 2. "From" set to `app_admin` with custom domain `@divel.me`
 3. Custom domain `divel.me` is verified — active in production.
+
+### Admin Password Reset (Cloud Function)
+Admin-initiated password resets bypass email entirely. The admin sets a temporary password directly via the `adminSetPassword` Cloud Function:
+- **Function:** `functions/index.js` → `adminSetPassword` (Firebase Functions v2, `onCall`)
+- **Auth check:** Caller's UID must exist in `admins/{uid}` Firestore collection
+- **Operation:** `getAuth().updateUser(targetUid, { password: newPassword })`
+- **Validation:** password ≥ 6 characters, `targetUid` must be a non-empty string
+- **Deployed to:** Firebase Functions, project `mental-maths-fabc3`

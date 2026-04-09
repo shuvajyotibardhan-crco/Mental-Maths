@@ -1,0 +1,13 @@
+{
+  "name": "mental-maths-functions",
+  "description": "Cloud Functions for Mental Maths",
+  "main": "index.js",
+  "engines": {
+    "node": "22"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^6.0.0"
+  },
+  "private": true
+}

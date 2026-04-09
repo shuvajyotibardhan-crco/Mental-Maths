@@ -358,7 +358,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 1. Admin access shall be controlled by the `admins/{uid}` Firestore collection — only UIDs present in this collection can access the panel.
 2. A 🛡️ Admin tab shall appear in the bottom navigation only for admin users.
 3. The admin panel shall support three actions: Reset Password, Merge Users, and Move Scores.
-4. **Reset Password**: Admin shall be able to trigger a Firebase password reset email to the recovery address on file for any user. If no recovery email is on file, a clear error shall be shown.
+4. **Reset Password**: Admin shall be able to directly set a new temporary password for any user via a Cloud Function (Firebase Admin SDK). The admin enters and confirms a new password (min 6 characters); the user can then log in and change it. No recovery email is required for this action.
 5. **Merge Users**: Admin shall be able to merge User A into User B. Best scores from both accounts shall be kept under User B. All of User A's sessions shall be transferred to User B. User A's profile shall be marked as merged.
 6. **Move Scores**: Admin shall be able to move all sessions and high scores from User A to User B. Better scores are retained. User A's high scores are cleared after transfer. User A's account is left intact.
 7. Every admin action must include a mandatory notes/reason field before confirmation.
@@ -375,8 +375,8 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Search for non-existent username | Error message shown |
 | Search for valid username | User card displayed with action buttons |
 | Click Reset Password without notes | Confirm button disabled |
-| Click Reset Password with notes, user has recovery email | Reset email sent; success message; audit entry logged |
-| Click Reset Password, user has no recovery email | Error message shown; failed audit entry logged |
+| Click Reset Password, enter matching passwords ≥6 chars, add notes | Password set via Cloud Function; success message; audit entry logged |
+| Click Reset Password with mismatched passwords | "Passwords do not match" error shown; confirm button disabled |
 | Click Merge, select same user as User B | Error: cannot select same user twice |
 | Complete Merge with notes | Sessions transferred, best scores merged; success message; audit entry logged |
 | Complete Move Scores with notes | Sessions transferred, scores moved, User A scores cleared; audit entry logged |

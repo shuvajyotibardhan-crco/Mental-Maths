@@ -1,5 +1,5 @@
 {
-"hosting": {
+  "hosting": {
     "public": "dist",
     "ignore": [
       "firebase.json",
@@ -12,5 +12,8 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "functions": {
+    "source": "functions"
   }
 }

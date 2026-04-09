@@ -38,6 +38,8 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
 
   // Action form
   const [notes, setNotes] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [executing, setExecuting] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
@@ -99,6 +101,8 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
     setSearchB('')
     setErrorB('')
     setNotes('')
+    setNewPassword('')
+    setConfirmPassword('')
     setResult(null)
   }
 
@@ -112,8 +116,8 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
 
     try {
       if (action === 'reset_password') {
-        await adminResetPassword(userA, profile, notes.trim())
-        setResult({ ok: true, msg: `Password reset email sent for @${userA.username}.` })
+        await adminResetPassword(userA, profile, newPassword, notes.trim())
+        setResult({ ok: true, msg: `Password updated for @${userA.username}. User can now log in with the new password.` })
       } else if (action === 'merge' && userB) {
         const details = await adminMergeUsers(userA, userB, profile, notes.trim())
         setResult({ ok: true, msg: details })
@@ -123,6 +127,8 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
       }
 
       setNotes('')
+      setNewPassword('')
+      setConfirmPassword('')
     } catch (err) {
       setResult({ ok: false, msg: err instanceof Error ? err.message : 'Operation failed.' })
     } finally {
@@ -131,10 +137,14 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
   }
 
   const needsSecondUser = action === 'merge' || action === 'move'
+  const passwordValid =
+    action !== 'reset_password' ||
+    (newPassword.length >= 6 && newPassword === confirmPassword)
   const canConfirm =
     !executing &&
     notes.trim().length > 0 &&
-    (!needsSecondUser || !!userB)
+    (!needsSecondUser || !!userB) &&
+    passwordValid
 
   return (
     <div className="p-4 pb-10 max-w-lg mx-auto">
@@ -268,6 +278,39 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                   </div>
                   {errorB && <p className="text-red-500 text-sm">{errorB}</p>}
                   {userB && <UserCard user={userB} label="User B" />}
+                </div>
+              )}
+
+              {/* New password (reset only) */}
+              {action === 'reset_password' && (
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">
+                      New Password <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Min 6 characters"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-sm font-medium text-gray-600">
+                      Confirm Password <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repeat password"
+                      className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                    />
+                    {confirmPassword && newPassword !== confirmPassword && (
+                      <p className="text-red-500 text-xs">Passwords do not match.</p>
+                    )}
+                  </div>
                 </div>
               )}
 

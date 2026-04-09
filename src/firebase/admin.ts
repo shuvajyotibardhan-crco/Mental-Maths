@@ -15,9 +15,8 @@ import {
   Timestamp,
 } from 'firebase/firestore'
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
-import { sendPasswordResetEmail } from 'firebase/auth'
-import { db, storage, auth } from './config'
-import { getRecoveryEmailByUsername } from './firestore'
+import { httpsCallable } from 'firebase/functions'
+import { db, storage, functions } from './config'
 import type { UserProfile } from '../types/user'
 import type { HighScoreEntry } from '../types/session'
 import type { AuditEntry } from '../types/admin'
@@ -83,13 +82,14 @@ export async function getAuditLog(limitCount = 50): Promise<AuditEntry[]> {
 }
 
 // ---- Password Reset ----
+// Sets the user's password directly via Cloud Function (adminSetPassword).
+// Admin provides a new temporary password; user can change it after login.
 
 export async function adminResetPassword(
   targetUser: UserProfile,
   adminProfile: UserProfile,
+  newPassword: string,
   notes: string,
-  fileUrl?: string,
-  fileName?: string,
 ): Promise<void> {
   const baseEntry = {
     timestamp: Date.now(),
@@ -98,21 +98,15 @@ export async function adminResetPassword(
     action: 'password_reset' as const,
     affectedUsers: [{ uid: targetUser.uid, username: targetUser.username }],
     notes,
-    ...(fileUrl ? { supportingFileUrl: fileUrl, supportingFileName: fileName } : {}),
   }
 
   try {
-    const recoveryEmail = await getRecoveryEmailByUsername(targetUser.username)
-    if (!recoveryEmail) {
-      throw new Error(
-        `No recovery email on file for @${targetUser.username}. Reset must be done via Firebase Console.`,
-      )
-    }
-    await sendPasswordResetEmail(auth, recoveryEmail)
+    const setPassword = httpsCallable(functions, 'adminSetPassword')
+    await setPassword({ targetUid: targetUser.uid, newPassword })
     await saveAuditEntry({
       ...baseEntry,
       outcome: 'success',
-      details: `Password reset email sent to recovery address on file for @${targetUser.username}.`,
+      details: `Password set directly for @${targetUser.username} by admin.`,
     })
   } catch (err) {
     await saveAuditEntry({
