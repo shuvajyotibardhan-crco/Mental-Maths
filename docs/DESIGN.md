@@ -100,7 +100,7 @@ Wraps Firestore `onSnapshot` for a challenge document. Returns the live `Challen
 Game logic hook for multiplayer. Steps through pre-generated questions from the challenge document, tracks score/streak locally, and writes progress to Firestore after each answer. Mirrors the solo GameContext reducer pattern but decoupled from it.
 
 ### `src/components/layout/AppShell.tsx`
-Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows.
+Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows. On profile load, calls `checkIsAdmin` and stores the result in `userIsAdmin` state — passed to `BottomNav` (to show/hide the admin tab) and used to guard the `admin` screen route.
 
 ### `src/firebase/admin.ts`
 All admin-specific Firestore operations. Functions: `checkIsAdmin` (reads `admins/{uid}`), `getUserByUsername` (query by username field), `uploadSupportingFile` (Firebase Storage), `getAuditLog` (ordered query), `adminResetPassword`, `adminMergeUsers`, `adminMoveScores`. Every operation writes an `auditLog` entry regardless of outcome. Batch writes (400 ops/batch) handle large session transfers safely.
