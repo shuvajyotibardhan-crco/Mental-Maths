@@ -183,7 +183,7 @@ GitHub repo: https://github.com/shuvajyotibardhan-crco/Mental-Maths
 
 | Constraint | Detail |
 |-----------|--------|
-| Child Google accounts | Firebase password reset emails are blocked by Google Family Link. Recovery email must be an adult Gmail account. A Cloud Function–based solution is deferred to the native app. |
+| Password reset sender | Emails are sent from `app_admin@divel.me` (custom domain verified in Firebase). |
 | Password reset requires recovery email | Users who did not set a recovery email cannot self-serve reset. They must contact the app admin. |
 | `verifyBeforeUpdateEmail` delay | When a recovery email is updated via Profile, it is not active until the user clicks the verification link in their inbox. |
 | Single bundle | The JS bundle is ~630 KB (186 KB gzipped). Code splitting is not implemented; acceptable for current scale. |

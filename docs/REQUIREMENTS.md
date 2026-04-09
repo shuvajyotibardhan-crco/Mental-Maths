@@ -17,7 +17,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 
 ### Out of Scope
 - Native iOS/Android app (future)
-- Email-based reset for child Google accounts via Cloud Functions (future)
+- Email-based reset via Cloud Functions (future)
 - Teacher/parent dashboard
 - In-app purchase or subscriptions
 
@@ -33,7 +33,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 3. Password must be at least 6 characters.
 4. Confirm password field must match password.
 5. Recovery email is optional; if provided, it must be a valid email format.
-6. Hint text shall warn that recovery email must be an adult account and must not be used by another account in the app.
+6. Hint text shall warn that recovery email must not be used by another account in the app.
 7. On success, user shall be redirected to Profile Setup.
 8. On error, a clear inline message shall be shown.
 
@@ -80,7 +80,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 1. "Forgot Password?" link must be visible on the Login screen.
 2. User shall enter their username (not email) to request a reset.
 3. System shall look up the recovery email from Firestore.
-4. If no recovery email is on file, a clear message shall explain this and suggest asking a parent if it is a child account.
+4. If no recovery email is on file, a clear message shall explain this and advise the user to contact the app admin.
 5. If a recovery email exists, a Firebase password reset link shall be sent to it.
 6. The displayed email must be masked (e.g. `****han@gmail.com`).
 7. Success and error states must both be shown clearly.

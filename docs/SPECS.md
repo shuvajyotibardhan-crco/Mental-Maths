@@ -22,7 +22,7 @@ Publicly readable (no auth required) to support unauthenticated password reset.
 
 ```typescript
 {
-  recoveryEmail?: string   // optional adult email for password reset
+  recoveryEmail?: string   // optional email for password reset
 }
 ```
 

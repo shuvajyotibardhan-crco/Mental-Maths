@@ -46,7 +46,7 @@ A mental maths practice app for kids/students. Vite + React + **TypeScript** + T
 ## Key rules / decisions
 - **TypeScript** throughout — unlike Bingo which is plain JSX
 - Auth is real Firebase Auth (email/password) — username/password login, in-app change password
-- Password reset uses parent email
+- Password reset uses recovery email (optional, set by user in Profile); reset email sent from `app_admin@divel.me`
 - Game has two modes: **timed** (countdown) and **fixed** (set number of questions)
 - Timer logic is isolated in `useTimer.ts`
 - `App.tsx` is minimal — just wraps providers; routing/screen logic is in `AppShell.tsx`
