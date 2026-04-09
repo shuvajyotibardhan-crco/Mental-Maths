@@ -303,10 +303,10 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                       <button
                         type="button"
                         onClick={() => setShowNewPassword((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
                         tabIndex={-1}
                       >
-                        {showNewPassword ? '🙈' : '👁️'}
+                        {showNewPassword ? 'Hide' : 'Show'}
                       </button>
                     </div>
                   </div>
@@ -325,10 +325,10 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword((v) => !v)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400 hover:text-gray-600 cursor-pointer"
                         tabIndex={-1}
                       >
-                        {showConfirmPassword ? '🙈' : '👁️'}
+                        {showConfirmPassword ? 'Hide' : 'Show'}
                       </button>
                     </div>
                     {confirmPassword && newPassword !== confirmPassword && (
