@@ -6,7 +6,6 @@ import {
   adminMergeUsers,
   adminMoveScores,
   getAuditLog,
-  uploadSupportingFile,
 } from '../../firebase/admin'
 import type { UserProfile } from '../../types'
 import type { AuditEntry } from '../../types/admin'
@@ -39,7 +38,6 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
 
   // Action form
   const [notes, setNotes] = useState('')
-  const [file, setFile] = useState<File | null>(null)
   const [executing, setExecuting] = useState(false)
   const [result, setResult] = useState<{ ok: boolean; msg: string } | null>(null)
 
@@ -101,7 +99,6 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
     setSearchB('')
     setErrorB('')
     setNotes('')
-    setFile(null)
     setResult(null)
   }
 
@@ -114,29 +111,18 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
     setResult(null)
 
     try {
-      let fileUrl: string | undefined
-      let fileName: string | undefined
-
-      if (file) {
-        const tempId = `${Date.now()}_${Math.random().toString(36).slice(2)}`
-        const uploaded = await uploadSupportingFile(file, tempId)
-        fileUrl = uploaded.url
-        fileName = uploaded.name
-      }
-
       if (action === 'reset_password') {
-        await adminResetPassword(userA, profile, notes.trim(), fileUrl, fileName)
+        await adminResetPassword(userA, profile, notes.trim())
         setResult({ ok: true, msg: `Password reset email sent for @${userA.username}.` })
       } else if (action === 'merge' && userB) {
-        const details = await adminMergeUsers(userA, userB, profile, notes.trim(), fileUrl, fileName)
+        const details = await adminMergeUsers(userA, userB, profile, notes.trim())
         setResult({ ok: true, msg: details })
       } else if (action === 'move' && userB) {
-        const details = await adminMoveScores(userA, userB, profile, notes.trim(), fileUrl, fileName)
+        const details = await adminMoveScores(userA, userB, profile, notes.trim())
         setResult({ ok: true, msg: details })
       }
 
       setNotes('')
-      setFile(null)
     } catch (err) {
       setResult({ ok: false, msg: err instanceof Error ? err.message : 'Operation failed.' })
     } finally {
@@ -297,24 +283,6 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                   placeholder="Describe the reason for this action…"
                   className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
                 />
-              </div>
-
-              {/* Supporting file upload */}
-              <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-600">
-                  Supporting Document <span className="text-gray-400">(optional — email, screenshot, PDF)</span>
-                </label>
-                <input
-                  type="file"
-                  accept="image/*,.pdf,.eml,.msg,.txt"
-                  onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-                  className="w-full text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-sm file:bg-primary/10 file:text-primary-dark file:cursor-pointer cursor-pointer"
-                />
-                {file && (
-                  <p className="text-xs text-gray-400">
-                    {file.name} ({(file.size / 1024).toFixed(0)} KB)
-                  </p>
-                )}
               </div>
 
               {/* Confirm */}

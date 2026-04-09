@@ -362,9 +362,9 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 5. **Merge Users**: Admin shall be able to merge User A into User B. Best scores from both accounts shall be kept under User B. All of User A's sessions shall be transferred to User B. User A's profile shall be marked as merged.
 6. **Move Scores**: Admin shall be able to move all sessions and high scores from User A to User B. Better scores are retained. User A's high scores are cleared after transfer. User A's account is left intact.
 7. Every admin action must include a mandatory notes/reason field before confirmation.
-8. Every admin action shall allow an optional supporting document upload (image, PDF, email file) stored in Firebase Storage.
-9. Every action — successful or failed — shall be recorded in a Firestore `auditLog` collection with: timestamp, admin UID/username, action type, affected user UIDs/usernames, notes, outcome, details, and optional file URL.
-10. The Audit Log tab shall display the 50 most recent entries, newest first, with outcome badge, action type, affected users, admin, details, notes, and supporting file link.
+8. Supporting document upload per action is deferred (requires Firebase Storage / Blaze plan).
+9. Every action — successful or failed — shall be recorded in a Firestore `auditLog` collection with: timestamp, admin UID/username, action type, affected user UIDs/usernames, notes, outcome, and details.
+10. The Audit Log tab shall display the 50 most recent entries, newest first, with outcome badge, action type, affected users, admin, details, and notes.
 
 **Test Plan:**
 
