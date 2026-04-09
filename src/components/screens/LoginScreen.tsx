@@ -50,7 +50,7 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
     try {
       const recoveryEmail = await getRecoveryEmailByUsername(resetUsername.trim())
       if (!recoveryEmail) {
-        setResetError('No recovery email found for this username. If this is a child\'s account, ask a parent to reset the password from inside the app.')
+        setResetError('No recovery email found for this username. Please contact the app admin for help.')
         return
       }
       await resetPasswordByUsername(recoveryEmail)

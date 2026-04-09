@@ -292,7 +292,7 @@ export function ProfileScreen() {
             placeholder="your@email.com"
             autoComplete="email"
           />
-          <p className="text-xs text-gray-400">Used only to reset your password if you forget it. Must be an adult email account — do not use a child's Google account or an email already linked to another account in this app.</p>
+          <p className="text-xs text-gray-400">Used only to reset your password if you forget it. Must not be an email already linked to another account in this app.</p>
 
           {recoveryError && (
             <p className="text-wrong text-sm text-center bg-orange-50 rounded-xl p-2">{recoveryError}</p>
