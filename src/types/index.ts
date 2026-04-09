@@ -21,3 +21,5 @@ export type {
   ChallengeConfig,
   ChallengeStatus,
 } from './challenge'
+
+export type { AuditEntry, AdminActionType } from './admin'

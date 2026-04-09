@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { purgeOldSessions } from '../../firebase/firestore'
+import { checkIsAdmin } from '../../firebase/admin'
 import { GameProvider } from '../../context/GameContext'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
@@ -20,11 +21,13 @@ import { ChallengeLobbyScreen } from '../screens/ChallengeLobbyScreen'
 import { ChallengeGameScreen } from '../screens/ChallengeGameScreen'
 import { ChallengeResultsScreen } from '../screens/ChallengeResultsScreen'
 import { ContactScreen } from '../screens/ContactScreen'
+import { AdminScreen } from '../screens/AdminScreen'
 
 export function AppShell() {
   const { user, profile, loading } = useAuth()
   const [screen, setScreen] = useState('home')
   const [challengeCode, setChallengeCode] = useState<string | null>(null)
+  const [userIsAdmin, setUserIsAdmin] = useState(false)
   const purgedRef = useRef(false)
 
   // Purge sessions older than 6 months on startup
@@ -32,6 +35,7 @@ export function AppShell() {
     if (!profile || purgedRef.current) return
     purgedRef.current = true
     purgeOldSessions(profile.uid).catch((err) => console.warn('Purge skipped:', err))
+    checkIsAdmin(profile.uid).then(setUserIsAdmin).catch(() => setUserIsAdmin(false))
   }, [profile])
 
   // Reset screen to home when user logs in (screen might be stuck on 'register' or 'login')
@@ -79,6 +83,7 @@ export function AppShell() {
     <GameProvider>
       <div className="h-dvh flex flex-col">
         {!isGameScreen && <Header onNavigate={setScreen} />}
+
         <main className="flex-1 overflow-y-auto">
           {screen === 'home' && <HomeScreen onNavigate={setScreen} />}
           {screen === 'setup' && <GameSetupScreen onNavigate={setScreen} />}
@@ -103,8 +108,11 @@ export function AppShell() {
           {screen === 'challenge-results' && challengeCode && (
             <ChallengeResultsScreen gameCode={challengeCode} onNavigate={setScreen} />
           )}
+          {screen === 'admin' && userIsAdmin && <AdminScreen onNavigate={setScreen} />}
         </main>
-        {!isGameScreen && <BottomNav currentScreen={screen} onNavigate={setScreen} />}
+        {!isGameScreen && (
+          <BottomNav currentScreen={screen} onNavigate={setScreen} isAdmin={userIsAdmin} />
+        )}
       </div>
     </GameProvider>
   )

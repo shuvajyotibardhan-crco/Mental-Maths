@@ -346,3 +346,40 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Enter invalid email format | Validation error shown |
 | Submit valid form | Success screen shown; email delivered to admin |
 | Tap "Back to Settings" on success screen | Returns to Settings |
+
+---
+
+## Feature: Admin Panel
+
+**User story:** As the app administrator, I want a protected admin panel so that I can manage user accounts, correct data errors, and maintain a full audit trail of all administrative actions.
+
+**Acceptance Criteria:**
+
+1. Admin access shall be controlled by the `admins/{uid}` Firestore collection — only UIDs present in this collection can access the panel.
+2. A 🛡️ Admin tab shall appear in the bottom navigation only for admin users.
+3. The admin panel shall support three actions: Reset Password, Merge Users, and Move Scores.
+4. **Reset Password**: Admin shall be able to trigger a Firebase password reset email to the recovery address on file for any user. If no recovery email is on file, a clear error shall be shown.
+5. **Merge Users**: Admin shall be able to merge User A into User B. Best scores from both accounts shall be kept under User B. All of User A's sessions shall be transferred to User B. User A's profile shall be marked as merged.
+6. **Move Scores**: Admin shall be able to move all sessions and high scores from User A to User B. Better scores are retained. User A's high scores are cleared after transfer. User A's account is left intact.
+7. Every admin action must include a mandatory notes/reason field before confirmation.
+8. Every admin action shall allow an optional supporting document upload (image, PDF, email file) stored in Firebase Storage.
+9. Every action — successful or failed — shall be recorded in a Firestore `auditLog` collection with: timestamp, admin UID/username, action type, affected user UIDs/usernames, notes, outcome, details, and optional file URL.
+10. The Audit Log tab shall display the 50 most recent entries, newest first, with outcome badge, action type, affected users, admin, details, notes, and supporting file link.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Log in as non-admin user | No Admin tab visible in nav |
+| Log in as admin user | 🛡️ Admin tab visible in nav |
+| Search for non-existent username | Error message shown |
+| Search for valid username | User card displayed with action buttons |
+| Click Reset Password without notes | Confirm button disabled |
+| Click Reset Password with notes, user has recovery email | Reset email sent; success message; audit entry logged |
+| Click Reset Password, user has no recovery email | Error message shown; failed audit entry logged |
+| Click Merge, select same user as User B | Error: cannot select same user twice |
+| Complete Merge with notes | Sessions transferred, best scores merged; success message; audit entry logged |
+| Complete Move Scores with notes | Sessions transferred, scores moved, User A scores cleared; audit entry logged |
+| Upload supporting file on any action | File stored in Firebase Storage; link visible in audit log entry |
+| Open Audit Log tab | Last 50 entries shown, newest first |
+| Failed action | Audit entry with outcome = Failed and error detail recorded |

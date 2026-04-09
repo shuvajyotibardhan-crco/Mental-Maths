@@ -1,6 +1,7 @@
 interface BottomNavProps {
   currentScreen: string
   onNavigate: (screen: string) => void
+  isAdmin?: boolean
 }
 
 const NAV_ITEMS = [
@@ -10,10 +11,13 @@ const NAV_ITEMS = [
   { id: 'settings', label: 'Settings', icon: '⚙️' },
 ]
 
-export function BottomNav({ currentScreen, onNavigate }: BottomNavProps) {
+const ADMIN_ITEM = { id: 'admin', label: 'Admin', icon: '🛡️' }
+
+export function BottomNav({ currentScreen, onNavigate, isAdmin }: BottomNavProps) {
+  const items = isAdmin ? [...NAV_ITEMS, ADMIN_ITEM] : NAV_ITEMS
   return (
     <nav className="flex items-center justify-around bg-white/80 backdrop-blur-sm border-t border-gray-200 py-2 px-1">
-      {NAV_ITEMS.map((item) => (
+      {items.map((item) => (
         <button
           key={item.id}
           onClick={() => onNavigate(item.id)}

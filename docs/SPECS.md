@@ -131,6 +131,27 @@ interface HighScoreEntry {
 }
 ```
 
+### AuditEntry
+Stored in Firestore collection `auditLog`, document ID = Firestore auto-generated.
+
+```typescript
+type AdminActionType = 'password_reset' | 'merge_users' | 'move_scores'
+
+interface AuditEntry {
+  id: string
+  timestamp: number                               // Date.now()
+  adminUid: string                                // Firebase UID of the admin
+  adminUsername: string
+  action: AdminActionType
+  affectedUsers: Array<{ uid: string; username: string }>
+  notes: string                                   // mandatory reason entered by admin
+  supportingFileUrl?: string                      // Firebase Storage download URL
+  supportingFileName?: string
+  outcome: 'success' | 'failed'
+  details: string                                 // human-readable action summary or error message
+}
+```
+
 ### HighScoreKey
 Composite key used as Firestore document ID.
 
@@ -153,12 +174,20 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 | `highScores` | Firebase UID | Map of HighScoreKey → HighScoreEntry |
 | `globalHighScores` | HighScoreKey | HighScoreEntry |
 | `challenges` | 7-char game code | Challenge (config, questions, players map) |
+| `admins` | Firebase UID | `{}` — presence of document grants admin access |
+| `auditLog` | auto | AuditEntry fields |
 
 ### localStorage
 
 | Key | Type | Purpose |
 |-----|------|---------|
 | `mm_sound` | `'true'` \| `'false'` | Sound effects preference |
+
+### Firebase Storage
+
+| Path | Contents |
+|------|----------|
+| `audit-support/{tempId}/{filename}` | Supporting documents uploaded during admin actions (images, PDFs, email files). Requires Firebase Storage enabled (Blaze plan). |
 
 ---
 
@@ -394,13 +423,15 @@ Mental Maths/
     │   ├── question.ts           # OperationType, Difficulty, Grade, GameMode, Question, AnsweredQuestion
     │   ├── session.ts            # SessionRecord, HighScoreEntry, HighScoreKey
     │   ├── user.ts               # UserProfile
-    │   └── challenge.ts          # Challenge, ChallengePlayer, ChallengeConfig, ChallengeStatus
+    │   ├── challenge.ts          # Challenge, ChallengePlayer, ChallengeConfig, ChallengeStatus
+    │   └── admin.ts              # AuditEntry, AdminActionType
     │
     ├── firebase/
-    │   ├── config.ts             # Firebase app init; exports app, auth, db
+    │   ├── config.ts             # Firebase app init; exports app, auth, db, storage
     │   ├── auth.ts               # Auth helpers; synthetic email system
     │   ├── firestore.ts          # All Firestore CRUD (users, sessions, high scores)
-    │   └── challenge.ts          # Challenge CRUD + onSnapshot subscription
+    │   ├── challenge.ts          # Challenge CRUD + onSnapshot subscription
+    │   └── admin.ts              # Admin ops: isAdmin check, user search, reset/merge/move, audit log
     │
     ├── context/
     │   ├── AuthContext.tsx       # onAuthStateChanged → profile fetch
@@ -441,6 +472,7 @@ Mental Maths/
         │   ├── HistoryScreen.tsx       # Session list with filters
         │   ├── ProfileScreen.tsx       # Edit profile, password, recovery email
         │   ├── SettingsScreen.tsx           # Sound toggle, version
+        │   ├── AdminScreen.tsx              # Admin panel: user search, reset/merge/move, audit log
         │   ├── ChallengeCreateScreen.tsx   # Host configures and creates challenge
         │   ├── JoinChallengeScreen.tsx      # Enter 7-digit code to join
         │   ├── ChallengeLobbyScreen.tsx     # Waiting room with player list

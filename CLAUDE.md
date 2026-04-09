@@ -58,6 +58,16 @@ Login / Register → ProfileSetup (first time) → Home → GameSetup → Game �
 Home → ChallengeCreate → ChallengeLobby → ChallengeGame → ChallengeResults
 Home → JoinChallenge → ChallengeLobby → ChallengeGame → ChallengeResults
 
+## Admin Panel
+- `src/components/screens/AdminScreen.tsx` — admin UI (two tabs: Users, Audit Log)
+- `src/firebase/admin.ts` — admin Firestore ops (checkIsAdmin, getUserByUsername, uploadSupportingFile, adminResetPassword, adminMergeUsers, adminMoveScores, getAuditLog)
+- `src/types/admin.ts` — AuditEntry, AdminActionType types
+- Admin access: add UID to Firestore `admins/{uid}` collection manually via Firebase Console
+- Admin tab (🛡️) appears in BottomNav only for admin users
+- Audit trail stored in `auditLog` Firestore collection — every action (success or fail) logged
+- Supporting file uploads stored at `audit-support/{tempId}/{filename}` in Firebase Storage (requires Blaze plan)
+- Three operations: Reset Password (sends email to recovery address), Merge Users (A into B, best scores kept), Move Scores (A → B, A's scores cleared)
+
 ## Contact Form
 - `src/components/screens/ContactScreen.tsx` — contact/support form screen
 - Accessible via Settings screen → "Contact Support" button

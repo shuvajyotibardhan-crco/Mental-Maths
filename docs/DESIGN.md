@@ -102,6 +102,12 @@ Game logic hook for multiplayer. Steps through pre-generated questions from the 
 ### `src/components/layout/AppShell.tsx`
 Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows.
 
+### `src/firebase/admin.ts`
+All admin-specific Firestore operations. Functions: `checkIsAdmin` (reads `admins/{uid}`), `getUserByUsername` (query by username field), `uploadSupportingFile` (Firebase Storage), `getAuditLog` (ordered query), `adminResetPassword`, `adminMergeUsers`, `adminMoveScores`. Every operation writes an `auditLog` entry regardless of outcome. Batch writes (400 ops/batch) handle large session transfers safely.
+
+### `src/components/screens/AdminScreen.tsx`
+Admin-only panel with two tabs: **Users** (search → action → confirm) and **Audit Log** (last 50 entries). User tab has a primary search (User A), three action buttons (Reset Password / Merge / Move), and an action panel with a secondary user search (for merge/move), mandatory notes field, optional file upload, and confirm button. Each action result is shown inline. Audit Log renders `AuditCard` components with outcome badge, affected users, details, notes, and supporting file link. Only rendered in AppShell when `userIsAdmin` is true.
+
 ### `src/components/screens/ContactScreen.tsx`
 Contact support form. Collects subject, description (≤500 words with live counter), and contact email. On submission, sends all fields to EmailJS, which delivers the email to `app_admin@divel.me`. Displays a confirmation screen on success and an inline error with fallback admin email on failure. File attachments are not supported (Firebase Storage requires the Blaze plan).
 
@@ -138,6 +144,9 @@ For a kids' math app with 2–8 players, all data (config, 20–60 questions, pl
 
 **Why EmailJS for the contact form?**
 The contact form needs to send emails from the browser without a backend. EmailJS is a client-side email SDK that works with any SMTP provider via a configured service/template. It requires no server deployment and the free tier is sufficient for a low-volume support form. The trade-off is that the public key is exposed in the bundle, but EmailJS public keys are intended to be client-visible (rate limiting and domain allowlisting are the security controls on the EmailJS side). File attachments were considered but dropped — Firebase Storage (needed to host uploaded files) requires the Blaze plan.
+
+**Why Firestore `admins` collection for admin access instead of Firebase custom claims?**
+Custom claims require a Cloud Function (or Firebase Admin SDK server-side call) to set. A `admins/{uid}` Firestore collection achieves the same result with no backend: the project owner adds UIDs manually in the Firebase Console, and the app checks the collection on login. The trade-off is that a malicious user could read the collection (but not write to it) — acceptable since knowing which UIDs are admins carries no exploitable privilege.
 
 **Why Web Audio API for sounds instead of audio files?**
 Audio files require hosting, fetching, and cache management, and add to the bundle. The Web Audio API can synthesise simple tones (oscillators + gain envelopes) entirely in JavaScript with no assets. For a kids' math app needing four short sound cues, this is simpler, faster, and dependency-free. The trade-off is that sounds are synthetic rather than recorded, but this is appropriate for the use case.
@@ -184,6 +193,7 @@ GitHub repo: https://github.com/shuvajyotibardhan-crco/Mental-Maths
 | Constraint | Detail |
 |-----------|--------|
 | Password reset sender | Emails are sent from `app_admin@divel.me` (custom domain verified in Firebase). |
+| Firebase Storage (admin) | Admin file uploads require Firebase Storage (Blaze plan). `storageBucket` is already in the config; Storage must be enabled in the Firebase Console if not already. |
 | Password reset requires recovery email | Users who did not set a recovery email cannot self-serve reset. They must contact the app admin. |
 | `verifyBeforeUpdateEmail` delay | When a recovery email is updated via Profile, it is not active until the user clicks the verification link in their inbox. |
 | Single bundle | The JS bundle is ~630 KB (186 KB gzipped). Code splitting is not implemented; acceptable for current scale. |
