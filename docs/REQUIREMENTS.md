@@ -317,7 +317,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 
 ---
 
-## Feature: Contact Support Form
+## Feature 12 — Contact Support Form
 
 **User story:** As a user, I want to report a problem or send feedback to the app administrator, so that issues can be investigated and resolved.
 
@@ -349,7 +349,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 
 ---
 
-## Feature: Admin Panel
+## Feature 13 — Admin Panel
 
 **User story:** As the app administrator, I want a protected admin panel so that I can manage user accounts, correct data errors, and maintain a full audit trail of all administrative actions.
 
