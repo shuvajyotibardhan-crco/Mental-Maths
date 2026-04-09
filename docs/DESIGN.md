@@ -106,7 +106,7 @@ Single source of routing truth. Uses a `currentScreen` state variable and a `nav
 All admin-specific Firestore operations. Functions: `checkIsAdmin` (reads `admins/{uid}`), `getUserByUsername` (query by username field), `uploadSupportingFile` (Firebase Storage), `getAuditLog` (ordered query), `adminResetPassword`, `adminMergeUsers`, `adminMoveScores`. Every operation writes an `auditLog` entry regardless of outcome. Batch writes (400 ops/batch) handle large session transfers safely.
 
 ### `src/components/screens/AdminScreen.tsx`
-Admin-only panel with two tabs: **Users** (search → action → confirm) and **Audit Log** (last 50 entries). User tab has a primary search (User A), three action buttons (Reset Password / Merge / Move), and an action panel with a secondary user search (for merge/move), mandatory notes field, optional file upload, and confirm button. Each action result is shown inline. Audit Log renders `AuditCard` components with outcome badge, affected users, details, notes, and supporting file link. Only rendered in AppShell when `userIsAdmin` is true.
+Admin-only panel with two tabs: **Users** (search → action → confirm) and **Audit Log** (last 50 entries). User tab has a primary search (User A), three action buttons (Reset Password / Merge / Move), and an action panel with a secondary user search (for merge/move), mandatory notes field, and confirm button. Each action result is shown inline. Audit Log renders `AuditCard` components with outcome badge, affected users, details, and notes. Only rendered in AppShell when `userIsAdmin` is true. Supporting document upload is deferred (requires Firebase Storage / Blaze plan).
 
 ### `src/components/screens/ContactScreen.tsx`
 Contact support form. Collects subject, description (≤500 words with live counter), and contact email. On submission, sends all fields to EmailJS, which delivers the email to `app_admin@divel.me`. Displays a confirmation screen on success and an inline error with fallback admin email on failure. File attachments are not supported (Firebase Storage requires the Blaze plan).
@@ -193,7 +193,7 @@ GitHub repo: https://github.com/shuvajyotibardhan-crco/Mental-Maths
 | Constraint | Detail |
 |-----------|--------|
 | Password reset sender | Emails are sent from `app_admin@divel.me` (custom domain verified in Firebase). |
-| Firebase Storage (admin) | Admin file uploads require Firebase Storage (Blaze plan). `storageBucket` is already in the config; Storage must be enabled in the Firebase Console if not already. |
+| Firebase Storage (admin) | Supporting document upload in admin panel is deferred — requires Firebase Storage (Blaze plan). Backend function `uploadSupportingFile` is implemented but not exposed in the UI yet. |
 | Password reset requires recovery email | Users who did not set a recovery email cannot self-serve reset. They must contact the app admin. |
 | `verifyBeforeUpdateEmail` delay | When a recovery email is updated via Profile, it is not active until the user clicks the verification link in their inbox. |
 | Single bundle | The JS bundle is ~630 KB (186 KB gzipped). Code splitting is not implemented; acceptable for current scale. |
