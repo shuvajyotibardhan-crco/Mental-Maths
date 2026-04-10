@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import {
-  getUserByUsername,
+  searchUsersByPrefix,
   adminResetPassword,
   adminMergeUsers,
   adminMoveScores,
@@ -48,6 +48,7 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
   // Primary user search
   const [searchA, setSearchA] = useState('')
   const [userA, setUserA] = useState<UserProfile | null>(null)
+  const [resultsA, setResultsA] = useState<UserProfile[]>([])
   const [errorA, setErrorA] = useState('')
   const [loadingA, setLoadingA] = useState(false)
 
@@ -57,6 +58,7 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
   // Secondary user search (merge / move)
   const [searchB, setSearchB] = useState('')
   const [userB, setUserB] = useState<UserProfile | null>(null)
+  const [resultsB, setResultsB] = useState<UserProfile[]>([])
   const [errorB, setErrorB] = useState('')
   const [loadingB, setLoadingB] = useState(false)
 
@@ -110,13 +112,20 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
     try {
       let resolvedUid: string | undefined
       if (dashUsername.trim()) {
-        const found = await getUserByUsername(dashUsername.trim())
-        if (!found) {
-          setDashError(`No user found: "${dashUsername.trim()}"`)
+        if (dashUsername.trim().length < 4) {
+          setDashError('Enter at least 4 characters for username filter.')
           setDashLoading(false)
           return
         }
-        resolvedUid = found.uid
+        const results = await searchUsersByPrefix(dashUsername.trim())
+        if (results.length === 0) {
+          setDashError(`No users found matching "${dashUsername.trim()}"`)
+          setDashLoading(false)
+          return
+        }
+        // If multiple matches, filter on all of them (no single uid filter)
+        // If exactly one match, filter by that uid
+        resolvedUid = results.length === 1 ? results[0]!.uid : undefined
       }
 
       const filters: DashboardFilters = {
@@ -141,41 +150,62 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
   }
 
   async function handleSearchA() {
-    const username = searchA.trim()
-    if (!username) return
+    const input = searchA.trim()
+    if (!input) return
+    if (input.length < 4) { setErrorA('Enter at least 4 characters to search.'); return }
     setLoadingA(true)
     setErrorA('')
     setUserA(null)
+    setResultsA([])
     setAction(null)
     setResult(null)
     try {
-      const found = await getUserByUsername(username)
-      if (!found) setErrorA(`No user found: "${username}"`)
-      else setUserA(found)
+      const results = await searchUsersByPrefix(input)
+      if (results.length === 0) setErrorA(`No users found matching "${input}".`)
+      else if (results.length === 1) setUserA(results[0]!)
+      else setResultsA(results)
     } finally {
       setLoadingA(false)
     }
   }
 
+  function selectUserA(user: UserProfile) {
+    setUserA(user)
+    setResultsA([])
+  }
+
   async function handleSearchB() {
-    const username = searchB.trim()
-    if (!username) return
+    const input = searchB.trim()
+    if (!input) return
+    if (input.length < 4) { setErrorB('Enter at least 4 characters to search.'); return }
     setLoadingB(true)
     setErrorB('')
     setUserB(null)
+    setResultsB([])
     try {
-      const found = await getUserByUsername(username)
-      if (!found) setErrorB(`No user found: "${username}"`)
-      else if (found.uid === userA?.uid) setErrorB('Cannot select the same user twice.')
-      else setUserB(found)
+      const results = await searchUsersByPrefix(input)
+      if (results.length === 0) setErrorB(`No users found matching "${input}".`)
+      else if (results.length === 1) {
+        const found = results[0]!
+        if (found.uid === userA?.uid) setErrorB('Cannot select the same user twice.')
+        else setUserB(found)
+      } else {
+        setResultsB(results.filter((u) => u.uid !== userA?.uid))
+      }
     } finally {
       setLoadingB(false)
     }
   }
 
+  function selectUserB(user: UserProfile) {
+    setUserB(user)
+    setResultsB([])
+  }
+
   function selectAction(a: Action) {
     setAction(a)
     setUserB(null)
+    setResultsB([])
     setSearchB('')
     setErrorB('')
     setNotes('')
@@ -295,6 +325,13 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
               </button>
             </div>
             {errorA && <p className="text-red-500 text-sm">{errorA}</p>}
+            {resultsA.length > 0 && (
+              <UserPickerList
+                users={resultsA}
+                onSelect={selectUserA}
+                label="Select User A"
+              />
+            )}
           </div>
 
           {/* User A card + action buttons */}
@@ -361,6 +398,9 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                     </button>
                   </div>
                   {errorB && <p className="text-red-500 text-sm">{errorB}</p>}
+                  {resultsB.length > 0 && (
+                    <UserPickerList users={resultsB} onSelect={selectUserB} label="Select User B" />
+                  )}
                   {userB && <UserCard user={userB} label="User B" />}
                 </div>
               )}
@@ -612,6 +652,29 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
 }
 
 // ── Sub-components ─────────────────────────────────────
+
+function UserPickerList({
+  users, onSelect, label,
+}: { users: UserProfile[]; onSelect: (u: UserProfile) => void; label: string }) {
+  return (
+    <div className="space-y-1">
+      <p className="text-xs text-gray-500 font-medium">{label} — tap to select:</p>
+      {users.map((u) => (
+        <button
+          key={u.uid}
+          onClick={() => onSelect(u)}
+          className="w-full flex items-center gap-3 bg-gray-50 hover:bg-primary/10 rounded-xl px-3 py-2 text-left transition-colors cursor-pointer"
+        >
+          <span className="text-xl">{u.avatar}</span>
+          <div>
+            <p className="text-sm font-semibold text-gray-800">@{u.username}</p>
+            <p className="text-xs text-gray-500">{u.name} · Grade {u.grade}</p>
+          </div>
+        </button>
+      ))}
+    </div>
+  )
+}
 
 function UserCard({ user, label }: { user: UserProfile; label: string }) {
   return (

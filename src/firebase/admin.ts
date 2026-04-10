@@ -42,6 +42,19 @@ export async function getUserByUsername(username: string): Promise<UserProfile |
   return { ...d.data(), uid: d.id } as UserProfile
 }
 
+// Prefix search — returns up to 10 users whose username starts with the given prefix.
+export async function searchUsersByPrefix(prefix: string): Promise<UserProfile[]> {
+  const lower = prefix.toLowerCase().trim()
+  const q = query(
+    collection(db, 'users'),
+    where('username', '>=', lower),
+    where('username', '<=', lower + '\uf8ff'),
+    limit(10),
+  )
+  const snap = await getDocs(q)
+  return snap.docs.map((d) => ({ ...d.data(), uid: d.id } as UserProfile))
+}
+
 // ---- File Upload ----
 // Note: requires Firebase Storage (Blaze plan)
 
