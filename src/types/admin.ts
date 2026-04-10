@@ -1,4 +1,4 @@
-export type AdminActionType = 'password_reset' | 'merge_users' | 'move_scores'
+export type AdminActionType = 'password_reset' | 'merge_users' | 'move_scores' | 'delete_user'
 
 export interface AuditEntry {
   id: string

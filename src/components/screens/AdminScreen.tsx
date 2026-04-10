@@ -5,16 +5,40 @@ import {
   adminResetPassword,
   adminMergeUsers,
   adminMoveScores,
-  getAuditLog,
+  adminDeleteUser,
+  getDashboardSessions,
+  type DashboardFilters,
 } from '../../firebase/admin'
+import { getAuditLog } from '../../firebase/admin'
 import type { UserProfile } from '../../types'
 import type { AuditEntry } from '../../types/admin'
+import type { SessionRecord } from '../../types/session'
+import type { OperationType, Difficulty, Grade } from '../../types/question'
 
-type Tab = 'users' | 'audit'
-type Action = 'reset_password' | 'merge' | 'move' | null
+type Tab = 'users' | 'audit' | 'dashboard'
+type Action = 'reset_password' | 'merge' | 'move' | 'delete_user' | null
 
 interface AdminScreenProps {
   onNavigate: (screen: string) => void
+}
+
+const OPERATION_LABELS: Record<OperationType, string> = {
+  addition: '+ Addition',
+  subtraction: '− Subtraction',
+  multiplication: '× Multiplication',
+  division: '÷ Division',
+  percentage: '% Percentage',
+  squareRoot: '√ Square Root',
+  power: '^ Power',
+  mix: '🎲 Mix',
+}
+
+const GRADE_OPTIONS: Grade[] = ['KG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+const DIFFICULTY_OPTIONS: Difficulty[] = ['easy', 'medium', 'hard']
+const OPERATION_OPTIONS = Object.keys(OPERATION_LABELS) as OperationType[]
+
+function toDateInputValue(ms: number) {
+  return new Date(ms).toISOString().slice(0, 10)
 }
 
 export function AdminScreen({ onNavigate }: AdminScreenProps) {
@@ -49,8 +73,24 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([])
   const [auditLoading, setAuditLoading] = useState(false)
 
+  // Dashboard
+  const now = Date.now()
+  const defaultStart = now - 60 * 24 * 60 * 60 * 1000
+  const [dashFromDate, setDashFromDate] = useState(toDateInputValue(defaultStart))
+  const [dashToDate, setDashToDate] = useState(toDateInputValue(now))
+  const [dashUsername, setDashUsername] = useState('')
+  const [dashGrade, setDashGrade] = useState('')
+  const [dashOperation, setDashOperation] = useState('')
+  const [dashDifficulty, setDashDifficulty] = useState('')
+  const [dashSessions, setDashSessions] = useState<SessionRecord[]>([])
+  const [dashUserMap, setDashUserMap] = useState<Record<string, string>>({})
+  const [dashLoading, setDashLoading] = useState(false)
+  const [dashError, setDashError] = useState('')
+  const [dashLoaded, setDashLoaded] = useState(false)
+
   useEffect(() => {
     if (tab === 'audit') loadAudit()
+    if (tab === 'dashboard' && !dashLoaded) loadDashboard()
   }, [tab])
 
   async function loadAudit() {
@@ -61,6 +101,42 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
       console.error(err)
     } finally {
       setAuditLoading(false)
+    }
+  }
+
+  async function loadDashboard() {
+    setDashLoading(true)
+    setDashError('')
+    try {
+      let resolvedUid: string | undefined
+      if (dashUsername.trim()) {
+        const found = await getUserByUsername(dashUsername.trim())
+        if (!found) {
+          setDashError(`No user found: "${dashUsername.trim()}"`)
+          setDashLoading(false)
+          return
+        }
+        resolvedUid = found.uid
+      }
+
+      const filters: DashboardFilters = {
+        startMs: new Date(dashFromDate).getTime(),
+        endMs: new Date(dashToDate).getTime() + 86399999, // end of day
+        userId: resolvedUid,
+        grade: dashGrade || undefined,
+        operation: dashOperation || undefined,
+        difficulty: dashDifficulty || undefined,
+      }
+
+      const { sessions, userMap } = await getDashboardSessions(filters)
+      setDashSessions(sessions)
+      setDashUserMap(userMap)
+      setDashLoaded(true)
+    } catch (err) {
+      setDashError('Failed to load sessions. Please try again.')
+      console.error(err)
+    } finally {
+      setDashLoading(false)
     }
   }
 
@@ -128,6 +204,11 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
       } else if (action === 'move' && userB) {
         const details = await adminMoveScores(userA, userB, profile, notes.trim())
         setResult({ ok: true, msg: details })
+      } else if (action === 'delete_user') {
+        const details = await adminDeleteUser(userA, profile, notes.trim())
+        setResult({ ok: true, msg: details })
+        setUserA(null)
+        setAction(null)
       }
 
       setNotes('')
@@ -150,6 +231,15 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
     (!needsSecondUser || !!userB) &&
     passwordValid
 
+  // Dashboard stats
+  const uniqueUsers = new Set(dashSessions.map((s) => s.userId)).size
+  const avgScore = dashSessions.length
+    ? Math.round(dashSessions.reduce((sum, s) => sum + s.score, 0) / dashSessions.length)
+    : 0
+  const avgAccuracy = dashSessions.length
+    ? Math.round(dashSessions.reduce((sum, s) => sum + s.accuracy, 0) / dashSessions.length)
+    : 0
+
   return (
     <div className="p-4 pb-10 max-w-lg mx-auto">
       {/* Header */}
@@ -165,7 +255,7 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5">
-        {(['users', 'audit'] as Tab[]).map((t) => (
+        {(['users', 'dashboard', 'audit'] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -175,7 +265,7 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                 : 'bg-white/70 text-gray-600 hover:bg-white'
             }`}
           >
-            {t === 'users' ? '👤 Users' : '📋 Audit Log'}
+            {t === 'users' ? '👤 Users' : t === 'dashboard' ? '📊 Dashboard' : '📋 Audit Log'}
           </button>
         ))}
       </div>
@@ -211,25 +301,11 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
           {userA && (
             <div className="bg-white/90 rounded-2xl p-4 space-y-3 shadow-sm">
               <UserCard user={userA} label="User A" />
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                <ActionBtn
-                  label="Reset Password"
-                  icon="🔑"
-                  active={action === 'reset_password'}
-                  onClick={() => selectAction('reset_password')}
-                />
-                <ActionBtn
-                  label="Merge Users"
-                  icon="🔀"
-                  active={action === 'merge'}
-                  onClick={() => selectAction('merge')}
-                />
-                <ActionBtn
-                  label="Move Scores"
-                  icon="📦"
-                  active={action === 'move'}
-                  onClick={() => selectAction('move')}
-                />
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <ActionBtn label="Reset Password" icon="🔑" active={action === 'reset_password'} onClick={() => selectAction('reset_password')} />
+                <ActionBtn label="Merge Users"    icon="🔀" active={action === 'merge'}          onClick={() => selectAction('merge')} />
+                <ActionBtn label="Move Scores"    icon="📦" active={action === 'move'}           onClick={() => selectAction('move')} />
+                <ActionBtn label="Delete User"    icon="🗑️" active={action === 'delete_user'}    onClick={() => selectAction('delete_user')} danger />
               </div>
             </div>
           )}
@@ -239,8 +315,9 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
             <div className="bg-white/90 rounded-2xl p-4 space-y-4 shadow-sm">
               <p className="font-semibold text-gray-700">
                 {action === 'reset_password' && '🔑 Reset Password'}
-                {action === 'merge' && '🔀 Merge Users'}
-                {action === 'move' && '📦 Move Scores'}
+                {action === 'merge'          && '🔀 Merge Users'}
+                {action === 'move'           && '📦 Move Scores'}
+                {action === 'delete_user'    && '🗑️ Delete User'}
               </p>
 
               {/* Contextual description */}
@@ -254,14 +331,17 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                   All sessions and high scores are transferred from User A to User B. User A's high scores are cleared. User A's account is left intact.
                 </p>
               )}
+              {action === 'delete_user' && (
+                <p className="text-xs text-red-700 bg-red-50 p-3 rounded-xl leading-relaxed">
+                  Permanently deletes <strong>@{userA.username}</strong>'s account, all sessions, high scores, and profile. This cannot be undone.
+                </p>
+              )}
 
               {/* Secondary user search */}
               {needsSecondUser && (
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-600">
-                    {action === 'merge'
-                      ? 'Merge into — User B (keeps identity):'
-                      : 'Move scores to — User B:'}
+                    {action === 'merge' ? 'Merge into — User B (keeps identity):' : 'Move scores to — User B:'}
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -298,7 +378,7 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Min 6 characters"
-                        className="w-full px-3 py-2 pr-10 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="w-full px-3 py-2 pr-16 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                       <button
                         type="button"
@@ -320,7 +400,7 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Repeat password"
-                        className="w-full px-3 py-2 pr-10 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                        className="w-full px-3 py-2 pr-16 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                       />
                       <button
                         type="button"
@@ -356,23 +436,152 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
               <button
                 onClick={handleExecute}
                 disabled={!canConfirm}
-                className="w-full py-3 bg-primary text-white font-bold rounded-xl disabled:opacity-40 cursor-pointer hover:bg-primary-dark active:scale-95 transition-all"
+                className={`w-full py-3 font-bold rounded-xl disabled:opacity-40 cursor-pointer active:scale-95 transition-all ${
+                  action === 'delete_user'
+                    ? 'bg-red-600 hover:bg-red-700 text-white'
+                    : 'bg-primary hover:bg-primary-dark text-white'
+                }`}
               >
-                {executing ? 'Working…' : 'Confirm Action'}
+                {executing ? 'Working…' : action === 'delete_user' ? 'Delete User' : 'Confirm Action'}
               </button>
 
               {/* Result */}
               {result && (
-                <div
-                  className={`p-3 rounded-xl text-sm font-medium leading-relaxed ${
-                    result.ok
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : 'bg-red-50 text-red-700'
-                  }`}
-                >
+                <div className={`p-3 rounded-xl text-sm font-medium leading-relaxed ${result.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
                   {result.ok ? '✅ ' : '❌ '}
                   {result.msg}
                 </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── DASHBOARD TAB ────────────────────────────── */}
+      {tab === 'dashboard' && (
+        <div className="space-y-4">
+
+          {/* Filters */}
+          <div className="bg-white/90 rounded-2xl p-4 space-y-3 shadow-sm">
+            <p className="text-sm font-semibold text-gray-600">Filters</p>
+
+            {/* Date range */}
+            <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">From</label>
+                <input
+                  type="date"
+                  value={dashFromDate}
+                  onChange={(e) => setDashFromDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs text-gray-500">To</label>
+                <input
+                  type="date"
+                  value={dashToDate}
+                  onChange={(e) => setDashToDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                />
+              </div>
+            </div>
+
+            {/* Username */}
+            <input
+              type="text"
+              value={dashUsername}
+              onChange={(e) => setDashUsername(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && loadDashboard()}
+              placeholder="Username (optional)"
+              className="w-full px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+            />
+
+            {/* Grade / Operation / Difficulty */}
+            <div className="grid grid-cols-3 gap-2">
+              <select
+                value={dashGrade}
+                onChange={(e) => setDashGrade(e.target.value)}
+                className="px-2 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+              >
+                <option value="">All grades</option>
+                {GRADE_OPTIONS.map((g) => <option key={g} value={g}>Grade {g}</option>)}
+              </select>
+              <select
+                value={dashOperation}
+                onChange={(e) => setDashOperation(e.target.value)}
+                className="px-2 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+              >
+                <option value="">All ops</option>
+                {OPERATION_OPTIONS.map((o) => (
+                  <option key={o} value={o}>{OPERATION_LABELS[o].split(' ')[1] ?? o}</option>
+                ))}
+              </select>
+              <select
+                value={dashDifficulty}
+                onChange={(e) => setDashDifficulty(e.target.value)}
+                className="px-2 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+              >
+                <option value="">All levels</option>
+                {DIFFICULTY_OPTIONS.map((d) => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+              </select>
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => { setDashLoaded(false); loadDashboard() }}
+                disabled={dashLoading}
+                className="flex-1 py-2 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 cursor-pointer"
+              >
+                {dashLoading ? 'Loading…' : 'Apply Filters'}
+              </button>
+              <button
+                onClick={() => {
+                  setDashUsername('')
+                  setDashGrade('')
+                  setDashOperation('')
+                  setDashDifficulty('')
+                  setDashFromDate(toDateInputValue(Date.now() - 60 * 24 * 60 * 60 * 1000))
+                  setDashToDate(toDateInputValue(Date.now()))
+                  setDashLoaded(false)
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-600 rounded-xl text-sm font-medium cursor-pointer hover:bg-gray-200"
+              >
+                Reset
+              </button>
+            </div>
+            {dashError && <p className="text-red-500 text-sm">{dashError}</p>}
+          </div>
+
+          {/* Stats summary */}
+          {dashLoaded && !dashLoading && (
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: 'Sessions', value: dashSessions.length },
+                { label: 'Users', value: uniqueUsers },
+                { label: 'Avg Score', value: avgScore },
+                { label: 'Avg Acc', value: `${avgAccuracy}%` },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white/90 rounded-2xl p-3 text-center shadow-sm">
+                  <p className="text-lg font-bold text-primary-dark">{value}</p>
+                  <p className="text-xs text-gray-500">{label}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Session list */}
+          {dashLoading && <p className="text-center text-gray-400 py-10">Loading…</p>}
+          {dashLoaded && !dashLoading && dashSessions.length === 0 && (
+            <p className="text-center text-gray-400 py-10">No sessions found for the selected filters.</p>
+          )}
+          {dashLoaded && !dashLoading && dashSessions.length > 0 && (
+            <div className="space-y-2">
+              {dashSessions.map((s) => (
+                <SessionRow key={s.id} session={s} username={dashUserMap[s.userId] ?? s.userId} />
+              ))}
+              {dashSessions.length === 500 && (
+                <p className="text-xs text-center text-gray-400 pt-1">Showing first 500 results. Narrow filters to see more.</p>
               )}
             </div>
           )}
@@ -384,17 +593,12 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <p className="font-semibold text-gray-700">Recent Actions</p>
-            <button
-              onClick={loadAudit}
-              className="text-sm text-primary cursor-pointer hover:underline"
-            >
+            <button onClick={loadAudit} className="text-sm text-primary cursor-pointer hover:underline">
               Refresh
             </button>
           </div>
 
-          {auditLoading && (
-            <p className="text-center text-gray-400 py-10">Loading…</p>
-          )}
+          {auditLoading && <p className="text-center text-gray-400 py-10">Loading…</p>}
           {!auditLoading && auditEntries.length === 0 && (
             <p className="text-center text-gray-400 py-10">No audit entries yet.</p>
           )}
@@ -425,23 +629,17 @@ function UserCard({ user, label }: { user: UserProfile; label: string }) {
 }
 
 function ActionBtn({
-  label,
-  icon,
-  active,
-  onClick,
+  label, icon, active, onClick, danger,
 }: {
-  label: string
-  icon: string
-  active: boolean
-  onClick: () => void
+  label: string; icon: string; active: boolean; onClick: () => void; danger?: boolean
 }) {
   return (
     <button
       onClick={onClick}
       className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
         active
-          ? 'bg-primary text-white shadow-sm'
-          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          ? danger ? 'bg-red-600 text-white shadow-sm' : 'bg-primary text-white shadow-sm'
+          : danger ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
       }`}
     >
       <span className="text-lg">{icon}</span>
@@ -450,10 +648,37 @@ function ActionBtn({
   )
 }
 
+const OP_SHORT: Record<string, string> = {
+  addition: '+', subtraction: '−', multiplication: '×', division: '÷',
+  percentage: '%', squareRoot: '√', power: '^', mix: '🎲',
+}
+
+function SessionRow({ session, username }: { session: SessionRecord; username: string }) {
+  const date = new Date(session.timestamp)
+  const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
+
+  return (
+    <div className="bg-white/90 rounded-xl px-3 py-2 shadow-sm flex items-center gap-2 text-sm flex-wrap">
+      <span className="text-gray-400 text-xs w-24 shrink-0">{dateStr}</span>
+      <span className="text-primary font-medium shrink-0">@{username}</span>
+      <span className="text-gray-500 shrink-0">G{session.grade}</span>
+      <span className="font-mono text-gray-700 shrink-0">{OP_SHORT[session.operation] ?? session.operation}</span>
+      <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${
+        session.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+        session.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+        'bg-red-100 text-red-700'
+      }`}>{session.difficulty}</span>
+      <span className="ml-auto font-bold text-gray-800 shrink-0">{session.score}pts</span>
+      <span className="text-gray-500 shrink-0">{session.accuracy}%</span>
+    </div>
+  )
+}
+
 const ACTION_LABELS: Record<string, string> = {
   password_reset: '🔑 Password Reset',
   merge_users: '🔀 Merge Users',
   move_scores: '📦 Move Scores',
+  delete_user: '🗑️ Delete User',
 }
 
 function AuditCard({ entry }: { entry: AuditEntry }) {
@@ -462,21 +687,13 @@ function AuditCard({ entry }: { entry: AuditEntry }) {
   return (
     <div className="bg-white/90 rounded-2xl p-4 space-y-2 shadow-sm">
       <div className="flex items-center justify-between gap-2">
-        <span
-          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-            entry.outcome === 'success'
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-red-100 text-red-700'
-          }`}
-        >
+        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${entry.outcome === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
           {entry.outcome === 'success' ? '✓ Success' : '✗ Failed'}
         </span>
         <span className="text-xs text-gray-400 shrink-0">{date}</span>
       </div>
 
-      <p className="font-semibold text-gray-800">
-        {ACTION_LABELS[entry.action] ?? entry.action}
-      </p>
+      <p className="font-semibold text-gray-800">{ACTION_LABELS[entry.action] ?? entry.action}</p>
 
       <p className="text-xs text-gray-500">
         By <strong>@{entry.adminUsername}</strong>
@@ -487,18 +704,11 @@ function AuditCard({ entry }: { entry: AuditEntry }) {
       <p className="text-sm text-gray-700">{entry.details}</p>
 
       {entry.notes && (
-        <p className="text-xs text-gray-400 italic border-t border-gray-100 pt-2">
-          "{entry.notes}"
-        </p>
+        <p className="text-xs text-gray-400 italic border-t border-gray-100 pt-2">"{entry.notes}"</p>
       )}
 
       {entry.supportingFileUrl && (
-        <a
-          href={entry.supportingFileUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1 text-xs text-primary hover:underline pt-1"
-        >
+        <a href={entry.supportingFileUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-xs text-primary hover:underline pt-1">
           📎 {entry.supportingFileName ?? 'Supporting document'}
         </a>
       )}

@@ -415,3 +415,59 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Tap "Yes, Delete" | All user data deleted; user logged out; redirected to login screen |
 | Log in with deleted username/password | Login fails (account no longer exists) |
 | Attempt delete after long session without re-login | Error shown: "Please log out and log back in, then try again" |
+
+---
+
+## Feature 15 — Admin: Delete User
+
+**User story:** As the app administrator, I want to permanently delete any user account and all their data, so that I can handle account removal requests or remove invalid accounts.
+
+**Acceptance Criteria:**
+
+1. A "Delete User" button (styled in red) shall appear in the admin Users tab alongside the existing action buttons.
+2. On selecting Delete User, a red warning panel shall describe the irreversible action.
+3. A mandatory notes field must be filled before confirming.
+4. On confirmation, all sessions, high scores, profile, and username lookup data shall be deleted from Firestore, then the Auth account shall be deleted via the `adminDeleteUser` Cloud Function.
+5. A success or failure message shall be shown inline.
+6. Every action — successful or failed — shall be recorded in the audit log.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Search for user, click Delete User | Red warning panel shown with notes field |
+| Confirm without notes | Confirm button disabled |
+| Confirm with notes | User data deleted; auth account deleted; success message; audit entry logged |
+| Search for deleted username | "No user found" error |
+| Failed delete | Error shown; failed audit entry logged |
+
+---
+
+## Feature 16 — Admin: Quiz Dashboard
+
+**User story:** As the app administrator, I want to view all quiz sessions across all users with filters, so that I can monitor usage and identify patterns.
+
+**Acceptance Criteria:**
+
+1. A "📊 Dashboard" tab shall appear in the Admin Panel.
+2. On opening the tab, sessions from the last 60 days shall be loaded automatically.
+3. Filter controls shall include: date range (from/to), username, grade, operation, difficulty.
+4. Filters can be applied individually or in combination.
+5. A summary row shall show: total sessions, unique users, average score, average accuracy.
+6. Each session row shall display: date/time, username, grade, operation (symbol), difficulty badge, score, and accuracy.
+7. Results shall be capped at 500 per query. If the limit is reached, a notice shall prompt narrowing filters.
+8. A "Reset" button shall restore all filters to defaults (last 60 days, all values).
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Open Dashboard tab | Sessions from last 60 days loaded; stats shown |
+| Filter by username | Only that user's sessions shown |
+| Filter by grade | Only that grade's sessions shown |
+| Filter by operation | Only sessions with that operation shown |
+| Filter by difficulty | Only sessions with that difficulty shown |
+| Combine multiple filters | All filters applied together |
+| Click Reset | All filters cleared; default date range restored |
+| No sessions match filters | "No sessions found" message |
+| 500+ sessions in range | "Showing first 500 results" notice shown |

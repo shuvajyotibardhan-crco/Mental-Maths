@@ -36,3 +36,28 @@ exports.adminSetPassword = onCall(async (request) => {
 
   return { success: true }
 })
+
+/**
+ * adminDeleteUser — deletes a user's Firebase Auth account.
+ * Caller must be authenticated and present in the admins/{uid} Firestore collection.
+ * Firestore data deletion is handled client-side before calling this function.
+ */
+exports.adminDeleteUser = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Authentication required.')
+  }
+
+  const db = getFirestore()
+  const adminSnap = await db.doc(`admins/${request.auth.uid}`).get()
+  if (!adminSnap.exists) {
+    throw new HttpsError('permission-denied', 'Admin access required.')
+  }
+
+  const { targetUid } = request.data
+  if (!targetUid || typeof targetUid !== 'string') {
+    throw new HttpsError('invalid-argument', 'targetUid is required.')
+  }
+
+  await getAuth().deleteUser(targetUid)
+  return { success: true }
+})

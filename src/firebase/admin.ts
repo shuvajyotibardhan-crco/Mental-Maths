@@ -17,8 +17,9 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import { httpsCallable } from 'firebase/functions'
 import { db, storage, functions } from './config'
+import { deleteAllUserData } from './firestore'
 import type { UserProfile } from '../types/user'
-import type { HighScoreEntry } from '../types/session'
+import type { HighScoreEntry, SessionRecord } from '../types/session'
 import type { AuditEntry } from '../types/admin'
 
 // ---- Admin Access ----
@@ -206,6 +207,37 @@ export async function adminMergeUsers(
   }
 }
 
+// ---- Delete User ----
+// Deletes all Firestore data for the user, then deletes their Auth account via Cloud Function.
+
+export async function adminDeleteUser(
+  targetUser: UserProfile,
+  adminProfile: UserProfile,
+  notes: string,
+): Promise<string> {
+  const baseEntry = {
+    timestamp: Date.now(),
+    adminUid: adminProfile.uid,
+    adminUsername: adminProfile.username,
+    action: 'delete_user' as const,
+    affectedUsers: [{ uid: targetUser.uid, username: targetUser.username }],
+    notes,
+  }
+
+  try {
+    await deleteAllUserData(targetUser.uid, targetUser.username)
+    const deleteFn = httpsCallable(functions, 'adminDeleteUser')
+    await deleteFn({ targetUid: targetUser.uid })
+    const details = `Deleted account @${targetUser.username} (uid: ${targetUser.uid}) and all associated data.`
+    await saveAuditEntry({ ...baseEntry, outcome: 'success', details })
+    return details
+  } catch (err) {
+    const details = err instanceof Error ? err.message : 'Unknown error'
+    await saveAuditEntry({ ...baseEntry, outcome: 'failed', details })
+    throw err
+  }
+}
+
 // ---- Move Scores ----
 // Transfers all sessions and high scores from fromUser to toUser.
 // Better scores are kept (no score is lost for toUser).
@@ -293,4 +325,55 @@ export async function adminMoveScores(
     await saveAuditEntry({ ...baseEntry, outcome: 'failed', details })
     throw err
   }
+}
+
+// ---- Dashboard ----
+
+export interface DashboardFilters {
+  startMs: number
+  endMs: number
+  userId?: string
+  grade?: string
+  operation?: string
+  difficulty?: string
+}
+
+export async function getDashboardSessions(
+  filters: DashboardFilters,
+): Promise<{ sessions: SessionRecord[]; userMap: Record<string, string> }> {
+  const q = query(
+    collection(db, 'sessions'),
+    where('timestamp', '>=', Timestamp.fromMillis(filters.startMs)),
+    where('timestamp', '<=', Timestamp.fromMillis(filters.endMs)),
+    orderBy('timestamp', 'desc'),
+    limit(500),
+  )
+
+  const snap = await getDocs(q)
+  let sessions: SessionRecord[] = snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      ...data,
+      id: d.id,
+      timestamp: data.timestamp instanceof Timestamp ? data.timestamp.toMillis() : data.timestamp,
+    } as SessionRecord
+  })
+
+  if (filters.userId) sessions = sessions.filter((s) => s.userId === filters.userId)
+  if (filters.grade) sessions = sessions.filter((s) => s.grade === filters.grade)
+  if (filters.operation) sessions = sessions.filter((s) => s.operation === filters.operation)
+  if (filters.difficulty) sessions = sessions.filter((s) => s.difficulty === filters.difficulty)
+
+  const uniqueUids = [...new Set(sessions.map((s) => s.userId))]
+  const userMap: Record<string, string> = {}
+  await Promise.all(
+    uniqueUids.map(async (uid) => {
+      const userSnap = await getDoc(doc(db, 'users', uid))
+      if (userSnap.exists()) {
+        userMap[uid] = (userSnap.data() as { username: string }).username
+      }
+    }),
+  )
+
+  return { sessions, userMap }
 }
