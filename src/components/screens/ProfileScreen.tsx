@@ -5,7 +5,7 @@ import { logoutUser, changePassword, setRecoveryEmailOnAuth, getFirebaseErrorMes
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
 
-export function ProfileScreen() {
+export function ProfileScreen({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const { profile, setProfile } = useAuth()
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(profile?.name ?? '')
@@ -349,8 +349,8 @@ export function ProfileScreen() {
         <p className="text-success text-sm text-center bg-green-50 rounded-xl p-2">{recoverySuccess}</p>
       )}
 
-      {/* Delete Account */}
-      {confirmingDelete ? (
+      {/* Delete Account — hidden for super admin */}
+      {!isSuperAdmin && confirmingDelete ? (
         <div className="bg-red-50 border border-red-200 rounded-3xl p-6 space-y-3">
           <h3 className="text-base font-semibold text-red-700">Delete Account</h3>
           <p className="text-sm text-red-600">
@@ -376,14 +376,14 @@ export function ProfileScreen() {
             </button>
           </div>
         </div>
-      ) : (
+      ) : !isSuperAdmin ? (
         <button
           onClick={() => setConfirmingDelete(true)}
           className="w-full py-3 text-red-400 font-medium hover:text-red-600 bg-white/80 rounded-2xl cursor-pointer"
         >
           Delete Account
         </button>
-      )}
+      ) : null}
 
       <button
         onClick={handleLogout}
