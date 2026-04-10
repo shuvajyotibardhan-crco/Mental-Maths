@@ -354,6 +354,56 @@ deleteCurrentUser():
 ```
 Requires recent login. If `auth/requires-recent-login` is thrown, user is prompted to re-login first.
 
+### Admin: User Search (Prefix)
+```
+searchUsersByPrefix(prefix):   // min 4 chars
+  query users where username >= prefix AND username <= prefix + '\uf8ff', limit 10
+  returns UserProfile[]
+  single result → auto-selected in UI
+  multiple results → picker list shown
+```
+
+### Admin: Delete User
+```
+adminDeleteUser(targetUser, adminProfile, notes):
+  deleteAllUserData(targetUser.uid, targetUser.username)   // Firestore
+  call adminDeleteUser Cloud Function → auth().deleteUser(targetUid)  // Auth
+  saveAuditEntry(outcome)
+```
+
+### Admin: Quiz Dashboard
+```
+getDashboardSessions(filters):
+  query sessions where timestamp >= startMs AND timestamp <= endMs
+    orderBy timestamp desc, limit 500
+  client-side filter: userId, grade, operation, difficulty
+  batch getDoc users/{uid} for each unique userId → userMap
+  return { sessions, userMap }
+```
+Date range default: last 60 days. Results capped at 500.
+
+### Admin Roles (Super Admin)
+
+**Firestore schema** — `admins/{uid}`:
+```
+{
+  role: 'super' | 'admin'   // 'super' set manually; absence treated as 'admin'
+  username: string           // stored when added via UI
+  addedAt: number            // ms timestamp
+}
+```
+
+**Functions:**
+```
+checkIsSuperAdmin(uid):  read admins/{uid}, return role === 'super'
+getAdminList():          getDocs(admins), map to AdminRecord[]
+addAdmin(user):          setDoc admins/{uid} { role:'admin', username, addedAt }
+removeAdmin(uid):        deleteDoc admins/{uid}
+```
+
+Super admin cannot remove themselves or delete their own account via admin panel.
+Regular admin count can be zero — super admin alone is valid.
+
 ---
 
 ## Grade Configuration

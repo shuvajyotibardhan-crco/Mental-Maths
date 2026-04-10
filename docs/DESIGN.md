@@ -100,19 +100,25 @@ Wraps Firestore `onSnapshot` for a challenge document. Returns the live `Challen
 Game logic hook for multiplayer. Steps through pre-generated questions from the challenge document, tracks score/streak locally, and writes progress to Firestore after each answer. Mirrors the solo GameContext reducer pattern but decoupled from it.
 
 ### `src/components/layout/AppShell.tsx`
-Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows. On profile load, calls `checkIsAdmin` and stores the result in `userIsAdmin` state — passed to `BottomNav` (to show/hide the admin tab) and used to guard the `admin` screen route.
+Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows. On profile load, calls `checkIsAdmin` and `checkIsSuperAdmin` — results stored as `userIsAdmin` and `userIsSuperAdmin`, passed to `BottomNav` and `AdminScreen`. The `contact` screen is accessible without login (rendered before the auth guard).
 
 ### `src/firebase/admin.ts`
-All admin-specific Firestore operations. Functions: `checkIsAdmin` (reads `admins/{uid}`), `getUserByUsername` (query by username field), `uploadSupportingFile` (Firebase Storage), `getAuditLog` (ordered query), `adminResetPassword`, `adminMergeUsers`, `adminMoveScores`. Every operation writes an `auditLog` entry regardless of outcome. Batch writes (400 ops/batch) handle large session transfers safely. `adminResetPassword` calls the `adminSetPassword` Cloud Function (Firebase Admin SDK) to set the password directly — no recovery email required.
+All admin-specific Firestore operations. Functions: `checkIsAdmin`, `checkIsSuperAdmin`, `searchUsersByPrefix` (prefix range query, min 4 chars), `uploadSupportingFile`, `getAuditLog`, `adminResetPassword`, `adminMergeUsers`, `adminMoveScores`, `adminDeleteUser`, `getDashboardSessions`, `getAdminList`, `addAdmin`, `removeAdmin`. Every action writes an `auditLog` entry regardless of outcome. Batch writes (400 ops/batch) handle large session transfers. `adminResetPassword` and `adminDeleteUser` call Cloud Functions for server-side Auth operations.
 
 ### `functions/index.js`
-Firebase Cloud Functions (Node 22, v2). Exports `adminSetPassword`: an `onCall` function that verifies the caller is an admin (`admins/{uid}`), then calls `auth().updateUser()` to set the target user's password directly. Returns `{ success: true }` or throws `HttpsError`. Deployed separately via `firebase-tools` in CI.
+Firebase Cloud Functions (Node 22, v2). Exports two `onCall` functions — both verify caller is admin via `admins/{uid}`: `adminSetPassword` (sets target user's password via `auth().updateUser()`), `adminDeleteUser` (deletes target user's Auth account via `auth().deleteUser()`). Deployed via `firebase-tools` in CI.
 
 ### `src/components/screens/AdminScreen.tsx`
-Admin-only panel with three tabs: **Users**, **Dashboard**, and **Audit Log**. Users tab: primary search (User A), four action buttons (Reset Password / Merge / Move / Delete User), action panel with secondary user search (merge/move), password fields (reset), mandatory notes, and confirm. Delete User is styled red and calls `adminDeleteUser`. Dashboard tab: date range + username + grade + operation + difficulty filters, stats summary row, and compact session rows (up to 500 per query). Audit Log: last 50 entries with outcome badge, affected users, details, notes. Only rendered when `userIsAdmin` is true.
+Admin-only panel with three tabs for regular admins (**Users**, **Dashboard**, **Audit**) and a fourth tab for super admins (**🔐 Admins**). Users tab: primary search (User A), four action buttons (Reset Password / Merge / Move / Delete User — Delete hidden when searching self), action panel with secondary user search (merge/move), password fields (reset), mandatory notes, and confirm. Dashboard tab: date range + username + grade + operation + difficulty filters, stats summary row, compact session rows (up to 500). Audit tab: last 50 entries. Admins tab (super admin only): search and add regular admins, list all admins with role badges, remove regular admins. Receives `isSuperAdmin` prop from AppShell.
 
 ### `src/components/screens/ContactScreen.tsx`
 Contact support form. Accessible from Settings (logged in) and from the Login screen (logged out). When accessed without login, a mandatory username field is shown. Collects subject, description (≤500 words with live counter), and contact email. On submission, sends all fields to EmailJS, which delivers the email to `app_admin@divel.me`. Displays a confirmation screen on success and an inline error with fallback admin email on failure. Back navigation goes to Login (logged out) or Settings (logged in). File attachments are not supported (Firebase Storage requires the Blaze plan).
+
+### `src/components/screens/ProfileScreen.tsx`
+Displays and edits user profile (avatar, name, grade), change password, recovery email, and account deletion. Delete Account shows a confirmation panel, then calls `deleteAllUserData` + `deleteCurrentUser` — deleting all Firestore data before removing the Auth account, which triggers automatic logout.
+
+### `src/components/screens/LoginScreen.tsx`
+Handles login, forgot-password flow, and a "Contact Support" link that navigates to `ContactScreen` without requiring authentication.
 
 ### `src/components/screens/*`
 One file per screen. Each receives `onNavigate` and accesses shared state via context hooks. No screen imports from another screen.

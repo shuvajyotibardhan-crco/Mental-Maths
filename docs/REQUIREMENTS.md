@@ -471,3 +471,32 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Click Reset | All filters cleared; default date range restored |
 | No sessions match filters | "No sessions found" message |
 | 500+ sessions in range | "Showing first 500 results" notice shown |
+
+---
+
+## Feature 17 — Super Admin Role
+
+**User story:** As the sole super admin, I want to manage who has admin access, so that I can grant or revoke admin privileges without touching the Firebase Console.
+
+**Acceptance Criteria:**
+
+1. The `admins/{uid}` Firestore document shall support an optional `role` field: `"super"` or `"admin"`. Documents without a `role` field are treated as regular admin.
+2. Exactly one super admin shall exist. The super admin UID is set manually in Firestore Console by adding `role: "super"` to the relevant `admins/{uid}` document.
+3. Super admin has all the same capabilities as regular admin (reset password, merge, move scores, delete user, dashboard, audit log).
+4. Super admin additionally sees a 🔐 Admins tab — regular admins do not.
+5. In the Admins tab, super admin can search for any user by username (4+ chars) and grant them admin access.
+6. In the Admins tab, super admin can remove any regular admin. The super admin cannot remove themselves.
+7. The super admin cannot delete their own account via the Delete User action in the Users tab (the button is hidden when the searched user is the logged-in super admin).
+8. Regular admins can be zero or more — the super admin can operate alone.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Log in as super admin | 🔐 Admins tab visible in admin panel |
+| Log in as regular admin | 🔐 Admins tab not visible |
+| Search own username in Users tab as super admin | Delete User button not shown |
+| Open Admins tab | Full list of admins with role badges shown |
+| Search and add a regular user as admin | User appears in admin list with "Admin" badge |
+| Remove a regular admin | Admin removed from list; they lose panel access on next login |
+| Try to remove super admin entry | No Remove button shown for super admin row |
