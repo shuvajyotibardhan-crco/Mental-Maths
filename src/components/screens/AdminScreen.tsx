@@ -7,7 +7,11 @@ import {
   adminMoveScores,
   adminDeleteUser,
   getDashboardSessions,
+  getAdminList,
+  addAdmin,
+  removeAdmin,
   type DashboardFilters,
+  type AdminRecord,
 } from '../../firebase/admin'
 import { getAuditLog } from '../../firebase/admin'
 import type { UserProfile } from '../../types'
@@ -15,11 +19,12 @@ import type { AuditEntry } from '../../types/admin'
 import type { SessionRecord } from '../../types/session'
 import type { OperationType, Difficulty, Grade } from '../../types/question'
 
-type Tab = 'users' | 'audit' | 'dashboard'
+type Tab = 'users' | 'dashboard' | 'audit' | 'admins'
 type Action = 'reset_password' | 'merge' | 'move' | 'delete_user' | null
 
 interface AdminScreenProps {
   onNavigate: (screen: string) => void
+  isSuperAdmin?: boolean
 }
 
 const OPERATION_LABELS: Record<OperationType, string> = {
@@ -41,7 +46,7 @@ function toDateInputValue(ms: number) {
   return new Date(ms).toISOString().slice(0, 10)
 }
 
-export function AdminScreen({ onNavigate }: AdminScreenProps) {
+export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenProps) {
   const { profile } = useAuth()
   const [tab, setTab] = useState<Tab>('users')
 
@@ -90,9 +95,19 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
   const [dashError, setDashError] = useState('')
   const [dashLoaded, setDashLoaded] = useState(false)
 
+  // Admins management (super admin only)
+  const [adminList, setAdminList] = useState<AdminRecord[]>([])
+  const [adminsLoading, setAdminsLoading] = useState(false)
+  const [adminSearch, setAdminSearch] = useState('')
+  const [adminCandidates, setAdminCandidates] = useState<UserProfile[]>([])
+  const [adminSearchError, setAdminSearchError] = useState('')
+  const [adminSearchLoading, setAdminSearchLoading] = useState(false)
+  const [adminActionMsg, setAdminActionMsg] = useState<{ ok: boolean; msg: string } | null>(null)
+
   useEffect(() => {
     if (tab === 'audit') loadAudit()
     if (tab === 'dashboard' && !dashLoaded) loadDashboard()
+    if (tab === 'admins') loadAdminList()
   }, [tab])
 
   async function loadAudit() {
@@ -146,6 +161,57 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
       console.error(err)
     } finally {
       setDashLoading(false)
+    }
+  }
+
+  async function loadAdminList() {
+    setAdminsLoading(true)
+    try {
+      setAdminList(await getAdminList())
+    } finally {
+      setAdminsLoading(false)
+    }
+  }
+
+  async function handleAdminSearch() {
+    const input = adminSearch.trim()
+    if (input.length < 4) { setAdminSearchError('Enter at least 4 characters.'); return }
+    setAdminSearchLoading(true)
+    setAdminSearchError('')
+    setAdminCandidates([])
+    try {
+      const results = await searchUsersByPrefix(input)
+      // Exclude users already admins
+      const existing = new Set(adminList.map((a) => a.uid))
+      const filtered = results.filter((u) => !existing.has(u.uid))
+      if (filtered.length === 0) setAdminSearchError('No eligible users found.')
+      else setAdminCandidates(filtered)
+    } finally {
+      setAdminSearchLoading(false)
+    }
+  }
+
+  async function handleAddAdmin(user: UserProfile) {
+    setAdminCandidates([])
+    setAdminSearch('')
+    setAdminActionMsg(null)
+    try {
+      await addAdmin(user)
+      setAdminActionMsg({ ok: true, msg: `@${user.username} added as admin.` })
+      await loadAdminList()
+    } catch {
+      setAdminActionMsg({ ok: false, msg: 'Failed to add admin. Please try again.' })
+    }
+  }
+
+  async function handleRemoveAdmin(record: AdminRecord) {
+    setAdminActionMsg(null)
+    try {
+      await removeAdmin(record.uid)
+      setAdminActionMsg({ ok: true, msg: `@${record.username} removed as admin.` })
+      await loadAdminList()
+    } catch {
+      setAdminActionMsg({ ok: false, msg: 'Failed to remove admin. Please try again.' })
     }
   }
 
@@ -284,18 +350,18 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 mb-5">
-        {(['users', 'dashboard', 'audit'] as Tab[]).map((t) => (
+      <div className="flex gap-2 mb-5 flex-wrap">
+        {(['users', 'dashboard', 'audit', ...(isSuperAdmin ? ['admins'] : [])] as Tab[]).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2 rounded-xl font-medium text-sm cursor-pointer transition-colors ${
+            className={`flex-1 py-2 rounded-xl font-medium text-sm cursor-pointer transition-colors min-w-fit ${
               tab === t
                 ? 'bg-primary text-white shadow-sm'
                 : 'bg-white/70 text-gray-600 hover:bg-white'
             }`}
           >
-            {t === 'users' ? '👤 Users' : t === 'dashboard' ? '📊 Dashboard' : '📋 Audit Log'}
+            {t === 'users' ? '👤 Users' : t === 'dashboard' ? '📊 Dashboard' : t === 'audit' ? '📋 Audit' : '🔐 Admins'}
           </button>
         ))}
       </div>
@@ -342,7 +408,9 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
                 <ActionBtn label="Reset Password" icon="🔑" active={action === 'reset_password'} onClick={() => selectAction('reset_password')} />
                 <ActionBtn label="Merge Users"    icon="🔀" active={action === 'merge'}          onClick={() => selectAction('merge')} />
                 <ActionBtn label="Move Scores"    icon="📦" active={action === 'move'}           onClick={() => selectAction('move')} />
-                <ActionBtn label="Delete User"    icon="🗑️" active={action === 'delete_user'}    onClick={() => selectAction('delete_user')} danger />
+                {userA.uid !== profile?.uid && (
+                  <ActionBtn label="Delete User" icon="🗑️" active={action === 'delete_user'} onClick={() => selectAction('delete_user')} danger />
+                )}
               </div>
             </div>
           )}
@@ -625,6 +693,74 @@ export function AdminScreen({ onNavigate }: AdminScreenProps) {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── ADMINS TAB (super admin only) ─────────────── */}
+      {tab === 'admins' && isSuperAdmin && (
+        <div className="space-y-4">
+
+          {/* Add admin */}
+          <div className="bg-white/90 rounded-2xl p-4 space-y-3 shadow-sm">
+            <p className="text-sm font-semibold text-gray-600">Add Admin</p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={adminSearch}
+                onChange={(e) => setAdminSearch(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleAdminSearch()}
+                placeholder="Search by username (4+ chars)"
+                className="flex-1 px-3 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              <button
+                onClick={handleAdminSearch}
+                disabled={adminSearchLoading || adminSearch.trim().length < 4}
+                className="px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium disabled:opacity-50 cursor-pointer"
+              >
+                {adminSearchLoading ? '…' : 'Search'}
+              </button>
+            </div>
+            {adminSearchError && <p className="text-red-500 text-sm">{adminSearchError}</p>}
+            {adminCandidates.length > 0 && (
+              <UserPickerList
+                users={adminCandidates}
+                onSelect={handleAddAdmin}
+                label="Select user to make admin"
+              />
+            )}
+            {adminActionMsg && (
+              <p className={`text-sm font-medium ${adminActionMsg.ok ? 'text-emerald-600' : 'text-red-600'}`}>
+                {adminActionMsg.ok ? '✅ ' : '❌ '}{adminActionMsg.msg}
+              </p>
+            )}
+          </div>
+
+          {/* Admin list */}
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-gray-600 px-1">
+              {adminsLoading ? 'Loading…' : `${adminList.length} admin${adminList.length !== 1 ? 's' : ''}`}
+            </p>
+            {adminList.map((a) => (
+              <div key={a.uid} className="bg-white/90 rounded-2xl px-4 py-3 shadow-sm flex items-center gap-3">
+                <div className="flex-1">
+                  <span className="font-semibold text-gray-800">@{a.username}</span>
+                  <span className={`ml-2 text-xs font-semibold px-2 py-0.5 rounded-full ${
+                    a.role === 'super' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                  }`}>
+                    {a.role === 'super' ? '⭐ Super Admin' : 'Admin'}
+                  </span>
+                </div>
+                {a.role !== 'super' && (
+                  <button
+                    onClick={() => handleRemoveAdmin(a)}
+                    className="text-sm text-red-500 hover:text-red-700 cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

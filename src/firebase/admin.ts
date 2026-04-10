@@ -29,6 +29,43 @@ export async function checkIsAdmin(uid: string): Promise<boolean> {
   return snap.exists()
 }
 
+export async function checkIsSuperAdmin(uid: string): Promise<boolean> {
+  const snap = await getDoc(doc(db, 'admins', uid))
+  return snap.exists() && snap.data()?.role === 'super'
+}
+
+export interface AdminRecord {
+  uid: string
+  username: string
+  role: 'super' | 'admin'
+  addedAt?: number
+}
+
+export async function getAdminList(): Promise<AdminRecord[]> {
+  const snap = await getDocs(collection(db, 'admins'))
+  return snap.docs.map((d) => {
+    const data = d.data()
+    return {
+      uid: d.id,
+      username: data.username ?? '(unknown)',
+      role: data.role === 'super' ? 'super' : 'admin',
+      addedAt: data.addedAt,
+    }
+  })
+}
+
+export async function addAdmin(user: UserProfile): Promise<void> {
+  await setDoc(doc(db, 'admins', user.uid), {
+    role: 'admin',
+    username: user.username,
+    addedAt: Date.now(),
+  })
+}
+
+export async function removeAdmin(uid: string): Promise<void> {
+  await deleteDoc(doc(db, 'admins', uid))
+}
+
 // ---- User Search ----
 
 export async function getUserByUsername(username: string): Promise<UserProfile | null> {

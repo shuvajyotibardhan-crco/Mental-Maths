@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { purgeOldSessions } from '../../firebase/firestore'
-import { checkIsAdmin } from '../../firebase/admin'
+import { checkIsAdmin, checkIsSuperAdmin } from '../../firebase/admin'
 import { GameProvider } from '../../context/GameContext'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
@@ -28,6 +28,7 @@ export function AppShell() {
   const [screen, setScreen] = useState('home')
   const [challengeCode, setChallengeCode] = useState<string | null>(null)
   const [userIsAdmin, setUserIsAdmin] = useState(false)
+  const [userIsSuperAdmin, setUserIsSuperAdmin] = useState(false)
   const purgedRef = useRef(false)
 
   // Purge sessions older than 6 months on startup
@@ -36,6 +37,7 @@ export function AppShell() {
     purgedRef.current = true
     purgeOldSessions(profile.uid).catch((err) => console.warn('Purge skipped:', err))
     checkIsAdmin(profile.uid).then(setUserIsAdmin).catch(() => setUserIsAdmin(false))
+    checkIsSuperAdmin(profile.uid).then(setUserIsSuperAdmin).catch(() => setUserIsSuperAdmin(false))
   }, [profile])
 
   // Reset screen to home when user logs in (screen might be stuck on 'register' or 'login')
@@ -107,7 +109,7 @@ export function AppShell() {
           {screen === 'challenge-results' && challengeCode && (
             <ChallengeResultsScreen gameCode={challengeCode} onNavigate={setScreen} />
           )}
-          {screen === 'admin' && userIsAdmin && <AdminScreen onNavigate={setScreen} />}
+          {screen === 'admin' && userIsAdmin && <AdminScreen onNavigate={setScreen} isSuperAdmin={userIsSuperAdmin} />}
         </main>
         {!isGameScreen && (
           <BottomNav currentScreen={screen} onNavigate={setScreen} isAdmin={userIsAdmin} />
