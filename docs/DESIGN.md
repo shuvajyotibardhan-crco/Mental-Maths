@@ -115,7 +115,7 @@ Admin-only panel with three tabs for regular admins (**Users**, **Dashboard**, *
 Contact support form. Accessible from Settings (logged in) and from the Login screen (logged out). When accessed without login, a mandatory username field is shown. Collects subject, description (≤500 words with live counter), and contact email. On submission, sends all fields to EmailJS, which delivers the email to `app_admin@divel.me`. Displays a confirmation screen on success and an inline error with fallback admin email on failure. Back navigation goes to Login (logged out) or Settings (logged in). File attachments are not supported (Firebase Storage requires the Blaze plan).
 
 ### `src/components/screens/ProfileScreen.tsx`
-Displays and edits user profile (avatar, name, grade), change password, recovery email, and account deletion. Delete Account shows a confirmation panel, then calls `deleteAllUserData` + `deleteCurrentUser` — deleting all Firestore data before removing the Auth account, which triggers automatic logout.
+Displays and edits user profile (avatar, name, grade), change password, recovery email, and account deletion. Delete Account shows a confirmation panel, then calls `deleteAllUserData` + `deleteCurrentUser` — deleting all Firestore data before removing the Auth account, which triggers automatic logout. The Delete Account button and confirmation panel are hidden when `isSuperAdmin` is true, preventing the super admin from removing their own account.
 
 ### `src/components/screens/LoginScreen.tsx`
 Handles login, forgot-password flow, and a "Contact Support" link that navigates to `ContactScreen` without requiring authentication.

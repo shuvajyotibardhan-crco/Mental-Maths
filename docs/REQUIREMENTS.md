@@ -404,6 +404,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 4. The Firebase Auth account must also be deleted, logging the user out automatically.
 5. If the Firebase Auth deletion fails due to stale login (`auth/requires-recent-login`), a clear message must instruct the user to log out and back in first.
 6. The action is irreversible — no undo.
+7. The "Delete Account" button and confirmation panel must not be shown when the logged-in user is the super admin.
 
 **Test Plan:**
 
@@ -415,6 +416,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Tap "Yes, Delete" | All user data deleted; user logged out; redirected to login screen |
 | Log in with deleted username/password | Login fails (account no longer exists) |
 | Attempt delete after long session without re-login | Error shown: "Please log out and log back in, then try again" |
+| Open Profile screen as super admin | "Delete Account" button not visible |
 
 ---
 
@@ -487,7 +489,8 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 5. In the Admins tab, super admin can search for any user by username (4+ chars) and grant them admin access.
 6. In the Admins tab, super admin can remove any regular admin. The super admin cannot remove themselves.
 7. The super admin cannot delete their own account via the Delete User action in the Users tab (the button is hidden when the searched user is the logged-in super admin).
-8. Regular admins can be zero or more — the super admin can operate alone.
+8. The super admin cannot delete their own account via the Profile screen (the Delete Account button is hidden for super admin).
+9. Regular admins can be zero or more — the super admin can operate alone.
 
 **Test Plan:**
 
@@ -496,6 +499,7 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Log in as super admin | 🔐 Admins tab visible in admin panel |
 | Log in as regular admin | 🔐 Admins tab not visible |
 | Search own username in Users tab as super admin | Delete User button not shown |
+| Open Profile screen as super admin | Delete Account button not shown |
 | Open Admins tab | Full list of admins with role badges shown |
 | Search and add a regular user as admin | User appears in admin list with "Admin" badge |
 | Remove a regular admin | Admin removed from list; they lose panel access on next login |

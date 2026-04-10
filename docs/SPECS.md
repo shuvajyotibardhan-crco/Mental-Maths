@@ -401,7 +401,7 @@ addAdmin(user):          setDoc admins/{uid} { role:'admin', username, addedAt }
 removeAdmin(uid):        deleteDoc admins/{uid}
 ```
 
-Super admin cannot remove themselves or delete their own account via admin panel.
+Super admin cannot remove themselves or delete their own account via the admin panel (Delete User button hidden) or via the Profile screen (Delete Account button hidden).
 Regular admin count can be zero — super admin alone is valid.
 
 ---
