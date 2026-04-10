@@ -341,6 +341,19 @@ purgeOldSessions(userId):
   delete each in batches of 400
 ```
 
+### Account Deletion
+```
+deleteAllUserData(uid, username):
+  delete all docs in sessions where userId == uid
+  delete highScores/{uid}
+  delete users/{uid}
+  delete usernames/{username}
+
+deleteCurrentUser():
+  deleteUser(auth.currentUser)   // Firebase Auth deletion → triggers logout
+```
+Requires recent login. If `auth/requires-recent-login` is thrown, user is prompted to re-login first.
+
 ---
 
 ## Grade Configuration

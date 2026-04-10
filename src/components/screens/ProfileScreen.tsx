@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { updateUserProfile, getRecoveryEmailByUsername, saveUsernameLookup } from '../../firebase/firestore'
-import { logoutUser, changePassword, setRecoveryEmailOnAuth, getFirebaseErrorMessage } from '../../firebase/auth'
+import { updateUserProfile, getRecoveryEmailByUsername, saveUsernameLookup, deleteAllUserData } from '../../firebase/firestore'
+import { logoutUser, changePassword, setRecoveryEmailOnAuth, getFirebaseErrorMessage, deleteCurrentUser } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
 
@@ -36,6 +36,10 @@ export function ProfileScreen() {
   const [passwordSuccess, setPasswordSuccess] = useState('')
   const [passwordLoading, setPasswordLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   async function handleSave() {
     if (!profile) return
@@ -113,6 +117,24 @@ export function ProfileScreen() {
 
   async function handleLogout() {
     await logoutUser()
+  }
+
+  async function handleDeleteAccount() {
+    if (!profile) return
+    setDeleteLoading(true)
+    setDeleteError('')
+    try {
+      await deleteAllUserData(profile.uid, profile.username)
+      await deleteCurrentUser()
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code ?? ''
+      if (code === 'auth/requires-recent-login') {
+        setDeleteError('Please log out and log back in, then try again.')
+      } else {
+        setDeleteError('Failed to delete account. Please try again.')
+      }
+      setDeleteLoading(false)
+    }
   }
 
   if (!profile) return null
@@ -325,6 +347,42 @@ export function ProfileScreen() {
 
       {recoverySuccess && (
         <p className="text-success text-sm text-center bg-green-50 rounded-xl p-2">{recoverySuccess}</p>
+      )}
+
+      {/* Delete Account */}
+      {confirmingDelete ? (
+        <div className="bg-red-50 border border-red-200 rounded-3xl p-6 space-y-3">
+          <h3 className="text-base font-semibold text-red-700">Delete Account</h3>
+          <p className="text-sm text-red-600">
+            This will permanently delete your account, all game history, and scores. This cannot be undone.
+          </p>
+          {deleteError && (
+            <p className="text-sm text-red-700 bg-red-100 rounded-xl p-2">{deleteError}</p>
+          )}
+          <div className="flex gap-2">
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleteLoading}
+              className="flex-1 py-3 bg-red-600 text-white font-bold rounded-2xl hover:bg-red-700 disabled:opacity-50 cursor-pointer"
+            >
+              {deleteLoading ? 'Deleting…' : 'Yes, Delete'}
+            </button>
+            <button
+              onClick={() => { setConfirmingDelete(false); setDeleteError('') }}
+              disabled={deleteLoading}
+              className="flex-1 py-3 bg-gray-100 text-gray-700 font-medium rounded-2xl hover:bg-gray-200 cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          onClick={() => setConfirmingDelete(true)}
+          className="w-full py-3 text-red-400 font-medium hover:text-red-600 bg-white/80 rounded-2xl cursor-pointer"
+        >
+          Delete Account
+        </button>
       )}
 
       <button

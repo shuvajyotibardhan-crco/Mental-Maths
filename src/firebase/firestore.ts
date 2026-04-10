@@ -222,3 +222,19 @@ export async function purgeOldSessions(userId: string): Promise<number> {
 
   return purged
 }
+
+// ---- Delete all user data ----
+
+export async function deleteAllUserData(uid: string, username: string): Promise<void> {
+  // Delete all sessions
+  const sessionsSnap = await getDocs(query(collection(db, 'sessions'), where('userId', '==', uid)))
+  for (const d of sessionsSnap.docs) {
+    await deleteDoc(doc(db, 'sessions', d.id))
+  }
+  // Delete high scores
+  await deleteDoc(doc(db, 'highScores', uid))
+  // Delete user profile
+  await deleteDoc(doc(db, 'users', uid))
+  // Delete username lookup
+  await deleteDoc(doc(db, 'usernames', username))
+}

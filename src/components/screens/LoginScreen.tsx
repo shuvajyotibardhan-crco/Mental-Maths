@@ -200,6 +200,15 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
             Sign Up
           </button>
         </p>
+
+        <p className="text-center mt-2">
+          <button
+            onClick={() => onNavigate('contact')}
+            className="text-sm text-gray-400 hover:text-primary hover:underline cursor-pointer"
+          >
+            Contact Support
+          </button>
+        </p>
       </div>
     </div>
   )

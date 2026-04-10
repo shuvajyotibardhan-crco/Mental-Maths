@@ -6,6 +6,7 @@ import {
   updatePassword,
   verifyBeforeUpdateEmail,
   sendPasswordResetEmail,
+  deleteUser,
 } from 'firebase/auth'
 import { auth } from './config'
 
@@ -63,6 +64,12 @@ export async function changePassword(newPassword: string): Promise<void> {
   const user = auth.currentUser
   if (!user) throw new Error('No authenticated user')
   await updatePassword(user, newPassword)
+}
+
+export async function deleteCurrentUser(): Promise<void> {
+  const user = auth.currentUser
+  if (!user) throw new Error('No authenticated user')
+  await deleteUser(user)
 }
 
 export function getFirebaseErrorMessage(code: string): string {

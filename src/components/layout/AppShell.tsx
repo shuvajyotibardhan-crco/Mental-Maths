@@ -55,9 +55,8 @@ export function AppShell() {
 
   // Not logged in
   if (!user) {
-    if (screen === 'register') {
-      return <RegisterScreen onNavigate={setScreen} />
-    }
+    if (screen === 'register') return <RegisterScreen onNavigate={setScreen} />
+    if (screen === 'contact') return <ContactScreen onNavigate={setScreen} />
     return <LoginScreen onNavigate={setScreen} />
   }
 

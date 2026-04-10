@@ -18,10 +18,12 @@ function countWords(text: string): number {
 
 export function ContactScreen({ onNavigate }: ContactScreenProps) {
   const { profile } = useAuth()
+  const isLoggedOut = !profile
 
   const [subject, setSubject] = useState('')
   const [description, setDescription] = useState('')
   const [contactEmail, setContactEmail] = useState('')
+  const [usernameInput, setUsernameInput] = useState('')
   const [status, setStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
 
@@ -43,6 +45,7 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
     e.preventDefault()
     setErrorMsg('')
 
+    if (isLoggedOut && !usernameInput.trim()) { setErrorMsg('Please enter your username.'); return }
     if (!subject.trim()) { setErrorMsg('Please enter a subject.'); return }
     if (!description.trim()) { setErrorMsg('Please describe the problem.'); return }
     if (!contactEmail.trim()) { setErrorMsg('Please enter your contact email.'); return }
@@ -64,7 +67,7 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
         description: description.trim(),
         contact_email: contactEmail.trim(),
         from_name: profile?.name ?? 'App User',
-        username: profile?.username ?? 'unknown',
+        username: profile?.username ?? (usernameInput.trim() || 'unknown'),
       }, PUBLIC_KEY)
       setStatus('success')
     } catch (err) {
@@ -84,10 +87,10 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
           <span className="font-medium">{contactEmail}</span>.
         </p>
         <button
-          onClick={() => onNavigate('settings')}
+          onClick={() => onNavigate(isLoggedOut ? 'login' : 'settings')}
           className="mt-4 bg-primary text-white font-semibold rounded-2xl px-8 py-3 hover:bg-primary/90 transition-colors cursor-pointer"
         >
-          Back to Settings
+          {isLoggedOut ? 'Back to Login' : 'Back to Settings'}
         </button>
       </div>
     )
@@ -97,7 +100,7 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
     <div className="p-4 max-w-md mx-auto space-y-4 pb-8">
       <div className="flex items-center gap-3">
         <button
-          onClick={() => onNavigate('settings')}
+          onClick={() => onNavigate(isLoggedOut ? 'login' : 'settings')}
           className="text-gray-500 hover:text-gray-700 text-xl cursor-pointer"
           aria-label="Back"
         >
@@ -111,6 +114,20 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Username (logged-out only) */}
+        {isLoggedOut && (
+          <div className="space-y-1">
+            <label className="text-sm font-medium text-gray-700">Your username <span className="text-red-400">*</span></label>
+            <input
+              type="text"
+              value={usernameInput}
+              onChange={(e) => setUsernameInput(e.target.value)}
+              placeholder="Your app username"
+              className="w-full rounded-2xl border border-gray-200 bg-white/90 px-4 py-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+        )}
+
         {/* Subject */}
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">Subject</label>

@@ -323,29 +323,35 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 
 **Acceptance Criteria:**
 
-1. A "Contact Support" entry shall be accessible from the Settings screen.
-2. The contact form must include a subject line (required, max 120 characters).
-3. The contact form must include a description field (required, max 500 words; a live word counter shall be shown).
-4. The contact form must include a contact email field (required, valid email format).
-5. File attachments are not supported (Firebase Storage requires Blaze plan; deferred to future).
-6. On submission, an email shall be sent to `app_admin@divel.me` with the subject formatted as `[user subject] | Mental Maths`.
-7. Email content shall include the description, contact email, display name, and username.
-8. On successful send, a confirmation screen shall be shown.
-9. On failure, a clear error message shall be displayed with the admin email as fallback.
-10. Password reset emails shall be sent from `app_admin@divel.me` (configured via Firebase Console → Authentication → Email Templates; `divel.me` domain verified).
+1. A "Contact Support" entry shall be accessible from the Settings screen (when logged in).
+2. A "Contact Support" link shall be accessible from the Login screen (when not logged in).
+3. When accessed without login, the form must include a mandatory username field.
+4. The contact form must include a subject line (required, max 120 characters).
+5. The contact form must include a description field (required, max 500 words; a live word counter shall be shown).
+6. The contact form must include a contact email field (required, valid email format).
+7. File attachments are not supported (Firebase Storage requires Blaze plan; deferred to future).
+8. On submission, an email shall be sent to `app_admin@divel.me` with the subject formatted as `[user subject] | Mental Maths`.
+9. Email content shall include the description, contact email, display name, and username.
+10. On successful send, a confirmation screen shall be shown with a back button to Login (if not logged in) or Settings (if logged in).
+11. On failure, a clear error message shall be displayed with the admin email as fallback.
+12. Password reset emails shall be sent from `app_admin@divel.me` (configured via Firebase Console → Authentication → Email Templates; `divel.me` domain verified).
 
 **Test Plan:**
 
 | Step | Expected Result |
 |------|----------------|
 | Open Settings screen | "Contact Support" entry visible |
-| Tap "Contact Support" | Contact form screen opens |
+| Tap "Contact Support" (logged in) | Contact form opens, no username field |
+| Open Login screen | "Contact Support" link visible |
+| Tap "Contact Support" (logged out) | Contact form opens with mandatory username field |
+| Submit without username (logged out) | Validation error: "Please enter your username" |
 | Submit with all fields empty | Validation error shown for subject |
 | Submit without description | Validation error shown for description |
 | Enter description and count words to 500 | Word counter turns red; further typing truncated |
 | Enter invalid email format | Validation error shown |
 | Submit valid form | Success screen shown; email delivered to admin |
-| Tap "Back to Settings" on success screen | Returns to Settings |
+| Tap back on success (logged in) | Returns to Settings |
+| Tap back on success (logged out) | Returns to Login |
 
 ---
 
@@ -383,3 +389,29 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Upload supporting file on any action | File stored in Firebase Storage; link visible in audit log entry |
 | Open Audit Log tab | Last 50 entries shown, newest first |
 | Failed action | Audit entry with outcome = Failed and error detail recorded |
+
+---
+
+## Feature 14 — Delete Account
+
+**User story:** As a user, I want to permanently delete my account and all my data, so that I can fully remove my presence from the app.
+
+**Acceptance Criteria:**
+
+1. A "Delete Account" button shall be accessible from the Profile screen.
+2. Tapping "Delete Account" must show a confirmation panel with a clear warning before proceeding.
+3. On confirmation, the following must be deleted: all game sessions, high scores, user profile, and username lookup record.
+4. The Firebase Auth account must also be deleted, logging the user out automatically.
+5. If the Firebase Auth deletion fails due to stale login (`auth/requires-recent-login`), a clear message must instruct the user to log out and back in first.
+6. The action is irreversible — no undo.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Open Profile screen | "Delete Account" button visible below Log Out |
+| Tap "Delete Account" | Confirmation panel shown with warning text and Yes/Cancel buttons |
+| Tap "Cancel" | Confirmation panel dismissed, no action taken |
+| Tap "Yes, Delete" | All user data deleted; user logged out; redirected to login screen |
+| Log in with deleted username/password | Login fails (account no longer exists) |
+| Attempt delete after long session without re-login | Error shown: "Please log out and log back in, then try again" |
