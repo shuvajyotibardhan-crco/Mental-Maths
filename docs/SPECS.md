@@ -262,6 +262,23 @@ generateQuestion(grade, operation, difficulty):
       return { display: "base^exp = ?", answer: base ** exp }
 ```
 
+### Within-Session Deduplication (Standard Game)
+```
+generateUniqueQuestion(grade, operation, difficulty, seen: Set<string>):
+  q = generateQuestion(grade, operation, difficulty)
+  retries = 0
+  while q.displayString in seen and retries < 10:
+    q = generateQuestion(grade, operation, difficulty)
+    retries++
+  return q   // accepted even if duplicate after 10 retries (tiny pool edge case)
+
+// GameContext tracks seen across the full session:
+// START  → seen = { firstQuestion.displayString }
+// ANSWER → seen = seen ∪ { nextQuestion.displayString }
+// SKIP   → seen = seen ∪ { nextQuestion.displayString }
+// RESET  → seen = {}
+```
+
 ### Score Calculation
 ```
 calculateQuestionScore(question, currentStreak, mode):

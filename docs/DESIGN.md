@@ -70,7 +70,7 @@ All Firestore read/write operations grouped by domain: user profiles, username l
 Subscribes to `onAuthStateChanged` and fetches the Firestore `UserProfile` when a user is signed in. Exposes `user`, `profile`, `loading`, and `setProfile` (for in-place profile updates without a Firestore re-fetch). `setLoading(true)` is called at the top of the callback — before the async profile fetch — so the loading spinner is shown during re-login, preventing a flash of ProfileSetupScreen for existing users.
 
 ### `src/context/GameContext.tsx`
-Reducer-based state machine for a game session. States: `idle → playing → finished`. Handles question generation (calls engine), answer submission, scoring, streak tracking, and response timing. Provides `startGame`, `submitAnswer`, `skipQuestion`, `finishGame`, `resetGame` actions.
+Reducer-based state machine for a game session. States: `idle → playing → finished`. Handles question generation (calls engine), answer submission, scoring, streak tracking, and response timing. Provides `startGame`, `submitAnswer`, `skipQuestion`, `finishGame`, `resetGame` actions. Maintains a `seenQuestions` Set across the session to prevent repeated questions; each new question is generated via `generateUniqueQuestion()` which retries up to 10 times on collision.
 
 ### `src/context/SettingsContext.tsx`
 Single setting (sound toggle) persisted to `localStorage` under the key `mm_sound`.
