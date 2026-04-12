@@ -20,6 +20,7 @@ interface GameState {
   bestStreak: number
   questionStartTime: number
   questionCount: number
+  seenQuestions: Set<string>
 }
 
 type GameAction =
@@ -39,16 +40,35 @@ const initialState: GameState = {
   bestStreak: 0,
   questionStartTime: 0,
   questionCount: 0,
+  seenQuestions: new Set(),
+}
+
+function generateUniqueQuestion(
+  grade: Grade,
+  operation: OperationType,
+  difficulty: Difficulty,
+  seen: Set<string>,
+): Question {
+  let q = generateQuestion(grade, operation, difficulty)
+  let retries = 0
+  while (seen.has(q.displayString) && retries < 10) {
+    q = generateQuestion(grade, operation, difficulty)
+    retries++
+  }
+  return q
 }
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'START': {
-      const question = generateQuestion(
+      const seen = new Set<string>()
+      const question = generateUniqueQuestion(
         action.config.grade,
         action.config.operation,
         action.config.difficulty,
+        seen,
       )
+      seen.add(question.displayString)
       return {
         ...initialState,
         status: 'playing',
@@ -56,6 +76,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         currentQuestion: question,
         questionStartTime: Date.now(),
         questionCount: 1,
+        seenQuestions: seen,
       }
     }
 
@@ -95,11 +116,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
       // Generate next question
-      const nextQuestion = generateQuestion(
+      const newSeen = new Set(state.seenQuestions)
+      const nextQuestion = generateUniqueQuestion(
         state.config.grade,
         state.config.operation,
         state.config.difficulty,
+        newSeen,
       )
+      newSeen.add(nextQuestion.displayString)
 
       return {
         ...state,
@@ -110,6 +134,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         bestStreak: newBestStreak,
         questionStartTime: Date.now(),
         questionCount: newCount,
+        seenQuestions: newSeen,
       }
     }
 
@@ -136,11 +161,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         }
       }
 
-      const nextQuestion = generateQuestion(
+      const newSeen = new Set(state.seenQuestions)
+      const nextQuestion = generateUniqueQuestion(
         state.config.grade,
         state.config.operation,
         state.config.difficulty,
+        newSeen,
       )
+      newSeen.add(nextQuestion.displayString)
 
       return {
         ...state,
@@ -149,6 +177,7 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         streak: 0,
         questionStartTime: Date.now(),
         questionCount: state.questionCount + 1,
+        seenQuestions: newSeen,
       }
     }
 
