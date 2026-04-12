@@ -1,7 +1,32 @@
-import { createContext, useContext, useReducer, type ReactNode } from 'react'
+import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react'
 import type { Question, AnsweredQuestion, OperationType, Difficulty, GameMode, Grade } from '../types'
 import { generateQuestion } from '../engine/questionGenerator'
 import { calculateQuestionScore, getBestStreak } from '../engine/scoring'
+
+const LS_KEY = 'mm_seen_questions'
+const LS_MAX = 60
+
+function loadSeenFromStorage(): Set<string> {
+  try {
+    const raw = localStorage.getItem(LS_KEY)
+    if (!raw) return new Set()
+    const arr = JSON.parse(raw) as string[]
+    return new Set(arr)
+  } catch {
+    return new Set()
+  }
+}
+
+function saveSeenToStorage(seen: Set<string>): void {
+  try {
+    // Keep only the most recent LS_MAX entries (trim from the front)
+    const arr = Array.from(seen)
+    const trimmed = arr.length > LS_MAX ? arr.slice(arr.length - LS_MAX) : arr
+    localStorage.setItem(LS_KEY, JSON.stringify(trimmed))
+  } catch {
+    // localStorage unavailable — silently ignore
+  }
+}
 
 interface GameConfig {
   grade: Grade
@@ -24,7 +49,7 @@ interface GameState {
 }
 
 type GameAction =
-  | { type: 'START'; config: GameConfig }
+  | { type: 'START'; config: GameConfig; initialSeen: Set<string> }
   | { type: 'ANSWER'; userAnswer: number }
   | { type: 'SKIP' }
   | { type: 'FINISH' }
@@ -61,7 +86,7 @@ function generateUniqueQuestion(
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case 'START': {
-      const seen = new Set<string>()
+      const seen = new Set(action.initialSeen)
       const question = generateUniqueQuestion(
         action.config.grade,
         action.config.operation,
@@ -215,11 +240,18 @@ const GameContext = createContext<GameContextValue>({
 export function GameProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(gameReducer, initialState)
 
+  // Persist seen questions to localStorage when a session finishes
+  useEffect(() => {
+    if (state.status === 'finished') {
+      saveSeenToStorage(state.seenQuestions)
+    }
+  }, [state.status, state.seenQuestions])
+
   return (
     <GameContext.Provider
       value={{
         state,
-        startGame: (config) => dispatch({ type: 'START', config }),
+        startGame: (config) => dispatch({ type: 'START', config, initialSeen: loadSeenFromStorage() }),
         submitAnswer: (answer) => dispatch({ type: 'ANSWER', userAnswer: answer }),
         skipQuestion: () => dispatch({ type: 'SKIP' }),
         finishGame: () => dispatch({ type: 'FINISH' }),

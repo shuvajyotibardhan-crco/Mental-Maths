@@ -273,10 +273,13 @@ generateUniqueQuestion(grade, operation, difficulty, seen: Set<string>):
   return q   // accepted even if duplicate after 10 retries (tiny pool edge case)
 
 // GameContext tracks seen across the full session:
-// START  → seen = { firstQuestion.displayString }
+// START  → seen = loadSeenFromStorage() ∪ { firstQuestion.displayString }
 // ANSWER → seen = seen ∪ { nextQuestion.displayString }
 // SKIP   → seen = seen ∪ { nextQuestion.displayString }
+// FINISH → saveSeenToStorage(seen)   // persists to localStorage, capped at 60
 // RESET  → seen = {}
+
+// localStorage key: mm_seen_questions  (JSON array of displayString, max 60 entries, FIFO)
 ```
 
 ### Score Calculation
