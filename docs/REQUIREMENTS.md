@@ -1,7 +1,7 @@
-# EduQuiz — Requirements
+# DIVEL EDU QUIZ — Requirements
 
 ## Overview
-EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids and students (KG–Grade 12). It supports two subjects: **Mental Maths** (arithmetic practice across 8 operation types) and **Social Studies** (multiple-choice quizzes covering the US and Colorado curriculum for Grades 3–12). Players log in with a username and password; scores, streaks, and session history are tracked per user.
+DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG–Grade 12). It supports two subjects: **Mental Maths** (arithmetic practice across 8 operation types) and **Social Studies** (multiple-choice quizzes covering the US and Colorado curriculum for Grades 3–12). Players log in with a username and password; scores, streaks, and session history are tracked per user.
 
 ## Scope
 
@@ -341,7 +341,7 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 5. The contact form must include a description field (required, max 500 words; a live word counter shall be shown).
 6. The contact form must include a contact email field (required, valid email format).
 7. File attachments are not supported (Firebase Storage requires Blaze plan; deferred to future).
-8. On submission, an email shall be sent to `app_admin@divel.me` with the subject formatted as `[user subject] | Mental Maths`.
+8. On submission, an email shall be sent to `app_admin@divel.me` with the subject formatted as `[user subject] | DIVEL EDU QUIZ`.
 9. Email content shall include the description, contact email, display name, and username.
 10. On successful send, a confirmation screen shall be shown with a back button to Login (if not logged in) or Settings (if logged in).
 11. On failure, a clear error message shall be displayed with the admin email as fallback.

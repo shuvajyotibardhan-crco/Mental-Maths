@@ -1,4 +1,4 @@
-# EduQuiz — Technical Specifications
+# DIVEL EDU QUIZ — Technical Specifications
 
 ## Data Models
 
@@ -746,7 +746,7 @@ The template must define these variables and set "To Email" to `app_admin@divel.
 
 | Variable | Content |
 |----------|---------|
-| `{{subject}}` | `[user subject] | Mental Maths` |
+| `{{subject}}` | `[user subject] | DIVEL EDU QUIZ` |
 | `{{description}}` | Problem description (≤500 words) |
 | `{{contact_email}}` | User's reply-to email |
 | `{{from_name}}` | User's display name |
