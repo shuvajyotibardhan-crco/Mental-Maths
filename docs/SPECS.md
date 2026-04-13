@@ -1,4 +1,4 @@
-# Mental Maths — Technical Specifications
+# EduQuiz — Technical Specifications
 
 ## Data Models
 
@@ -52,7 +52,7 @@ interface AnsweredQuestion extends Question {
 ```
 
 ### SessionRecord
-Stored in Firestore collection `sessions`.
+Stored in Firestore collection `sessions`. Shared by both Mental Maths and Social Studies sessions.
 
 ```typescript
 interface SessionRecord {
@@ -60,17 +60,65 @@ interface SessionRecord {
   userId: string           // Firebase Auth UID
   timestamp: number        // Date.now()
   grade: Grade
-  operation: OperationType
-  difficulty: Difficulty
-  mode: GameMode           // 'timed' | 'fixed'
+  subject?: 'mentalMaths' | 'socialStudies'  // absent = mentalMaths (backward compat)
+  operation: OperationType | null  // null for Social Studies sessions
+  difficulty: Difficulty | null    // null for Social Studies sessions
+  mode: GameMode           // 'fixed' for Social Studies
   totalQuestions: number   // questions attempted
   correctAnswers: number
-  accuracy: number         // (correctAnswers / totalQuestions) * 100
-  score: number            // calculated by scoring engine
+  accuracy: number         // correctAnswers / totalQuestions (0–1)
+  score: number
   timeTakenSeconds: number
   bestStreak: number
-  isHighScore: boolean     // true if personal best at time of save
-  challengeId?: string     // game code if from multiplayer challenge
+  isHighScore: boolean     // always false for Social Studies (no HS system)
+  challengeId?: string     // game code if from multiplayer challenge (Maths only)
+}
+```
+
+### SocialStudiesQuestion
+Stored in Firestore collection `socialStudiesQuestions`.
+
+```typescript
+interface SocialStudiesQuestion {
+  id: string                               // Firestore auto-generated doc ID
+  grade: Grade                             // '3'–'12' (KG–2 not supported)
+  question: string                         // question text
+  options: [string, string, string, string] // four answer choices
+  correctIndex: 0 | 1 | 2 | 3             // index of the correct option
+  topic: string                            // e.g. 'Colorado History', 'US Civics'
+  standard: 'US' | 'Colorado' | 'both'    // curriculum alignment
+}
+```
+
+### SocialStudiesAnsweredQuestion
+In-memory only — used in `useSocialStudiesGame` state and `SocialStudiesResultsScreen`.
+
+```typescript
+interface SocialStudiesAnsweredQuestion {
+  question: SocialStudiesQuestion
+  selectedIndex: number | null  // null if unanswered (edge case)
+  isCorrect: boolean
+  answeredAt: number            // Date.now()
+}
+```
+
+### SocialStudiesSession
+Shape passed to `saveSocialStudiesSession`; persisted as a `SessionRecord` in Firestore.
+
+```typescript
+interface SocialStudiesSession {
+  id: string           // assigned by Firestore on write
+  userId: string
+  timestamp: number
+  grade: Grade
+  subject: 'socialStudies'
+  totalQuestions: number
+  correctAnswers: number
+  accuracy: number     // 0–1
+  score: number        // correctAnswers × 5 (max 100)
+  timeTakenSeconds: number
+  bestStreak: number
+  isHighScore: boolean // always false
 }
 ```
 
@@ -170,12 +218,13 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 |-----------|--------|----------|
 | `users` | Firebase UID | UserProfile fields |
 | `usernameLookup` | username (lowercase) | `{ recoveryEmail?: string }` |
-| `sessions` | auto | SessionRecord fields |
-| `highScores` | Firebase UID | Map of HighScoreKey → HighScoreEntry |
-| `globalHighScores` | HighScoreKey | HighScoreEntry |
+| `sessions` | auto | SessionRecord fields (Maths and Social Studies) |
+| `highScores` | Firebase UID | Map of HighScoreKey → HighScoreEntry (Maths only) |
+| `globalHighScores` | HighScoreKey | HighScoreEntry (Maths only) |
 | `challenges` | 7-char game code | Challenge (config, questions, players map) |
-| `admins` | Firebase UID | `{}` — presence of document grants admin access |
+| `admins` | Firebase UID | `{ role?, username?, addedAt? }` |
 | `auditLog` | auto | AuditEntry fields |
+| `socialStudiesQuestions` | auto | SocialStudiesQuestion fields (seeded via script) |
 
 ### localStorage
 
@@ -464,11 +513,21 @@ Min password length:  6 characters
 Max input length:     6 characters (excluding minus)
 ```
 
-### Scoring Constants
+### Scoring Constants (Mental Maths)
 ```
 Base points:    easy=10, medium=20, hard=30
 Streak bonus:   ≥10 streak → 2.0×, ≥5 → 1.5×, else 1.0×
 Speed bonus:    <3s → 2.0×, <5s → 1.5×, else 1.0× (timed mode only)
+```
+
+### Social Studies Constants
+```
+Questions per session:  20 (drawn randomly from up to 80 per grade in Firestore)
+Points per correct:     5 (max score = 100)
+Answer reveal delay:    1.2 seconds (auto-advance after answer shown)
+Eligible grades:        3–12 (KG, 1, 2 blocked)
+Curriculum:             US national + Colorado state standards
+Question bank size:     800 total (80 per grade, grades 3–12)
 ```
 
 ---
@@ -492,8 +551,11 @@ Mental Maths/
 │   └── SPECS.md
 │
 ├── scripts/
-│   └── reset.mjs                 # Dev utility: wipe all Firebase data
+│   ├── reset.mjs                 # Dev utility: wipe all Firebase data
+│   └── seedSocialStudies.mjs     # Seeds socialStudiesQuestions collection
+│                                 # 800 questions, 80/grade (grades 3–12)
 │                                 # Requires serviceAccount.json (git-ignored)
+│                                 # Uses preferRest:true to avoid Node v24 gRPC issue
 │
 └── src/
     ├── main.tsx                  # ReactDOM.createRoot entry
@@ -507,14 +569,16 @@ Mental Maths/
     │   ├── session.ts            # SessionRecord, HighScoreEntry, HighScoreKey
     │   ├── user.ts               # UserProfile
     │   ├── challenge.ts          # Challenge, ChallengePlayer, ChallengeConfig, ChallengeStatus
-    │   └── admin.ts              # AuditEntry, AdminActionType
+    │   ├── admin.ts              # AuditEntry, AdminActionType
+    │   └── socialStudies.ts      # SocialStudiesQuestion, SocialStudiesAnsweredQuestion, SocialStudiesSession
     │
     ├── firebase/
     │   ├── config.ts             # Firebase app init; exports app, auth, db, storage
     │   ├── auth.ts               # Auth helpers; synthetic email system
     │   ├── firestore.ts          # All Firestore CRUD (users, sessions, high scores)
     │   ├── challenge.ts          # Challenge CRUD + onSnapshot subscription
-    │   └── admin.ts              # Admin ops: isAdmin check, user search, reset/merge/move, audit log
+    │   ├── admin.ts              # Admin ops: isAdmin check, user search, reset/merge/move, audit log
+    │   └── socialStudies.ts      # fetchSocialStudiesQuestions, saveSocialStudiesSession
     │
     ├── context/
     │   ├── AuthContext.tsx       # onAuthStateChanged → profile fetch
@@ -525,7 +589,8 @@ Mental Maths/
     │   ├── useTimer.ts              # countdown/elapsed timer with onComplete
     │   ├── useSound.ts              # Web Audio API sound synthesis (wrong/complete/personalBest/globalBest)
     │   ├── useChallengeListener.ts  # onSnapshot wrapper for challenge doc
-    │   └── useChallengeGame.ts      # Multiplayer game logic (pre-gen questions + Firestore sync)
+    │   ├── useChallengeGame.ts      # Multiplayer game logic (pre-gen questions + Firestore sync)
+    │   └── useSocialStudiesGame.ts  # Social Studies quiz logic (fetch, select, reveal, save)
     │
     ├── engine/
     │   ├── questionGenerator.ts  # Pure: grade+op+diff → Question, generateQuestionBatch
@@ -556,11 +621,14 @@ Mental Maths/
         │   ├── ProfileScreen.tsx       # Edit profile, password, recovery email
         │   ├── SettingsScreen.tsx           # Sound toggle, version
         │   ├── AdminScreen.tsx              # Admin panel: user search, reset/merge/move, audit log
-        │   ├── ChallengeCreateScreen.tsx   # Host configures and creates challenge
-        │   ├── JoinChallengeScreen.tsx      # Enter 7-digit code to join
-        │   ├── ChallengeLobbyScreen.tsx     # Waiting room with player list
-        │   ├── ChallengeGameScreen.tsx      # Multiplayer gameplay + live leaderboard
-        │   └── ChallengeResultsScreen.tsx   # Leaderboard + stats + session save
+        │   ├── ChallengeCreateScreen.tsx        # Host configures and creates challenge
+        │   ├── JoinChallengeScreen.tsx           # Enter 7-digit code to join
+        │   ├── ChallengeLobbyScreen.tsx          # Waiting room with player list
+        │   ├── ChallengeGameScreen.tsx           # Multiplayer gameplay + live leaderboard
+        │   ├── ChallengeResultsScreen.tsx        # Leaderboard + stats + session save
+        │   ├── SocialStudiesSetupScreen.tsx      # Grade info + Start Quiz button
+        │   ├── SocialStudiesGameScreen.tsx       # MCQ gameplay with reveal + auto-advance
+        │   └── SocialStudiesResultsScreen.tsx    # Score, accuracy, streak, incorrect review
         │
         └── game/
             ├── QuestionCard.tsx  # Question text + correct/wrong feedback

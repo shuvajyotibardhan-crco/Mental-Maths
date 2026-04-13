@@ -4,8 +4,12 @@ interface HomeScreenProps {
   onNavigate: (screen: string) => void
 }
 
+const SS_GRADES = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const { profile } = useAuth()
+  const grade = profile?.grade ?? 'KG'
+  const ssEligible = SS_GRADES.includes(grade)
 
   return (
     <div className="flex flex-col items-center justify-center p-6 gap-8 min-h-[70vh]">
@@ -15,17 +19,31 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           Hi {profile?.name}!
         </h1>
         <p className="text-gray-500 mt-1">
-          Grade {profile?.grade} — Ready to practice?
+          Grade {grade} — What would you like to practice?
         </p>
       </div>
 
       <div className="w-full max-w-xs space-y-4">
-        <button
-          onClick={() => onNavigate('setup')}
-          className="w-full py-5 bg-primary text-white font-bold text-xl rounded-3xl shadow-lg hover:bg-primary-dark hover:shadow-xl active:scale-95 transition-all cursor-pointer"
-        >
-          Start Playing
-        </button>
+        {/* Subject cards */}
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            onClick={() => onNavigate('setup')}
+            className="flex flex-col items-center gap-2 py-5 bg-primary text-white font-bold rounded-3xl shadow-lg hover:bg-primary-dark hover:shadow-xl active:scale-95 transition-all cursor-pointer"
+          >
+            <span className="text-3xl">🧮</span>
+            <span className="text-sm">Mental Maths</span>
+          </button>
+
+          <button
+            onClick={() => ssEligible && onNavigate('ss-setup')}
+            disabled={!ssEligible}
+            title={!ssEligible ? 'Available for Grade 3+' : undefined}
+            className="flex flex-col items-center gap-2 py-5 bg-teal-500 text-white font-bold rounded-3xl shadow-lg hover:bg-teal-600 hover:shadow-xl active:scale-95 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="text-3xl">🌍</span>
+            <span className="text-sm">Social Studies</span>
+          </button>
+        </div>
 
         <div className="grid grid-cols-2 gap-3">
           <button

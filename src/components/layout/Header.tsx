@@ -13,7 +13,7 @@ export function Header({ onNavigate }: HeaderProps) {
         onClick={() => onNavigate('home')}
         className="text-xl font-bold text-primary-dark cursor-pointer"
       >
-        Mental Maths
+        EduQuiz
       </button>
       {profile && (
         <button

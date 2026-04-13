@@ -1,16 +1,17 @@
-# Mental Maths — Requirements
+# EduQuiz — Requirements
 
 ## Overview
-Mental Maths is a web-based arithmetic practice app for kids and students (KG–Grade 12). Players log in with a username and password, configure a game session by selecting grade, operation, difficulty, and mode, then answer questions generated at the appropriate level. Scores, streaks, and session history are tracked per user, with personal and global high score leaderboards.
+EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids and students (KG–Grade 12). It supports two subjects: **Mental Maths** (arithmetic practice across 8 operation types) and **Social Studies** (multiple-choice quizzes covering the US and Colorado curriculum for Grades 3–12). Players log in with a username and password; scores, streaks, and session history are tracked per user.
 
 ## Scope
 
 ### In Scope
 - Username/password authentication (no OAuth)
-- Question generation for 13 grade levels (KG–12) across 8 operation types
-- Two game modes: timed (2 minutes) and fixed (20 questions)
-- Scoring with streak and speed multipliers
-- Personal and global high score tracking
+- Mental Maths: question generation for 13 grade levels (KG–12) across 8 operation types
+- Social Studies: 20-question multiple-choice quizzes for Grades 3–12, US and Colorado curriculum
+- Two game modes for Maths: timed (2 minutes) and fixed (20 questions)
+- Scoring with streak and speed multipliers (Maths); accuracy-based scoring (Social Studies)
+- Personal and global high score tracking (Maths only)
 - Session history with filters
 - In-app password change and optional recovery email for password reset
 - Sound effects toggle
@@ -473,6 +474,41 @@ Mental Maths is a web-based arithmetic practice app for kids and students (KG–
 | Click Reset | All filters cleared; default date range restored |
 | No sessions match filters | "No sessions found" message |
 | 500+ sessions in range | "Showing first 500 results" notice shown |
+
+---
+
+## Feature 18 — Social Studies Quiz
+
+**User story:** As a student in Grade 3–12, I want to take a Social Studies quiz covering US and Colorado curriculum so that I can practise outside of maths.
+
+**Acceptance Criteria:**
+1. A "Social Studies" subject card shall appear on the Home screen alongside "Mental Maths".
+2. Social Studies shall only be available for Grades 3–12; the card shall be disabled with a tooltip for KG–Grade 2 users.
+3. The setup screen shall display the student's grade, number of questions (20), curriculum (US + Colorado), and format (multiple choice).
+4. Each quiz session shall present 20 questions drawn randomly from the `socialStudiesQuestions` Firestore collection for the student's grade.
+5. Questions shall have four answer options (A–D); the correct answer shall be revealed immediately after selection.
+6. After selecting an answer, the correct option shall highlight green and any wrong selection shall highlight red; the next question shall load automatically after 1.2 seconds.
+7. Score increments by 5 points per correct answer (max 100).
+8. A running score and question counter shall be visible throughout the quiz.
+9. On completion, a results screen shall show: score, correct/total, accuracy %, best streak, and a review of all incorrectly answered questions with the correct answers shown.
+10. A performance emoji and message shall be shown based on accuracy (≥90% 🏆, ≥75% 🌟, ≥60% 👍, ≥40% 💪, else 😔).
+11. Each completed session shall be saved to the shared `sessions` Firestore collection with `subject: 'socialStudies'`.
+12. "Play Again" shall return to the setup screen; "Home" shall return to the Home screen.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Log in as KG/Grade 1/2 user | Social Studies card disabled with tooltip |
+| Log in as Grade 3+ user | Social Studies card enabled |
+| Tap Social Studies card | Setup screen shows grade, 20 questions, US+Colorado curriculum |
+| Tap Start Quiz | 20 questions load; first question displayed |
+| Select correct answer | Option highlights green; after 1.2 s next question loads; score +5 |
+| Select wrong answer | Selection highlights red, correct answer highlights green; after 1.2 s advances |
+| Complete all 20 questions | Results screen shown with score, accuracy, streak, and review |
+| Check Firestore | Session doc with `subject: 'socialStudies'` written |
+| Tap Play Again | Returns to setup screen |
+| Tap Home | Home screen shown |
 
 ---
 

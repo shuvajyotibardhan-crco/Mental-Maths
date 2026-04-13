@@ -1,7 +1,7 @@
-# Mental Maths — Design
+# EduQuiz — Design
 
 ## High-Level Overview
-Mental Maths is a single-page React application built with TypeScript and Tailwind CSS v4, backed by Firebase Authentication and Firestore. The app targets students from KG to Grade 12 and generates arithmetic questions appropriate to each grade level across eight operation types. State is managed through React Context (auth, game, settings), routing is handled by a single AppShell component (no external router), and all game logic lives in pure engine modules decoupled from the UI. The design philosophy prioritises simplicity and child-friendly UX over feature breadth.
+EduQuiz is a single-page React application built with TypeScript and Tailwind CSS v4, backed by Firebase Authentication and Firestore. The app targets students from KG to Grade 12 and supports two subjects: **Mental Maths** (dynamically generated arithmetic questions across eight operation types) and **Social Studies** (multiple-choice quizzes seeded into Firestore from the US and Colorado curriculum for Grades 3–12). State is managed through React Context (auth, game, settings), routing is handled by a single AppShell component (no external router), and all game logic lives in pure modules decoupled from the UI. The design philosophy prioritises simplicity and child-friendly UX over feature breadth.
 
 ---
 
@@ -100,7 +100,13 @@ Wraps Firestore `onSnapshot` for a challenge document. Returns the live `Challen
 Game logic hook for multiplayer. Steps through pre-generated questions from the challenge document, tracks score/streak locally, and writes progress to Firestore after each answer. Mirrors the solo GameContext reducer pattern but decoupled from it.
 
 ### `src/components/layout/AppShell.tsx`
-Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows. On profile load, calls `checkIsAdmin` and `checkIsSuperAdmin` — results stored as `userIsAdmin` and `userIsSuperAdmin`, passed to `BottomNav` and `AdminScreen`. The `contact` screen is accessible without login (rendered before the auth guard).
+Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows. On profile load, calls `checkIsAdmin` and `checkIsSuperAdmin` — results stored as `userIsAdmin` and `userIsSuperAdmin`, passed to `BottomNav` and `AdminScreen`. The `contact` screen is accessible without login (rendered before the auth guard). Social Studies screens (`ss-setup`, `ss-game`, `ss-results`) are handled by an inner `SocialStudiesShell` component that owns a single `useSocialStudiesGame` instance, keeping Social Studies state entirely separate from the Maths `GameContext`.
+
+### `src/hooks/useSocialStudiesGame.ts`
+Custom hook encapsulating all Social Studies game logic. Fetches questions from Firestore via `fetchSocialStudiesQuestions`, manages a two-phase answer flow (select → reveal), tracks score/streak, and saves the completed session via `saveSocialStudiesSession`. The hook exposes `state`, `startGame`, `selectAnswer`, `advance`, and `reset`. Auto-advance after reveal is handled in `SocialStudiesGameScreen` via a `useEffect` timeout (1.2 s) rather than in the hook, keeping timing concerns in the UI layer.
+
+### `src/firebase/socialStudies.ts`
+Two functions: `fetchSocialStudiesQuestions(grade)` — queries the `socialStudiesQuestions` Firestore collection filtered by grade (limit 80), shuffles results, and returns 20 for the session; `saveSocialStudiesSession(session)` — writes to the shared `sessions` collection with `subject: 'socialStudies'` and null values for Maths-only fields (`operation`, `difficulty`) for backward compatibility.
 
 ### `src/firebase/admin.ts`
 All admin-specific Firestore operations. Functions: `checkIsAdmin`, `checkIsSuperAdmin`, `searchUsersByPrefix` (prefix range query, min 4 chars), `uploadSupportingFile`, `getAuditLog`, `adminResetPassword`, `adminMergeUsers`, `adminMoveScores`, `adminDeleteUser`, `getDashboardSessions`, `getAdminList`, `addAdmin`, `removeAdmin`. Every action writes an `auditLog` entry regardless of outcome. Batch writes (400 ops/batch) handle large session transfers. `adminResetPassword` and `adminDeleteUser` call Cloud Functions for server-side Auth operations.
@@ -162,6 +168,12 @@ Audio files require hosting, fetching, and cache management, and add to the bund
 
 **Why no state management library (Redux/Zustand)?**
 Three contexts (auth, game, settings) cover all shared state. The game context uses a reducer pattern where needed. A third-party library would add overhead without benefit at this scale.
+
+**Why a separate hook for Social Studies instead of extending GameContext?**
+Social Studies questions are multiple-choice and fetched from Firestore, not generated by the local engine. Extending the Maths `GameContext` reducer would require conditional logic throughout and pollute the Maths-specific types. A lightweight `useSocialStudiesGame` hook keeps the two subjects fully independent.
+
+**Why seed Social Studies questions into Firestore instead of generating them?**
+Unlike Maths, Social Studies content is factual and curriculum-specific — it cannot be algorithmically generated. Pre-seeding 800 questions (80 per grade, Grades 3–12) via `scripts/seedSocialStudies.mjs` allows question authors to add, edit, and remove content without a code deploy. The app fetches up to 80 questions per grade and randomly serves 20, providing variety across sessions.
 
 **Why session purging on startup?**
 Firestore bills per document read. Purging sessions older than 6 months on app startup keeps the history collection lean and costs predictable.

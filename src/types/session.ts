@@ -5,6 +5,7 @@ export interface SessionRecord {
   userId: string
   timestamp: number
   grade: Grade
+  subject?: 'mentalMaths' | 'socialStudies'  // optional for backward compat; absent = mentalMaths
   operation: OperationType
   difficulty: Difficulty
   mode: GameMode

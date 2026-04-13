@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { purgeOldSessions } from '../../firebase/firestore'
 import { checkIsAdmin, checkIsSuperAdmin } from '../../firebase/admin'
 import { GameProvider } from '../../context/GameContext'
+import { useSocialStudiesGame } from '../../hooks/useSocialStudiesGame'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
 import { LoginScreen } from '../screens/LoginScreen'
@@ -22,6 +23,66 @@ import { ChallengeGameScreen } from '../screens/ChallengeGameScreen'
 import { ChallengeResultsScreen } from '../screens/ChallengeResultsScreen'
 import { ContactScreen } from '../screens/ContactScreen'
 import { AdminScreen } from '../screens/AdminScreen'
+import { SocialStudiesSetupScreen } from '../screens/SocialStudiesSetupScreen'
+import { SocialStudiesGameScreen } from '../screens/SocialStudiesGameScreen'
+import { SocialStudiesResultsScreen } from '../screens/SocialStudiesResultsScreen'
+import type { Grade } from '../../types'
+
+function SocialStudiesShell({
+  screen,
+  setScreen,
+}: {
+  screen: string
+  setScreen: (s: string) => void
+}) {
+  const { user, profile } = useAuth()
+  const grade: Grade = (profile?.grade ?? '3') as Grade
+  const { state, startGame, selectAnswer, advance, reset } = useSocialStudiesGame(
+    user?.uid ?? '',
+    grade,
+  )
+
+  const handleStart = useCallback(async () => {
+    await startGame()
+    setScreen('ss-game')
+  }, [startGame, setScreen])
+
+  const handlePlayAgain = useCallback(() => {
+    reset()
+    setScreen('ss-setup')
+  }, [reset, setScreen])
+
+  // When game finishes, navigate to results
+  useEffect(() => {
+    if (state.status === 'finished' && screen === 'ss-game') {
+      setScreen('ss-results')
+    }
+  }, [state.status, screen, setScreen])
+
+  if (screen === 'ss-setup') {
+    return <SocialStudiesSetupScreen onNavigate={setScreen} onStart={handleStart} />
+  }
+  if (screen === 'ss-game') {
+    return (
+      <SocialStudiesGameScreen
+        gameState={state}
+        onSelectAnswer={selectAnswer}
+        onAdvance={advance}
+        onNavigate={setScreen}
+      />
+    )
+  }
+  if (screen === 'ss-results') {
+    return (
+      <SocialStudiesResultsScreen
+        gameState={state}
+        onPlayAgain={handlePlayAgain}
+        onNavigate={setScreen}
+      />
+    )
+  }
+  return null
+}
 
 export function AppShell() {
   const { user, profile, loading } = useAuth()
@@ -67,8 +128,9 @@ export function AppShell() {
     return <ProfileSetupScreen />
   }
 
+  const isSsScreen = screen === 'ss-game'
   // Only hide nav during active gameplay
-  const isGameScreen = screen === 'game' || screen === 'challenge-game'
+  const isGameScreen = screen === 'game' || screen === 'challenge-game' || isSsScreen
 
   function handleChallengeCreated(gameCode: string) {
     setChallengeCode(gameCode)
@@ -79,6 +141,8 @@ export function AppShell() {
     setChallengeCode(gameCode)
     setScreen('challenge-lobby')
   }
+
+  const isSocialStudiesScreen = screen === 'ss-setup' || screen === 'ss-game' || screen === 'ss-results'
 
   return (
     <GameProvider>
@@ -110,6 +174,9 @@ export function AppShell() {
             <ChallengeResultsScreen gameCode={challengeCode} onNavigate={setScreen} />
           )}
           {screen === 'admin' && userIsAdmin && <AdminScreen onNavigate={setScreen} isSuperAdmin={userIsSuperAdmin} />}
+          {isSocialStudiesScreen && (
+            <SocialStudiesShell screen={screen} setScreen={setScreen} />
+          )}
         </main>
         {!isGameScreen && (
           <BottomNav currentScreen={screen} onNavigate={setScreen} isAdmin={userIsAdmin} />

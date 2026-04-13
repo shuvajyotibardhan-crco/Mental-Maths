@@ -386,6 +386,7 @@ export interface DashboardFilters {
   grade?: string
   operation?: string
   difficulty?: string
+  subject?: 'mentalMaths' | 'socialStudies'
 }
 
 export async function getDashboardSessions(
@@ -413,6 +414,13 @@ export async function getDashboardSessions(
   if (filters.grade) sessions = sessions.filter((s) => s.grade === filters.grade)
   if (filters.operation) sessions = sessions.filter((s) => s.operation === filters.operation)
   if (filters.difficulty) sessions = sessions.filter((s) => s.difficulty === filters.difficulty)
+  if (filters.subject) {
+    sessions = sessions.filter((s) =>
+      filters.subject === 'socialStudies'
+        ? s.subject === 'socialStudies'
+        : s.subject === 'mentalMaths' || !s.subject,  // backward compat: absent = mentalMaths
+    )
+  }
 
   const uniqueUids = [...new Set(sessions.map((s) => s.userId))]
   const userMap: Record<string, string> = {}

@@ -89,6 +89,7 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
   const [dashGrade, setDashGrade] = useState('')
   const [dashOperation, setDashOperation] = useState('')
   const [dashDifficulty, setDashDifficulty] = useState('')
+  const [dashSubject, setDashSubject] = useState('')
   const [dashSessions, setDashSessions] = useState<SessionRecord[]>([])
   const [dashUserMap, setDashUserMap] = useState<Record<string, string>>({})
   const [dashLoading, setDashLoading] = useState(false)
@@ -150,6 +151,7 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
         grade: dashGrade || undefined,
         operation: dashOperation || undefined,
         difficulty: dashDifficulty || undefined,
+        subject: (dashSubject as 'mentalMaths' | 'socialStudies') || undefined,
       }
 
       const { sessions, userMap } = await getDashboardSessions(filters)
@@ -633,6 +635,15 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
                 <option value="">All levels</option>
                 {DIFFICULTY_OPTIONS.map((d) => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
               </select>
+              <select
+                value={dashSubject}
+                onChange={(e) => setDashSubject(e.target.value)}
+                className="px-2 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+              >
+                <option value="">All subjects</option>
+                <option value="mentalMaths">Mental Maths</option>
+                <option value="socialStudies">Social Studies</option>
+              </select>
             </div>
 
             <div className="flex gap-2">
@@ -856,17 +867,26 @@ function SessionRow({ session, username }: { session: SessionRecord; username: s
   const date = new Date(session.timestamp)
   const dateStr = `${date.getDate().toString().padStart(2, '0')}/${(date.getMonth() + 1).toString().padStart(2, '0')} ${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
 
+  const isSS = session.subject === 'socialStudies'
+
   return (
     <div className="bg-white/90 rounded-xl px-3 py-2 shadow-sm flex items-center gap-2 text-sm flex-wrap">
       <span className="text-gray-400 text-xs w-24 shrink-0">{dateStr}</span>
       <span className="text-primary font-medium shrink-0">@{username}</span>
       <span className="text-gray-500 shrink-0">G{session.grade}</span>
-      <span className="font-mono text-gray-700 shrink-0">{OP_SHORT[session.operation] ?? session.operation}</span>
-      <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${
-        session.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
-        session.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-        'bg-red-100 text-red-700'
-      }`}>{session.difficulty}</span>
+      <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${isSS ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
+        {isSS ? '🌍 SS' : '🧮 MM'}
+      </span>
+      {!isSS && session.operation && (
+        <span className="font-mono text-gray-700 shrink-0">{OP_SHORT[session.operation] ?? session.operation}</span>
+      )}
+      {!isSS && session.difficulty && (
+        <span className={`text-xs px-1.5 py-0.5 rounded-full shrink-0 ${
+          session.difficulty === 'easy' ? 'bg-green-100 text-green-700' :
+          session.difficulty === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+          'bg-red-100 text-red-700'
+        }`}>{session.difficulty}</span>
+      )}
       <span className="ml-auto font-bold text-gray-800 shrink-0">{session.score}pts</span>
       <span className="text-gray-500 shrink-0">{session.accuracy}%</span>
     </div>

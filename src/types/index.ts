@@ -23,3 +23,9 @@ export type {
 } from './challenge'
 
 export type { AuditEntry, AdminActionType } from './admin'
+
+export type {
+  SocialStudiesQuestion,
+  SocialStudiesAnsweredQuestion,
+  SocialStudiesSession,
+} from './socialStudies'
