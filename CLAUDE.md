@@ -32,16 +32,37 @@ A mental maths practice app for kids/students. Vite + React + **TypeScript** + T
 - `scripts/` — admin/seeding scripts using firebase-admin
 
 ## Multiplayer Challenge
-- `src/types/challenge.ts` — Challenge, ChallengePlayer, ChallengeConfig types
+- `src/types/challenge.ts` — Challenge, ChallengePlayer, ChallengeConfig types; `ChallengeConfig.subject` ('mentalMaths' | 'socialStudies') determines game engine
 - `src/firebase/challenge.ts` — Firestore CRUD for challenges collection
 - `src/engine/gameCode.ts` — 7-char alphanumeric code generator
 - `src/hooks/useChallengeListener.ts` — onSnapshot wrapper for live challenge state
-- `src/hooks/useChallengeGame.ts` — multiplayer game logic hook
+- `src/hooks/useChallengeGame.ts` — Mental Maths multiplayer game logic hook
+- `src/hooks/useChallengeSSGame.ts` — Social Studies multiplayer game logic hook (MC questions)
 - `src/components/screens/Challenge*.tsx` — 5 challenge screens (Create, Join, Lobby, Game, Results)
+- `ChallengeGameScreen` branches on `config.subject` → `ChallengeGameInner` (maths) or `ChallengeSSGameInner` (SS)
+- `ChallengeCreateScreen` has subject selector (Mental Maths / Social Studies) + per-subject options
 - Firestore collection: `challenges/{gameCode}` — single doc per challenge with config, questions, players map
-- All players answer same pre-generated questions in same order
+- All players answer same pre-generated/fetched questions in same order
 - Live leaderboard during gameplay via Firestore onSnapshot
-- Sessions saved to personal history with `challengeId` field for "Multiplayer" badge
+- Sessions saved to personal history (maths uses `saveSession`+high scores; SS uses `saveSocialStudiesSession`)
+
+## EduQuiz Framework Rules — apply to every new subject
+
+These are non-negotiable app-level rules. When a new subject is added, ALL of the following apply automatically. No exceptions.
+
+1. **Grade is per-quiz, not profile.** Every setup screen must include a `GradeSelector` component (`src/components/ui/GradeSelector.tsx`). The profile grade is only used as the default. Grade limits are subject-specific (Mental Maths: KG–12; Social Studies: 3–12).
+
+2. **End Game button required.** Every active game screen must show an "End Game" button. For Mental Maths: calls `finishGame()` on the game context. For SS-style subjects: calls `forceFinish()` on the hook. Partial sessions should be saved when at least 1 question was answered.
+
+3. **Challenge/multiplayer for all subjects.** `ChallengeCreateScreen` always has a subject selector. `ChallengeConfig.subject` determines which game engine loads in `ChallengeGameScreen`. To add a new subject to challenges: (a) add it to `ChallengeSubject` type, (b) create `useChallengeXxxGame` hook with Firestore progress syncing, (c) add a `ChallengeXxxGameInner` component to `ChallengeGameScreen.tsx`.
+
+4. **Cross-session deduplication always on.** Every subject uses localStorage to avoid repeating questions across sessions. Mental Maths key: `mm_seen_questions` (displayString, cap 60). Social Studies key: `mm_ss_seen_<grade>` (Firestore IDs, cap 80). New subjects follow the same pattern — choose a key prefix, a meaningful cap, and implement `loadSeenIds`/`saveSeenIds` helpers.
+
+5. **Answer input is format-driven, not subject-driven.** Free-form numeric answer (Maths) → submit button + number pad. Multiple-choice (Social Studies) → tap to select + auto-advance after 1.2 s reveal. This is intentional and consistent within each format. Do NOT add a submit button to MC screens or remove it from numeric screens.
+
+6. **Session save on every finish.** Every subject saves a session record to the shared `sessions` Firestore collection on finish (natural or forced). For new subjects: create a `saveXxxSession` helper in `src/firebase/xxx.ts` that writes with `subject: 'xxx'` and nulls for inapplicable fields (operation, difficulty).
+
+7. **To add a new subject:** (a) Create `src/types/xxx.ts` with Question, AnsweredQuestion, Session types. (b) Create `src/firebase/xxx.ts` with fetch, save, dedup helpers. (c) Create `src/hooks/useXxxGame.ts` (grade param at `startGame` time). (d) Create Setup/Game/Results screens. (e) Add `ChallengeXxxGameInner` to `ChallengeGameScreen`. (f) Register subject in `ChallengeSubject` type and `ChallengeCreateScreen`. (g) Update `AppShell` with an `XxxShell` inner component. (h) Add subject card to `HomeScreen`. (i) Update all three docs.
 
 ## Key rules / decisions
 - **TypeScript** throughout — unlike Bingo which is plain JSX

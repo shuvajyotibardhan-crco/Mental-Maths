@@ -36,23 +36,29 @@ function SocialStudiesShell({
   setScreen: (s: string) => void
 }) {
   const { user, profile } = useAuth()
-  const grade: Grade = (profile?.grade ?? '3') as Grade
-  const { state, startGame, selectAnswer, advance, reset } = useSocialStudiesGame(
+  // Grade is chosen per-quiz on the setup screen; default to profile grade or 3
+  const [selectedGrade, setSelectedGrade] = useState<Grade>(
+    (): Grade => {
+      const g = profile?.grade ?? '3'
+      return (['3','4','5','6','7','8','9','10','11','12'].includes(g) ? g : '3') as Grade
+    },
+  )
+
+  const { state, startGame, selectAnswer, advance, forceFinish, reset } = useSocialStudiesGame(
     user?.uid ?? '',
-    grade,
   )
 
   const handleStart = useCallback(async () => {
-    await startGame()
+    await startGame(selectedGrade)
     setScreen('ss-game')
-  }, [startGame, setScreen])
+  }, [startGame, selectedGrade, setScreen])
 
   const handlePlayAgain = useCallback(() => {
     reset()
     setScreen('ss-setup')
   }, [reset, setScreen])
 
-  // When game finishes, navigate to results
+  // When game finishes (natural or forced), navigate to results
   useEffect(() => {
     if (state.status === 'finished' && screen === 'ss-game') {
       setScreen('ss-results')
@@ -60,7 +66,14 @@ function SocialStudiesShell({
   }, [state.status, screen, setScreen])
 
   if (screen === 'ss-setup') {
-    return <SocialStudiesSetupScreen onNavigate={setScreen} onStart={handleStart} />
+    return (
+      <SocialStudiesSetupScreen
+        onNavigate={setScreen}
+        selectedGrade={selectedGrade}
+        onGradeChange={setSelectedGrade}
+        onStart={handleStart}
+      />
+    )
   }
   if (screen === 'ss-game') {
     return (
@@ -68,6 +81,7 @@ function SocialStudiesShell({
         gameState={state}
         onSelectAnswer={selectAnswer}
         onAdvance={advance}
+        onEndGame={forceFinish}
         onNavigate={setScreen}
       />
     )

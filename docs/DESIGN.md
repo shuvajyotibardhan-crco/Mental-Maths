@@ -97,13 +97,19 @@ Provides a `play(sound: SoundType)` function that synthesises audio using the We
 Wraps Firestore `onSnapshot` for a challenge document. Returns the live `Challenge` state and a loading flag. Used by lobby, game, and results screens.
 
 ### `src/hooks/useChallengeGame.ts`
-Game logic hook for multiplayer. Steps through pre-generated questions from the challenge document, tracks score/streak locally, and writes progress to Firestore after each answer. Mirrors the solo GameContext reducer pattern but decoupled from it.
+Mental Maths multiplayer game hook. Steps through pre-generated `Question[]` from the challenge document, tracks score/streak locally, and writes progress to Firestore after each answer. Mirrors the solo GameContext reducer pattern but decoupled from it.
+
+### `src/components/ui/GradeSelector.tsx`
+Shared grade picker component used by all setup screens (Mental Maths, Social Studies, Challenge Create). Renders a 4-column button grid from `GRADE_OPTIONS`. Accepts `allowedGrades` to restrict to subject-valid grades (e.g. 3–12 for SS) and `selectedClass` for per-subject accent colours.
 
 ### `src/components/layout/AppShell.tsx`
-Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows. On profile load, calls `checkIsAdmin` and `checkIsSuperAdmin` — results stored as `userIsAdmin` and `userIsSuperAdmin`, passed to `BottomNav` and `AdminScreen`. The `contact` screen is accessible without login (rendered before the auth guard). Social Studies screens (`ss-setup`, `ss-game`, `ss-results`) are handled by an inner `SocialStudiesShell` component that owns a single `useSocialStudiesGame` instance, keeping Social Studies state entirely separate from the Maths `GameContext`.
+Single source of routing truth. Uses a `currentScreen` state variable and a `navigate(screen)` function passed as props to each screen. Also wraps `GameProvider` (kept here so the game state is destroyed when leaving the game flow) and calls `purgeOldSessions` on mount. Manages `challengeCode` state for multiplayer flows. On profile load, calls `checkIsAdmin` and `checkIsSuperAdmin` — results stored as `userIsAdmin` and `userIsSuperAdmin`, passed to `BottomNav` and `AdminScreen`. The `contact` screen is accessible without login (rendered before the auth guard). Social Studies screens (`ss-setup`, `ss-game`, `ss-results`) are handled by an inner `SocialStudiesShell` component that: (a) manages the `selectedGrade` state (per-quiz, not profile-locked), (b) owns a single `useSocialStudiesGame` instance keeping SS state separate from the Maths `GameContext`, (c) wires `forceFinish` to the "End Game" button.
 
 ### `src/hooks/useSocialStudiesGame.ts`
-Custom hook encapsulating all Social Studies game logic. Fetches questions from Firestore via `fetchSocialStudiesQuestions`, manages a two-phase answer flow (select → reveal), tracks score/streak, and saves the completed session via `saveSocialStudiesSession`. On session finish, calls `saveSeenIdsToStorage` to persist the 20 question IDs seen in that session to localStorage for cross-session deduplication. The hook exposes `state`, `startGame`, `selectAnswer`, `advance`, and `reset`. Auto-advance after reveal is handled in `SocialStudiesGameScreen` via a `useEffect` timeout (1.2 s) rather than in the hook, keeping timing concerns in the UI layer.
+Custom hook encapsulating all Social Studies solo game logic. Grade is passed to `startGame(grade)` at start time (per-quiz) rather than at construction. Manages a two-phase answer flow (select → reveal), tracks score/streak, and on finish calls `saveSeenIdsToStorage` + `saveSocialStudiesSession`. Also exposes `forceFinish()` which ends a session early (saving partial results if ≥1 question answered) to support the End Game button. Auto-advance timing is handled in `SocialStudiesGameScreen` via a `useEffect` (1.2 s), keeping timing in the UI layer.
+
+### `src/hooks/useChallengeSSGame.ts`
+Multiplayer Social Studies game hook. Mirrors `useChallengeGame` but for multiple-choice questions. Takes `gameCode`, `uid`, and `questions: SocialStudiesQuestion[]`. On each answer, debounces a `updatePlayerProgress` Firestore write (100 ms). Exposes `selectAnswer`, `advance`, and `forceFinish`. Scoring: 5 points per correct answer (max 100).
 
 ### `src/firebase/socialStudies.ts`
 Four exports: `fetchSocialStudiesQuestions(grade)` — queries the `socialStudiesQuestions` Firestore collection filtered by grade (limit 80), loads previously seen question IDs from localStorage (`mm_ss_seen_<grade>`), filters to unseen questions, falls back to the full pool if fewer than 20 unseen remain, shuffles and returns 20; `saveSocialStudiesSession(session)` — writes to the shared `sessions` collection with `subject: 'socialStudies'` and null values for Maths-only fields; `loadSeenIdsFromStorage(grade)` / `saveSeenIdsToStorage(grade, ids)` — FIFO localStorage helpers capped at 80 entries (one per grade) implementing cross-session deduplication.
@@ -122,6 +128,12 @@ Contact support form. Accessible from Settings (logged in) and from the Login sc
 
 ### `src/components/screens/ProfileScreen.tsx`
 Displays and edits user profile (avatar, name, grade), change password, recovery email, and account deletion. Delete Account shows a confirmation panel, then calls `deleteAllUserData` + `deleteCurrentUser` — deleting all Firestore data before removing the Auth account, which triggers automatic logout. The Delete Account button and confirmation panel are hidden when `isSuperAdmin` is true, preventing the super admin from removing their own account.
+
+### `src/components/screens/ChallengeCreateScreen.tsx`
+Challenge configuration screen. Has a subject selector (Mental Maths / Social Studies) and a grade selector (defaulting to profile grade). For Maths: shows operation, difficulty, and mode selectors. For SS: hides those and shows an info card. On create, fetches questions (generates for Maths; fetches from Firestore for SS) and writes the challenge doc.
+
+### `src/components/screens/ChallengeGameScreen.tsx`
+Multiplayer game screen. Branches on `challenge.config.subject` (defaulting to `'mentalMaths'` for backward compatibility). Renders `ChallengeGameInner` for Mental Maths (number pad + timer) or `ChallengeSSGameInner` for Social Studies (multiple choice + auto-advance). Both inners share the same live leaderboard pattern, waiting-for-others screen, and End Game button.
 
 ### `src/components/screens/LoginScreen.tsx`
 Handles login, forgot-password flow, and a "Contact Support" link that navigates to `ContactScreen` without requiring authentication.

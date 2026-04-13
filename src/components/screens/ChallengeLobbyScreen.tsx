@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useChallengeListener } from '../../hooks/useChallengeListener'
 import { startChallenge, markPlayerReady } from '../../firebase/challenge'
+import { OPERATION_LABELS } from '../../constants/gradeConfig'
 
 interface ChallengeLobbyScreenProps {
   gameCode: string
@@ -60,6 +61,34 @@ export function ChallengeLobbyScreen({ gameCode, onNavigate }: ChallengeLobbyScr
     )
   }
 
+  const subject = challenge.config.subject ?? 'mentalMaths'
+  const isSS = subject === 'socialStudies'
+
+  function configSummary() {
+    if (isSS) {
+      return (
+        <>
+          <span className="font-semibold">Social Studies</span>
+          {' · '}
+          <span>Grade {challenge!.config.grade}</span>
+          {' · '}
+          <span>20 Questions</span>
+        </>
+      )
+    }
+    return (
+      <>
+        <span className="font-semibold">Grade {challenge!.config.grade}</span>
+        {' · '}
+        <span className="capitalize">{challenge!.config.operation ? OPERATION_LABELS[challenge!.config.operation] : '—'}</span>
+        {' · '}
+        <span className="capitalize">{challenge!.config.difficulty ?? '—'}</span>
+        {' · '}
+        <span>{challenge!.config.mode === 'timed' ? '2 min' : '20 Qs'}</span>
+      </>
+    )
+  }
+
   return (
     <div className="p-6 max-w-md mx-auto space-y-6">
       <div className="text-center space-y-2">
@@ -72,13 +101,7 @@ export function ChallengeLobbyScreen({ gameCode, onNavigate }: ChallengeLobbyScr
 
       {/* Game Config Summary */}
       <div className="bg-white/60 rounded-2xl p-4 text-center text-sm text-gray-600">
-        <span className="font-semibold">Grade {challenge.config.grade}</span>
-        {' · '}
-        <span className="capitalize">{challenge.config.operation}</span>
-        {' · '}
-        <span className="capitalize">{challenge.config.difficulty}</span>
-        {' · '}
-        <span>{challenge.config.mode === 'timed' ? '2 min' : '20 Qs'}</span>
+        {configSummary()}
       </div>
 
       {/* Players */}

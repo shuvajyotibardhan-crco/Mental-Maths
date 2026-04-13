@@ -1,5 +1,9 @@
 import { useState, useCallback, useRef } from 'react'
-import { fetchSocialStudiesQuestions, saveSocialStudiesSession, saveSeenIdsToStorage } from '../firebase/socialStudies'
+import {
+  fetchSocialStudiesQuestions,
+  saveSocialStudiesSession,
+  saveSeenIdsToStorage,
+} from '../firebase/socialStudies'
 import type { Grade } from '../types/question'
 import type { SocialStudiesQuestion, SocialStudiesAnsweredQuestion } from '../types/socialStudies'
 
@@ -7,6 +11,7 @@ type GameStatus = 'idle' | 'loading' | 'playing' | 'finished'
 
 export interface SocialStudiesGameState {
   status: GameStatus
+  grade: Grade
   questions: SocialStudiesQuestion[]
   currentIndex: number
   answered: SocialStudiesAnsweredQuestion[]
@@ -21,6 +26,7 @@ export interface SocialStudiesGameState {
 
 const initial: SocialStudiesGameState = {
   status: 'idle',
+  grade: '3',
   questions: [],
   currentIndex: 0,
   answered: [],
@@ -35,16 +41,21 @@ const initial: SocialStudiesGameState = {
 
 const POINTS_PER_CORRECT = 5  // 20 questions × 5 = 100 max
 
-export function useSocialStudiesGame(userId: string, grade: Grade) {
+export function useSocialStudiesGame(userId: string) {
   const [state, setState] = useState<SocialStudiesGameState>(initial)
   const startTimeRef = useRef<number>(0)
 
-  const startGame = useCallback(async () => {
-    setState({ ...initial, status: 'loading' })
+  /**
+   * Grade is passed here (per-quiz) rather than at construction time so the
+   * same hook instance supports different grades across sessions without
+   * requiring a remount.
+   */
+  const startGame = useCallback(async (grade: Grade) => {
+    setState({ ...initial, grade, status: 'loading' })
     try {
       const questions = await fetchSocialStudiesQuestions(grade)
       if (questions.length === 0) {
-        setState((s) => ({ ...s, status: 'idle', error: 'No questions available for your grade yet.' }))
+        setState((s) => ({ ...s, status: 'idle', error: 'No questions available for this grade yet.' }))
         return
       }
       startTimeRef.current = Date.now()
@@ -52,7 +63,7 @@ export function useSocialStudiesGame(userId: string, grade: Grade) {
     } catch {
       setState((s) => ({ ...s, status: 'idle', error: 'Failed to load questions. Please try again.' }))
     }
-  }, [grade])
+  }, [])
 
   const selectAnswer = useCallback((index: number) => {
     setState((s) => {
@@ -81,29 +92,7 @@ export function useSocialStudiesGame(userId: string, grade: Grade) {
       const nextIndex = s.currentIndex + 1
 
       if (nextIndex >= s.questions.length) {
-        // Session finished — save asynchronously, don't block UI
-        const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
-        const accuracy = newAnswered.filter((a) => a.isCorrect).length / newAnswered.length
-
-        // Persist seen question IDs for cross-session deduplication
-        saveSeenIdsToStorage(grade, newAnswered.map((a) => a.question.id))
-
-        saveSocialStudiesSession({
-          userId,
-          timestamp: Date.now(),
-          grade,
-          subject: 'socialStudies',
-          totalQuestions: newAnswered.length,
-          correctAnswers: newAnswered.filter((a) => a.isCorrect).length,
-          accuracy,
-          score: newScore,
-          timeTakenSeconds: timeTaken,
-          bestStreak: newBestStreak,
-          isHighScore: false, // social studies doesn't use the high score system
-        }).then((id) => {
-          setState((prev) => ({ ...prev, sessionId: id }))
-        }).catch(() => {/* non-critical */})
-
+        _finishSession(s.grade, newAnswered, newScore, newBestStreak)
         return {
           ...s,
           status: 'finished',
@@ -127,11 +116,57 @@ export function useSocialStudiesGame(userId: string, grade: Grade) {
         revealed: false,
       }
     })
-  }, [userId, grade])
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Ends the session early (End Game button). If at least one question was
+   * answered, saves the partial session and navigates to results.
+   */
+  const forceFinish = useCallback(() => {
+    setState((s) => {
+      if (s.status !== 'playing') return s
+      if (s.answered.length > 0) {
+        _finishSession(s.grade, s.answered, s.score, s.bestStreak)
+      }
+      return { ...s, status: 'finished', selectedIndex: null, revealed: false }
+    })
+  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const reset = useCallback(() => {
     setState(initial)
   }, [])
 
-  return { state, startGame, selectAnswer, advance, reset }
+  return { state, startGame, selectAnswer, advance, forceFinish, reset }
+
+  // ─── helpers (no closure over state; called with explicit snapshots) ───────
+
+  function _finishSession(
+    grade: Grade,
+    answered: SocialStudiesAnsweredQuestion[],
+    score: number,
+    bestStreak: number,
+  ) {
+    const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
+    const accuracy = answered.length > 0
+      ? answered.filter((a) => a.isCorrect).length / answered.length
+      : 0
+
+    saveSeenIdsToStorage(grade, answered.map((a) => a.question.id))
+
+    saveSocialStudiesSession({
+      userId,
+      timestamp: Date.now(),
+      grade,
+      subject: 'socialStudies',
+      totalQuestions: answered.length,
+      correctAnswers: answered.filter((a) => a.isCorrect).length,
+      accuracy,
+      score,
+      timeTakenSeconds: timeTaken,
+      bestStreak,
+      isHighScore: false,
+    }).then((id) => {
+      setState((prev) => ({ ...prev, sessionId: id }))
+    }).catch(() => {/* non-critical */})
+  }
 }

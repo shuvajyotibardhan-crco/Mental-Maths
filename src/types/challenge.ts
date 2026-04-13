@@ -1,11 +1,20 @@
 import type { Grade, OperationType, Difficulty, GameMode, Question } from './question'
+import type { SocialStudiesQuestion } from './socialStudies'
 
 export type ChallengeStatus = 'waiting' | 'playing' | 'finished'
+export type ChallengeSubject = 'mentalMaths' | 'socialStudies'
 
 export interface ChallengeConfig {
+  /**
+   * Which subject this challenge is for. Optional for backward compatibility —
+   * existing challenge docs without this field are treated as 'mentalMaths'.
+   */
+  subject?: ChallengeSubject
   grade: Grade
-  operation: OperationType
-  difficulty: Difficulty
+  /** Mental Maths only. Null / absent for Social Studies challenges. */
+  operation?: OperationType | null
+  /** Mental Maths only. Null / absent for Social Studies challenges. */
+  difficulty?: Difficulty | null
   mode: GameMode
 }
 
@@ -30,6 +39,10 @@ export interface Challenge {
   startedAt: number | null
   finishedAt: number | null
   config: ChallengeConfig
-  questions: Question[]
+  /** Question array — type depends on config.subject:
+   *  'mentalMaths'   → Question[]
+   *  'socialStudies' → SocialStudiesQuestion[]
+   */
+  questions: Question[] | SocialStudiesQuestion[]
   players: Record<string, ChallengePlayer>
 }

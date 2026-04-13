@@ -121,23 +121,25 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 
 ## Feature 5 — Game Setup
 
-**User story:** As a player, I want to choose the operation type, difficulty, and game mode before starting so that I can practise what I need.
+**User story:** As a player, I want to choose the grade, operation type, difficulty, and game mode before starting so that I can practise what I need at any level.
 
 **Acceptance Criteria:**
-1. Operation options must include: Addition, Subtraction, Multiplication, Division, Percentage, Square Root, Power, and Mix.
-2. Operations not appropriate for the user's grade shall not be shown.
-3. Difficulty options shall be: Easy, Medium, Hard.
-4. Mode options shall be: Timed (2 minutes) and Fixed (20 questions).
-5. All three selections are required before the Start button is enabled.
+1. A grade selector (KG–Grade 12) shall be shown on the setup screen; it defaults to the user's profile grade but can be changed freely per session.
+2. Grade is per-quiz — the profile grade is a default only, not a restriction.
+3. Operation options must include: Addition, Subtraction, Multiplication, Division, Percentage, Square Root, Power, and Mix.
+4. Operations not available for the selected grade shall not be shown; changing grade resets the operation if it becomes unavailable.
+5. Difficulty options shall be: Easy, Medium, Hard.
+6. Mode options shall be: Timed (2 minutes) and Fixed (20 questions).
 
 **Test Plan:**
 
 | Step | Expected Result |
 |------|----------------|
-| Open Game Setup as KG user | Only Addition and Subtraction shown |
-| Open Game Setup as Grade 6 user | All operations shown |
-| Tap Start without selecting operation | Button disabled or error |
-| Select all options and tap Start | Game screen opens with correct config |
+| Open Game Setup | Grade selector shown, defaulting to profile grade |
+| Change grade to KG | Only Addition and Subtraction shown |
+| Change grade to Grade 6 | All operations shown |
+| Change grade after selecting unavailable op | Operation resets to first available |
+| Select all options and tap Start | Game screen opens with the selected grade + config |
 
 ---
 
@@ -285,38 +287,43 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 
 ## Feature 11 — Multiplayer Challenge Mode
 
-**User story:** As a player, I want to challenge my friends to a maths competition so that we can see who scores the highest on the same set of questions.
+**User story:** As a player, I want to challenge my friends to a competition in any subject so that we can see who scores the highest on the same set of questions.
 
 **Acceptance Criteria:**
 1. Home screen shall provide "Challenge Friends" and "Join Challenge" buttons.
-2. Creating a challenge shall allow the host to configure grade, operation, difficulty, and mode (same options as solo play).
-3. On creation, the system shall generate a unique 7-character alphanumeric game code.
-4. The code shall be displayed prominently in the lobby for sharing.
-5. Friends shall join by entering the code on the Join Challenge screen.
-6. The lobby shall show all joined players with their avatars and names in real time.
-7. The host must have a "Start Game" button that is enabled only when at least 2 players have joined and all are ready.
-8. All players shall answer the same pre-generated questions in the same order.
-9. During gameplay, a live mini-leaderboard shall show all players' scores in real time.
-10. When a player finishes (timer expires or all questions answered), they shall see a waiting screen until all players are done.
-11. Once all players finish, a leaderboard screen shall rank players by score (tiebreak by time in fixed mode).
-12. Each player's session shall be saved to their personal history with a "Multiplayer" badge.
-13. Personal and global high scores shall be checked and updated as normal.
-14. Challenge sessions in History shall display a "Multiplayer" badge.
+2. The challenge create screen shall offer a **subject selector** (Mental Maths / Social Studies) — challenge is not limited to one subject.
+3. A **grade selector** (defaulting to profile grade) shall appear for all subjects; valid grades are subject-specific (Mental Maths: KG–12; Social Studies: 3–12).
+4. For Mental Maths challenges: operation, difficulty, and mode (timed/fixed) shall be configurable.
+5. For Social Studies challenges: no operation/difficulty/mode config — always 20 multiple-choice questions, fixed mode.
+6. On creation, the system shall generate a unique 7-character alphanumeric game code.
+7. The code shall be displayed prominently in the lobby for sharing; the lobby shows the subject and grade.
+8. Friends shall join by entering the code on the Join Challenge screen.
+9. The lobby shall show all joined players with their avatars and names in real time.
+10. The host must have a "Start Game" button that is enabled only when at least 2 players have joined and all are ready.
+11. All players shall answer the same pre-generated/pre-fetched questions in the same order.
+12. During gameplay, a live mini-leaderboard shall show all players' scores in real time.
+13. An "End Game" button shall be available during any challenge game to quit early.
+14. When a player finishes (timer expires, all questions answered, or End Game), they shall see a waiting screen until all players are done.
+15. Once all players finish, a leaderboard screen shall rank players by score (tiebreak by time in fixed mode).
+16. Mental Maths challenge sessions shall be saved with high-score checking; Social Studies challenge sessions shall be saved as SS sessions (no high-score system).
+17. Challenge sessions in History shall display a "Multiplayer" badge.
 
 **Test Plan:**
 
 | Step | Expected Result |
 |------|----------------|
-| Tap "Challenge Friends" on Home | ChallengeCreateScreen opens with game config options |
-| Configure and create challenge | 7-digit code displayed, lobby screen shown |
+| Tap "Challenge Friends" on Home | ChallengeCreateScreen opens with subject + grade selectors |
+| Select Social Studies, choose Grade 5 | Operation/difficulty/mode options hidden; SS info card shown |
+| Create SS challenge | Lobby shows "Social Studies · Grade 5 · 20 Questions" |
+| Select Mental Maths, configure and create | Lobby shows grade/operation/difficulty/mode |
 | Friend enters code on Join screen | Friend appears in lobby in real time |
 | Host taps Start with 1 player | Button disabled — need at least 2 |
 | Host taps Start with 2+ ready players | All players navigate to game screen simultaneously |
-| Answer questions during challenge | Same questions shown to all players in same order |
-| Check leaderboard during game | Live scores update as players answer |
-| Finish game (timer or all questions) | Waiting screen shown until all players finish |
+| Play SS challenge | Multiple-choice UI shown; auto-advance after 1.2 s; live leaderboard visible |
+| Tap End Game during SS challenge | Session finishes, waiting screen shown |
+| Answer questions during maths challenge | Same questions shown to all players; number pad + submit button |
 | All players finish | Leaderboard shows rankings with scores and stats |
-| Beat personal best in challenge | "New Personal Best!" banner shown |
+| Beat personal best in maths challenge | "New Personal Best!" banner shown |
 | View History after challenge | Session shows "Multiplayer" badge |
 
 ---
@@ -485,31 +492,33 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 **User story:** As a student in Grade 3–12, I want to take a Social Studies quiz covering US and Colorado curriculum so that I can practise outside of maths.
 
 **Acceptance Criteria:**
-1. A "Social Studies" subject card shall appear on the Home screen alongside "Mental Maths".
-2. Social Studies shall only be available for Grades 3–12; the card shall be disabled with a tooltip for KG–Grade 2 users.
-3. The setup screen shall display the student's grade, number of questions (20), curriculum (US + Colorado), and format (multiple choice).
-4. Each quiz session shall present 20 questions drawn randomly from the `socialStudiesQuestions` Firestore collection for the student's grade.
+1. A "Social Studies" subject card shall appear on the Home screen alongside "Mental Maths"; it is accessible to all users regardless of profile grade.
+2. The setup screen shall include a **grade selector** restricted to Grades 3–12 (the only grades with question content); it defaults to the user's profile grade (clamped to 3 if below).
+3. Grade is per-quiz — changing the grade on the setup screen does not affect the user's profile.
+4. Each quiz session shall present 20 questions drawn randomly from the `socialStudiesQuestions` Firestore collection for the **selected** grade.
 5. Questions shall have four answer options (A–D); the correct answer shall be revealed immediately after selection.
 6. After selecting an answer, the correct option shall highlight green and any wrong selection shall highlight red; the next question shall load automatically after 1.2 seconds.
 7. Score increments by 5 points per correct answer (max 100).
 8. A running score and question counter shall be visible throughout the quiz.
 9. On completion, a results screen shall show: score, correct/total, accuracy %, best streak, and a review of all incorrectly answered questions with the correct answers shown.
 10. A performance emoji and message shall be shown based on accuracy (≥90% 🏆, ≥75% 🌟, ≥60% 👍, ≥40% 💪, else 😔).
-11. Each completed session shall be saved to the shared `sessions` Firestore collection with `subject: 'socialStudies'`.
-12. "Play Again" shall return to the setup screen; "Home" shall return to the Home screen.
-13. Questions seen in previous sessions for the same grade shall be deprioritised in subsequent sessions (cross-session deduplication); when fewer than 20 unseen questions remain for the grade the full pool is used, acting as an automatic reset once the student has worked through all questions.
+11. An "End Game" button shall be available during the quiz; tapping it shall end the session early, save the partial session (if at least 1 question was answered), and navigate to the results screen.
+12. Each completed or early-ended session shall be saved to the shared `sessions` Firestore collection with `subject: 'socialStudies'`.
+13. "Play Again" shall return to the setup screen; "Home" shall return to the Home screen.
+14. Questions seen in previous sessions for the same grade shall be deprioritised in subsequent sessions (cross-session deduplication); when fewer than 20 unseen questions remain for the grade the full pool is used, acting as an automatic reset once the student has worked through all questions.
 
 **Test Plan:**
 
 | Step | Expected Result |
 |------|----------------|
-| Log in as KG/Grade 1/2 user | Social Studies card disabled with tooltip |
-| Log in as Grade 3+ user | Social Studies card enabled |
-| Tap Social Studies card | Setup screen shows grade, 20 questions, US+Colorado curriculum |
-| Tap Start Quiz | 20 questions load; first question displayed |
+| Log in as any user (any grade) | Social Studies card enabled on Home |
+| Tap Social Studies card | Setup screen shows grade selector (3–12), 20 questions, US+Colorado curriculum |
+| Change grade on setup screen | Selected grade updates without affecting profile |
+| Tap Start Quiz | 20 questions for selected grade load; first question displayed |
 | Select correct answer | Option highlights green; after 1.2 s next question loads; score +5 |
 | Select wrong answer | Selection highlights red, correct answer highlights green; after 1.2 s advances |
 | Complete all 20 questions | Results screen shown with score, accuracy, streak, and review |
+| Tap End Game at question 5 | Session ends; 5 answered questions saved to Firestore; results screen shown |
 | Check Firestore | Session doc with `subject: 'socialStudies'` written |
 | Tap Play Again | Returns to setup screen |
 | Tap Home | Home screen shown |

@@ -2,13 +2,23 @@ import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { getAvailableOperations, OPERATION_LABELS } from '../../constants/gradeConfig'
 import { generateQuestionBatch } from '../../engine/questionGenerator'
+import { fetchSocialStudiesQuestions } from '../../firebase/socialStudies'
 import { createChallenge } from '../../firebase/challenge'
-import type { OperationType, Difficulty, GameMode } from '../../types'
+import { GradeSelector } from '../ui/GradeSelector'
+import type { OperationType, Difficulty, GameMode, Grade } from '../../types'
+import type { ChallengeSubject } from '../../types/challenge'
+
+const SS_GRADES: Grade[] = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
 interface ChallengeCreateScreenProps {
   onNavigate: (screen: string) => void
   onChallengeCreated: (gameCode: string) => void
 }
+
+const SUBJECTS: { value: ChallengeSubject; label: string; icon: string }[] = [
+  { value: 'mentalMaths', label: 'Mental Maths', icon: '🧮' },
+  { value: 'socialStudies', label: 'Social Studies', icon: '🌍' },
+]
 
 const DIFFICULTIES: { value: Difficulty; label: string; color: string }[] = [
   { value: 'easy', label: 'Easy', color: 'bg-emerald-100 text-emerald-700 ring-emerald-400' },
@@ -23,27 +33,48 @@ const MODES: { value: GameMode; label: string; description: string }[] = [
 
 export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: ChallengeCreateScreenProps) {
   const { profile } = useAuth()
-  const grade = profile?.grade ?? '3'
-  const availableOps = getAvailableOperations(grade)
 
-  const [operation, setOperation] = useState<OperationType>(availableOps[0]!)
+  const [subject, setSubject] = useState<ChallengeSubject>('mentalMaths')
+  const [grade, setGrade] = useState<Grade>((profile?.grade ?? '3') as Grade)
+  const [operation, setOperation] = useState<OperationType>('addition')
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const [mode, setMode] = useState<GameMode>('fixed')
   const [creating, setCreating] = useState(false)
+
+  const availableOps = getAvailableOperations(grade)
+  const isSS = subject === 'socialStudies'
+
+  function handleSubjectChange(s: ChallengeSubject) {
+    setSubject(s)
+    // Ensure grade is valid for SS
+    if (s === 'socialStudies' && !SS_GRADES.includes(grade)) {
+      setGrade('3')
+    }
+  }
 
   async function handleCreate() {
     if (!profile || creating) return
     setCreating(true)
 
     try {
-      const count = mode === 'fixed' ? 20 : 60
-      const questions = generateQuestionBatch(grade, operation, difficulty, count)
-      const gameCode = await createChallenge(
-        { grade, operation, difficulty, mode },
-        questions,
-        profile,
-      )
-      onChallengeCreated(gameCode)
+      if (isSS) {
+        const questions = await fetchSocialStudiesQuestions(grade)
+        const gameCode = await createChallenge(
+          { subject: 'socialStudies', grade, operation: null, difficulty: null, mode: 'fixed' },
+          questions,
+          profile,
+        )
+        onChallengeCreated(gameCode)
+      } else {
+        const count = mode === 'fixed' ? 20 : 60
+        const questions = generateQuestionBatch(grade, operation, difficulty, count)
+        const gameCode = await createChallenge(
+          { subject: 'mentalMaths', grade, operation, difficulty, mode },
+          questions,
+          profile,
+        )
+        onChallengeCreated(gameCode)
+      }
     } catch (err) {
       console.error('Failed to create challenge:', err)
       setCreating(false)
@@ -55,78 +86,123 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       <h2 className="text-2xl font-bold text-primary-dark text-center">Challenge Friends</h2>
       <p className="text-center text-gray-500 text-sm">Set up the game, then share the code with friends!</p>
 
-      {/* Operation Selection */}
+      {/* Subject Selection */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Operation</label>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Subject</label>
         <div className="grid grid-cols-2 gap-2">
-          <button
-            onClick={() => setOperation('mix')}
-            className={`py-3 px-3 rounded-2xl text-sm font-medium transition-all cursor-pointer ${
-              operation === 'mix'
-                ? 'bg-primary text-white shadow-md'
-                : 'bg-white/80 text-gray-700 hover:bg-white'
-            }`}
-          >
-            {OPERATION_LABELS.mix}
-          </button>
-          {availableOps.map((op) => (
+          {SUBJECTS.map((s) => (
             <button
-              key={op}
-              onClick={() => setOperation(op)}
+              key={s.value}
+              onClick={() => handleSubjectChange(s.value)}
+              className={`py-3 px-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                subject === s.value
+                  ? 'bg-primary text-white shadow-md'
+                  : 'bg-white/80 text-gray-700 hover:bg-white'
+              }`}
+            >
+              <span>{s.icon}</span>
+              <span>{s.label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grade Selection */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
+        <GradeSelector
+          value={grade}
+          onChange={setGrade}
+          allowedGrades={isSS ? SS_GRADES : undefined}
+        />
+      </div>
+
+      {/* Mental Maths only: Operation */}
+      {!isSS && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Operation</label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => setOperation('mix')}
               className={`py-3 px-3 rounded-2xl text-sm font-medium transition-all cursor-pointer ${
-                operation === op
+                operation === 'mix'
                   ? 'bg-primary text-white shadow-md'
                   : 'bg-white/80 text-gray-700 hover:bg-white'
               }`}
             >
-              {OPERATION_LABELS[op]}
+              {OPERATION_LABELS.mix}
             </button>
-          ))}
+            {availableOps.map((op) => (
+              <button
+                key={op}
+                onClick={() => setOperation(op)}
+                className={`py-3 px-3 rounded-2xl text-sm font-medium transition-all cursor-pointer ${
+                  operation === op
+                    ? 'bg-primary text-white shadow-md'
+                    : 'bg-white/80 text-gray-700 hover:bg-white'
+                }`}
+              >
+                {OPERATION_LABELS[op]}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Difficulty Selection */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
-        <div className="grid grid-cols-3 gap-2">
-          {DIFFICULTIES.map((d) => (
-            <button
-              key={d.value}
-              onClick={() => setDifficulty(d.value)}
-              className={`py-3 rounded-2xl font-semibold transition-all cursor-pointer ${
-                difficulty === d.value
-                  ? `${d.color} ring-2 shadow-md`
-                  : 'bg-white/80 text-gray-600 hover:bg-white'
-              }`}
-            >
-              {d.label}
-            </button>
-          ))}
+      {/* Mental Maths only: Difficulty */}
+      {!isSS && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
+          <div className="grid grid-cols-3 gap-2">
+            {DIFFICULTIES.map((d) => (
+              <button
+                key={d.value}
+                onClick={() => setDifficulty(d.value)}
+                className={`py-3 rounded-2xl font-semibold transition-all cursor-pointer ${
+                  difficulty === d.value
+                    ? `${d.color} ring-2 shadow-md`
+                    : 'bg-white/80 text-gray-600 hover:bg-white'
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Mode Selection */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
-        <div className="grid grid-cols-2 gap-3">
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              onClick={() => setMode(m.value)}
-              className={`py-4 rounded-2xl text-center transition-all cursor-pointer ${
-                mode === m.value
-                  ? 'bg-primary text-white shadow-md'
-                  : 'bg-white/80 text-gray-700 hover:bg-white'
-              }`}
-            >
-              <div className="font-semibold text-lg">{m.label}</div>
-              <div className={`text-xs mt-1 ${mode === m.value ? 'text-blue-100' : 'text-gray-400'}`}>
-                {m.description}
-              </div>
-            </button>
-          ))}
+      {/* Mental Maths only: Mode */}
+      {!isSS && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
+          <div className="grid grid-cols-2 gap-3">
+            {MODES.map((m) => (
+              <button
+                key={m.value}
+                onClick={() => setMode(m.value)}
+                className={`py-4 rounded-2xl text-center transition-all cursor-pointer ${
+                  mode === m.value
+                    ? 'bg-primary text-white shadow-md'
+                    : 'bg-white/80 text-gray-700 hover:bg-white'
+                }`}
+              >
+                <div className="font-semibold text-lg">{m.label}</div>
+                <div className={`text-xs mt-1 ${mode === m.value ? 'text-blue-100' : 'text-gray-400'}`}>
+                  {m.description}
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* SS info card */}
+      {isSS && (
+        <div className="bg-teal-50 rounded-2xl p-4 text-sm text-teal-700 space-y-1">
+          <p><span className="font-semibold">20 questions</span> · Multiple choice</p>
+          <p>US & Colorado Curriculum · No time limit</p>
+        </div>
+      )}
 
       {/* Create Button */}
       <button

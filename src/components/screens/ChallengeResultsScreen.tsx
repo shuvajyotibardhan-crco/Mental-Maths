@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useChallengeListener } from '../../hooks/useChallengeListener'
 import { saveSession, checkAndUpdateHighScore, checkAndUpdateGlobalHighScore, getHighScores, getGlobalHighScore } from '../../firebase/firestore'
+import { saveSocialStudiesSession } from '../../firebase/socialStudies'
 import { OPERATION_LABELS } from '../../constants/gradeConfig'
 import type { SessionRecord, HighScoreKey } from '../../types'
 
@@ -19,8 +20,10 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
   const saveAttemptedRef = useRef(false)
 
   const me = challenge && profile ? challenge.players[profile.uid] : null
+  const subject = challenge?.config.subject ?? 'mentalMaths'
+  const isSS = subject === 'socialStudies'
 
-  // Save session + check high scores
+  // Save session + (maths only) check high scores
   useEffect(() => {
     if (!profile || !challenge || !me || saved || saveAttemptedRef.current) return
     if (challenge.status !== 'finished') return
@@ -28,20 +31,40 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
 
     async function save() {
       const accuracy = me!.totalAnswered > 0
-        ? Math.round((me!.correctAnswers / me!.totalAnswered) * 100)
+        ? me!.correctAnswers / me!.totalAnswered
         : 0
 
+      if (isSS) {
+        // Social Studies challenge — save as SS session, no high-score system
+        await saveSocialStudiesSession({
+          userId: profile!.uid,
+          timestamp: Date.now(),
+          grade: challenge!.config.grade,
+          subject: 'socialStudies',
+          totalQuestions: me!.totalAnswered,
+          correctAnswers: me!.correctAnswers,
+          accuracy,
+          score: me!.score,
+          timeTakenSeconds: me!.timeTakenSeconds ?? 0,
+          bestStreak: me!.bestStreak,
+          isHighScore: false,
+        })
+        setSaved(true)
+        return
+      }
+
+      // Mental Maths challenge — save + high score check
       const session: SessionRecord = {
         id: '',
         userId: profile!.uid,
         timestamp: Date.now(),
         grade: challenge!.config.grade,
-        operation: challenge!.config.operation,
-        difficulty: challenge!.config.difficulty,
+        operation: challenge!.config.operation ?? 'addition',
+        difficulty: challenge!.config.difficulty ?? 'easy',
         mode: challenge!.config.mode,
         totalQuestions: me!.totalAnswered,
         correctAnswers: me!.correctAnswers,
-        accuracy,
+        accuracy: Math.round(accuracy * 100),
         score: me!.score,
         timeTakenSeconds: me!.timeTakenSeconds ?? 0,
         bestStreak: me!.bestStreak,
@@ -51,7 +74,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
 
       const sessionId = await saveSession(session)
 
-      const key: HighScoreKey = `${challenge!.config.grade}_${challenge!.config.operation}_${challenge!.config.difficulty}_${challenge!.config.mode}`
+      const key: HighScoreKey = `${challenge!.config.grade}_${challenge!.config.operation ?? 'mix'}_${challenge!.config.difficulty ?? 'easy'}_${challenge!.config.mode}`
       const timeForScoring = challenge!.config.mode === 'fixed' ? session.timeTakenSeconds : undefined
 
       const existingScores = await getHighScores(profile!.uid)
@@ -67,7 +90,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
     }
 
     save().catch(console.error)
-  }, [profile, challenge, me, saved, gameCode])
+  }, [profile, challenge, me, saved, gameCode, isSS])
 
   if (!challenge || challenge.status !== 'finished') {
     return (
@@ -94,16 +117,23 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
     ? Math.round((me.correctAnswers / me.totalAnswered) * 100)
     : 0
 
+  function gameSubtitle() {
+    if (isSS) return `Social Studies · Grade ${challenge!.config.grade} · 20 Questions`
+    const op = challenge!.config.operation ? OPERATION_LABELS[challenge!.config.operation] : '—'
+    const mode = challenge!.config.mode === 'timed' ? '2 min' : '20 Qs'
+    return `${op} · ${challenge!.config.difficulty ?? '—'} · ${mode}`
+  }
+
   return (
     <div className="p-4 pb-8">
       <div className="w-full max-w-md mx-auto space-y-6">
-        {/* High Score Banners */}
-        {isNewGlobalBest && (
+        {/* High Score Banners (maths only) */}
+        {!isSS && isNewGlobalBest && (
           <div className="animate-bounce-in bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-2xl p-4 shadow-md text-center">
             <p className="text-2xl font-bold">New #1 Global Score!</p>
           </div>
         )}
-        {isNewPersonalBest && !isNewGlobalBest && (
+        {!isSS && isNewPersonalBest && !isNewGlobalBest && (
           <div className="animate-bounce-in bg-gradient-to-r from-amber-400 to-orange-400 text-white rounded-2xl p-4 shadow-md text-center">
             <p className="text-2xl font-bold">New Personal Best!</p>
           </div>
@@ -115,9 +145,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
           <h2 className="text-2xl font-bold text-primary-dark">
             {winner?.uid === profile?.uid ? 'You Won!' : `${winner?.name} Wins!`}
           </h2>
-          <p className="text-gray-500 mt-1">
-            {OPERATION_LABELS[challenge.config.operation]} · {challenge.config.difficulty} · {challenge.config.mode === 'timed' ? '2 min' : '20 Qs'}
-          </p>
+          <p className="text-gray-500 mt-1 text-sm">{gameSubtitle()}</p>
         </div>
 
         {/* Leaderboard */}

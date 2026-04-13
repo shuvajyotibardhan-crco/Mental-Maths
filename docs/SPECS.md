@@ -159,11 +159,14 @@ interface ChallengePlayer {
 
 ### ChallengeConfig
 ```typescript
+type ChallengeSubject = 'mentalMaths' | 'socialStudies'
+
 interface ChallengeConfig {
+  subject?: ChallengeSubject   // optional for backward compat — absent = 'mentalMaths'
   grade: Grade
-  operation: OperationType
-  difficulty: Difficulty
-  mode: GameMode
+  operation?: OperationType | null  // Mental Maths only
+  difficulty?: Difficulty | null    // Mental Maths only
+  mode: GameMode                    // SS always uses 'fixed'
 }
 ```
 
@@ -613,9 +616,10 @@ Mental Maths/
     ├── hooks/
     │   ├── useTimer.ts              # countdown/elapsed timer with onComplete
     │   ├── useSound.ts              # Web Audio API sound synthesis (wrong/complete/personalBest/globalBest)
-    │   ├── useChallengeListener.ts  # onSnapshot wrapper for challenge doc
-    │   ├── useChallengeGame.ts      # Multiplayer game logic (pre-gen questions + Firestore sync)
-    │   └── useSocialStudiesGame.ts  # Social Studies quiz logic (fetch, select, reveal, save)
+    │   ├── useChallengeListener.ts   # onSnapshot wrapper for challenge doc
+    │   ├── useChallengeGame.ts       # Mental Maths multiplayer logic (pre-gen questions + Firestore sync)
+    │   ├── useChallengeSSGame.ts     # SS multiplayer logic (MC questions + Firestore sync)
+    │   └── useSocialStudiesGame.ts   # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
     │
     ├── engine/
     │   ├── questionGenerator.ts  # Pure: grade+op+diff → Question, generateQuestionBatch
@@ -629,8 +633,11 @@ Mental Maths/
     │   └── emailHash.ts          # maskEmail(), hashEmail()
     │
     └── components/
+        ├── ui/
+        │   └── GradeSelector.tsx # Shared grade picker (4-column grid); used by all setup screens
+        │
         ├── layout/
-        │   ├── AppShell.tsx      # Screen router; mounts GameProvider
+        │   ├── AppShell.tsx      # Screen router; mounts GameProvider + SocialStudiesShell
         │   ├── Header.tsx        # Brand + user avatar nav
         │   └── BottomNav.tsx     # Home/History/Profile/Settings tabs
         │

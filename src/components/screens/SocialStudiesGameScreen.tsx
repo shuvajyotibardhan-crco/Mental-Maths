@@ -7,6 +7,7 @@ interface SocialStudiesGameScreenProps {
   gameState: SocialStudiesGameState
   onSelectAnswer: (index: number) => void
   onAdvance: () => void
+  onEndGame: () => void
   onNavigate: (screen: string) => void
 }
 
@@ -14,6 +15,7 @@ export function SocialStudiesGameScreen({
   gameState,
   onSelectAnswer,
   onAdvance,
+  onEndGame,
   onNavigate,
 }: SocialStudiesGameScreenProps) {
   const { status, questions, currentIndex, selectedIndex, revealed, score, error } = gameState
@@ -57,7 +59,7 @@ export function SocialStudiesGameScreen({
   function optionClass(idx: number) {
     const base = 'w-full text-left px-4 py-3 rounded-2xl font-medium text-sm transition-all border-2 '
     if (!revealed) {
-      return base + 'bg-white border-gray-200 hover:border-primary hover:bg-primary/5 active:scale-95 cursor-pointer'
+      return base + 'bg-white border-gray-200 hover:border-teal-400 hover:bg-teal-50 active:scale-95 cursor-pointer'
     }
     if (idx === question.correctIndex) {
       return base + 'bg-emerald-100 border-emerald-500 text-emerald-800'
@@ -78,11 +80,18 @@ export function SocialStudiesGameScreen({
         />
       </div>
 
+      {/* Top bar: counter · score · end game */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         <span className="text-xs text-gray-500 font-medium">
           Question {currentIndex + 1} of {total}
         </span>
         <span className="text-xs font-bold text-teal-600">Score: {score}</span>
+        <button
+          onClick={onEndGame}
+          className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 bg-white/60 rounded-xl cursor-pointer"
+        >
+          End Game
+        </button>
       </div>
 
       <div className="flex-1 flex flex-col px-4 py-4 gap-5">

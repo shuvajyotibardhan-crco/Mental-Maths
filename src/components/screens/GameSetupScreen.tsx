@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { useGame } from '../../context/GameContext'
 import { getAvailableOperations, OPERATION_LABELS } from '../../constants/gradeConfig'
-import type { OperationType, Difficulty, GameMode } from '../../types'
+import { GradeSelector } from '../ui/GradeSelector'
+import type { OperationType, Difficulty, GameMode, Grade } from '../../types'
 
 interface GameSetupScreenProps {
   onNavigate: (screen: string) => void
@@ -23,12 +24,19 @@ export function GameSetupScreen({ onNavigate }: GameSetupScreenProps) {
   const { profile } = useAuth()
   const { startGame } = useGame()
 
-  const grade = profile?.grade ?? '3'
-  const availableOps = getAvailableOperations(grade)
-
-  const [operation, setOperation] = useState<OperationType>(availableOps[0]!)
+  const [grade, setGrade] = useState<Grade>((profile?.grade ?? '3') as Grade)
+  const [operation, setOperation] = useState<OperationType>('addition')
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const [mode, setMode] = useState<GameMode>('fixed')
+
+  const availableOps = getAvailableOperations(grade)
+
+  // When grade changes, reset operation if it's no longer available
+  useEffect(() => {
+    if (!availableOps.includes(operation as Exclude<OperationType, 'mix'>)) {
+      setOperation(availableOps[0]!)
+    }
+  }, [grade]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleStart() {
     startGame({ grade, operation, difficulty, mode })
@@ -38,6 +46,12 @@ export function GameSetupScreen({ onNavigate }: GameSetupScreenProps) {
   return (
     <div className="p-6 max-w-md mx-auto space-y-6">
       <h2 className="text-2xl font-bold text-primary-dark text-center">Game Setup</h2>
+
+      {/* Grade Selection */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
+        <GradeSelector value={grade} onChange={setGrade} />
+      </div>
 
       {/* Operation Selection */}
       <div>
