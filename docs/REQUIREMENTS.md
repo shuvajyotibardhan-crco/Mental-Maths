@@ -415,7 +415,7 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 4. The Firebase Auth account must also be deleted, logging the user out automatically.
 5. If the Firebase Auth deletion fails due to stale login (`auth/requires-recent-login`), a clear message must instruct the user to log out and back in first.
 6. The action is irreversible — no undo.
-7. The "Delete Account" button and confirmation panel must not be shown when the logged-in user is the super admin.
+7. The "Delete Account" button and confirmation panel must not be shown when the logged-in user is any admin (regular or super).
 
 **Test Plan:**
 
@@ -428,6 +428,7 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 | Log in with deleted username/password | Login fails (account no longer exists) |
 | Attempt delete after long session without re-login | Error shown: "Please log out and log back in, then try again" |
 | Open Profile screen as super admin | "Delete Account" button not visible |
+| Open Profile screen as regular admin | "Delete Account" button not visible |
 
 ---
 
@@ -540,7 +541,7 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 5. In the Admins tab, super admin can search for any user by username (4+ chars) and grant them admin access.
 6. In the Admins tab, super admin can remove any regular admin. The super admin cannot remove themselves or any other superadmin.
 7. The super admin cannot delete their own account via the Delete User action in the Users tab (the button is hidden when the searched user is the logged-in super admin).
-8. The super admin cannot delete their own account via the Profile screen (the Delete Account button is hidden for super admin).
+8. Neither the super admin nor any regular admin may delete their own account via the Profile screen — the Delete Account button is hidden for all admin roles.
 9. Regular admins can be zero or more — the super admin can operate alone.
 10. **Regular admins must not be able to search for, view, or take action on other admin or superadmin accounts.** When a regular admin performs a user search (User A or User B), all UIDs present in the `admins` collection must be excluded from the results. Superadmins see all users in search.
 11. Admin tab visibility must reflect the **currently logged-in user's** actual admin status. If a user logs out and a different user logs in within the same browser session, the admin tab must update to reflect the new user — it must not carry over state from the previous session.
@@ -555,6 +556,7 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 | Log in as non-admin, log out, log in as admin in same browser | Admin tab visible for the admin user |
 | Search own username in Users tab as super admin | Delete User button not shown |
 | Open Profile screen as super admin | Delete Account button not shown |
+| Open Profile screen as regular admin | Delete Account button not shown |
 | Open Admins tab | Full list of admins with role badges shown |
 | Search and add a regular user as admin | User appears in admin list with "Admin" badge |
 | Remove a regular admin | Admin removed from list; they lose panel access on next login |

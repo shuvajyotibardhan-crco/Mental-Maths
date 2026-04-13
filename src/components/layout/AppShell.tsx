@@ -182,7 +182,7 @@ export function AppShell() {
           {screen === 'game' && <GameScreen onNavigate={setScreen} />}
           {screen === 'results' && <ResultsScreen onNavigate={setScreen} />}
           {screen === 'history' && <HistoryScreen />}
-          {screen === 'profile' && <ProfileScreen isSuperAdmin={userIsSuperAdmin} />}
+          {screen === 'profile' && <ProfileScreen isAdmin={userIsAdmin} isSuperAdmin={userIsSuperAdmin} />}
           {screen === 'settings' && <SettingsScreen onNavigate={setScreen} />}
           {screen === 'contact' && <ContactScreen onNavigate={setScreen} />}
           {screen === 'challenge-create' && (

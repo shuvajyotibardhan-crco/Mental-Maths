@@ -508,7 +508,8 @@ removeAdmin(uid):        deleteDoc admins/{uid}
 ```
 
 Super admin cannot remove themselves or any other superadmin (no Remove button in UI; server-side guard in `handleRemoveAdmin` blocks it even if called directly).
-Super admin cannot delete their own account via the admin panel (Delete User button hidden) or via the Profile screen (Delete Account button hidden).
+Neither super admin nor regular admin can delete their own account via the Profile screen — `isAdmin || isSuperAdmin` hides the Delete Account button and confirmation panel.
+Super admin cannot delete their own account via the admin panel Delete User action either (button hidden when searched user is the logged-in super admin).
 Regular admin count can be zero — super admin alone is valid.
 
 **Admin status session isolation:**
