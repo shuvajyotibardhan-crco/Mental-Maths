@@ -52,7 +52,7 @@ export function RegisterScreen({ onNavigate }: RegisterScreenProps) {
     <div className="min-h-dvh flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8">
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-primary-dark mb-2">Join Mental Maths!</h1>
+          <h1 className="text-3xl font-bold text-primary-dark mb-2">Join DIVEL EDU QUIZ!</h1>
           <p className="text-gray-500">Create your account to start playing.</p>
         </div>
 

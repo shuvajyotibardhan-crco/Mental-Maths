@@ -63,7 +63,7 @@ export function ContactScreen({ onNavigate }: ContactScreenProps) {
 
     try {
       await emailjs.send(SERVICE_ID, TEMPLATE_ID, {
-        subject: `${subject.trim()} | Mental Maths`,
+        subject: `${subject.trim()} | DIVEL EDU QUIZ`,
         description: description.trim(),
         contact_email: contactEmail.trim(),
         from_name: profile?.name ?? 'App User',

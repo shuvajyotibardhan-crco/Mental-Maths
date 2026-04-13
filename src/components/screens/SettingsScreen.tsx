@@ -47,7 +47,7 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
 
       <div className="bg-white/90 rounded-3xl p-6">
         <p className="text-sm text-gray-500 text-center">
-          Mental Maths v0.1.0
+          DIVEL EDU QUIZ v0.1.0
         </p>
       </div>
     </div>

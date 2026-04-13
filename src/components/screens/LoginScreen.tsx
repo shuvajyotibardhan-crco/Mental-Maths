@@ -129,7 +129,7 @@ export function LoginScreen({ onNavigate }: LoginScreenProps) {
     <div className="min-h-dvh flex items-center justify-center p-4">
       <div className="w-full max-w-sm bg-white/90 backdrop-blur rounded-3xl shadow-lg p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-primary-dark mb-2">Mental Maths</h1>
+          <h1 className="text-3xl font-bold text-primary-dark mb-2">DIVEL EDU QUIZ</h1>
           <p className="text-gray-500">Welcome back! Let's practice.</p>
         </div>
 
