@@ -458,6 +458,15 @@ searchUsersByPrefix(prefix):   // min 4 chars
   returns UserProfile[]
   single result → auto-selected in UI
   multiple results → picker list shown
+
+// Client-side filtering applied AFTER the Firestore query in AdminScreen:
+handleSearchA / handleSearchB (non-superadmin):
+  adminUids = Set of all UIDs currently in adminList (loaded on mount)
+  results = results.filter(u => !adminUids.has(u.uid))
+  // → regular admins never see or interact with other admin / superadmin accounts
+
+handleSearchA / handleSearchB (superadmin):
+  no filtering — all matching users returned
 ```
 
 ### Admin: Delete User
@@ -498,8 +507,15 @@ addAdmin(user):          setDoc admins/{uid} { role:'admin', username, addedAt }
 removeAdmin(uid):        deleteDoc admins/{uid}
 ```
 
-Super admin cannot remove themselves or delete their own account via the admin panel (Delete User button hidden) or via the Profile screen (Delete Account button hidden).
+Super admin cannot remove themselves or any other superadmin (no Remove button in UI; server-side guard in `handleRemoveAdmin` blocks it even if called directly).
+Super admin cannot delete their own account via the admin panel (Delete User button hidden) or via the Profile screen (Delete Account button hidden).
 Regular admin count can be zero — super admin alone is valid.
+
+**Admin status session isolation:**
+Admin status (`userIsAdmin`, `userIsSuperAdmin`) is checked in a dedicated `useEffect` in `AppShell`, keyed on `profile?.uid`. Both flags are reset to `false` synchronously before the async Firestore check runs. This ensures that if User A (admin) logs out and User B (non-admin) logs in within the same browser tab, the admin tab disappears immediately and is never shown to User B — and vice versa.
+
+**Admin list pre-load:**
+`AdminScreen` loads the full `admins` collection on component mount (via a `useEffect(loadAdminList, [])`), not only when the Admins tab is opened. This ensures the admin UID set is always available for filtering user search results, regardless of which tab the user navigates to first.
 
 ---
 

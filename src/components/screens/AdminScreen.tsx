@@ -105,6 +105,11 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
   const [adminSearchLoading, setAdminSearchLoading] = useState(false)
   const [adminActionMsg, setAdminActionMsg] = useState<{ ok: boolean; msg: string } | null>(null)
 
+  // Always load admin list on mount so we can filter out admins from user searches
+  useEffect(() => {
+    loadAdminList()
+  }, [])
+
   useEffect(() => {
     if (tab === 'audit') loadAudit()
     if (tab === 'dashboard' && !dashLoaded) loadDashboard()
@@ -208,6 +213,10 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
 
   async function handleRemoveAdmin(record: AdminRecord) {
     setAdminActionMsg(null)
+    if (record.role === 'super') {
+      setAdminActionMsg({ ok: false, msg: 'Cannot remove a superadmin.' })
+      return
+    }
     try {
       await removeAdmin(record.uid)
       setAdminActionMsg({ ok: true, msg: `@${record.username} removed as admin.` })
@@ -228,7 +237,12 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
     setAction(null)
     setResult(null)
     try {
-      const results = await searchUsersByPrefix(input)
+      let results = await searchUsersByPrefix(input)
+      // Non-superadmins must not be able to find other admins or superadmins
+      if (!isSuperAdmin) {
+        const adminUids = new Set(adminList.map((a) => a.uid))
+        results = results.filter((u) => !adminUids.has(u.uid))
+      }
       if (results.length === 0) setErrorA(`No users found matching "${input}".`)
       else if (results.length === 1) setUserA(results[0]!)
       else setResultsA(results)
@@ -251,7 +265,12 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
     setUserB(null)
     setResultsB([])
     try {
-      const results = await searchUsersByPrefix(input)
+      let results = await searchUsersByPrefix(input)
+      // Non-superadmins must not be able to find other admins or superadmins
+      if (!isSuperAdmin) {
+        const adminUids = new Set(adminList.map((a) => a.uid))
+        results = results.filter((u) => !adminUids.has(u.uid))
+      }
       if (results.length === 0) setErrorB(`No users found matching "${input}".`)
       else if (results.length === 1) {
         const found = results[0]!

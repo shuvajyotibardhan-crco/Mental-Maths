@@ -538,10 +538,12 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 3. Super admin has all the same capabilities as regular admin (reset password, merge, move scores, delete user, dashboard, audit log).
 4. Super admin additionally sees a 🔐 Admins tab — regular admins do not.
 5. In the Admins tab, super admin can search for any user by username (4+ chars) and grant them admin access.
-6. In the Admins tab, super admin can remove any regular admin. The super admin cannot remove themselves.
+6. In the Admins tab, super admin can remove any regular admin. The super admin cannot remove themselves or any other superadmin.
 7. The super admin cannot delete their own account via the Delete User action in the Users tab (the button is hidden when the searched user is the logged-in super admin).
 8. The super admin cannot delete their own account via the Profile screen (the Delete Account button is hidden for super admin).
 9. Regular admins can be zero or more — the super admin can operate alone.
+10. **Regular admins must not be able to search for, view, or take action on other admin or superadmin accounts.** When a regular admin performs a user search (User A or User B), all UIDs present in the `admins` collection must be excluded from the results. Superadmins see all users in search.
+11. Admin tab visibility must reflect the **currently logged-in user's** actual admin status. If a user logs out and a different user logs in within the same browser session, the admin tab must update to reflect the new user — it must not carry over state from the previous session.
 
 **Test Plan:**
 
@@ -549,9 +551,14 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 |------|----------------|
 | Log in as super admin | 🔐 Admins tab visible in admin panel |
 | Log in as regular admin | 🔐 Admins tab not visible |
+| Log in as admin, log out, log in as non-admin in same browser | Admin tab not visible for the non-admin user |
+| Log in as non-admin, log out, log in as admin in same browser | Admin tab visible for the admin user |
 | Search own username in Users tab as super admin | Delete User button not shown |
 | Open Profile screen as super admin | Delete Account button not shown |
 | Open Admins tab | Full list of admins with role badges shown |
 | Search and add a regular user as admin | User appears in admin list with "Admin" badge |
 | Remove a regular admin | Admin removed from list; they lose panel access on next login |
 | Try to remove super admin entry | No Remove button shown for super admin row |
+| Regular admin searches for another admin's username | No results returned for that username |
+| Regular admin searches for superadmin's username | No results returned |
+| Superadmin searches for any username (including admins) | Results include all matching users |

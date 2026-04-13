@@ -106,14 +106,27 @@ export function AppShell() {
   const [userIsSuperAdmin, setUserIsSuperAdmin] = useState(false)
   const purgedRef = useRef(false)
 
-  // Purge sessions older than 6 months on startup
+  // Purge sessions older than 6 months — only once per app mount
   useEffect(() => {
     if (!profile || purgedRef.current) return
     purgedRef.current = true
     purgeOldSessions(profile.uid).catch((err) => console.warn('Purge skipped:', err))
-    checkIsAdmin(profile.uid).then(setUserIsAdmin).catch(() => setUserIsAdmin(false))
-    checkIsSuperAdmin(profile.uid).then(setUserIsSuperAdmin).catch(() => setUserIsSuperAdmin(false))
   }, [profile])
+
+  // Admin status — re-checked every time the logged-in user changes so stale
+  // state from a previous session is never carried over to the next user.
+  useEffect(() => {
+    if (!profile) {
+      setUserIsAdmin(false)
+      setUserIsSuperAdmin(false)
+      return
+    }
+    const uid = profile.uid
+    setUserIsAdmin(false)
+    setUserIsSuperAdmin(false)
+    checkIsAdmin(uid).then(setUserIsAdmin).catch(() => setUserIsAdmin(false))
+    checkIsSuperAdmin(uid).then(setUserIsSuperAdmin).catch(() => setUserIsSuperAdmin(false))
+  }, [profile?.uid])
 
   // Reset screen to home when user logs in (screen might be stuck on 'register' or 'login')
   useEffect(() => {
