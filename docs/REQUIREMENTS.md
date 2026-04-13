@@ -159,6 +159,8 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 11. Streak indicator shall only appear when streak ≥ 3.
 12. An "End Game" button must be available to finish early.
 13. On timer expiry (timed mode) or last question (fixed mode), game shall end automatically.
+14. Within a single session, no question shall repeat (within-session deduplication).
+15. Questions seen in previous sessions shall be deprioritised in subsequent sessions (cross-session deduplication); if fewer than the required number of unseen questions remain the full pool is used so no session is ever short.
 
 **Test Plan:**
 
@@ -172,6 +174,7 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 | Press End Game early | Game ends, Results screen shown with questions answered so far |
 | Enter negative number | Minus sign accepted, correct calculation evaluated |
 | Use keyboard numpad | Input accepted identically to on-screen pad |
+| Complete a session, start another with same config | Questions from the first session do not reappear until the pool is exhausted |
 
 ---
 
@@ -494,6 +497,7 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 10. A performance emoji and message shall be shown based on accuracy (≥90% 🏆, ≥75% 🌟, ≥60% 👍, ≥40% 💪, else 😔).
 11. Each completed session shall be saved to the shared `sessions` Firestore collection with `subject: 'socialStudies'`.
 12. "Play Again" shall return to the setup screen; "Home" shall return to the Home screen.
+13. Questions seen in previous sessions for the same grade shall be deprioritised in subsequent sessions (cross-session deduplication); when fewer than 20 unseen questions remain for the grade the full pool is used, acting as an automatic reset once the student has worked through all questions.
 
 **Test Plan:**
 
@@ -509,6 +513,8 @@ EduQuiz (formerly Mental Maths) is a web-based educational practice app for kids
 | Check Firestore | Session doc with `subject: 'socialStudies'` written |
 | Tap Play Again | Returns to setup screen |
 | Tap Home | Home screen shown |
+| Complete a session, start another | Questions from the first session do not reappear until all 80 grade questions have been seen |
+| Complete 4 sessions (all 80 questions seen) | Next session draws from full pool again (natural reset) |
 
 ---
 

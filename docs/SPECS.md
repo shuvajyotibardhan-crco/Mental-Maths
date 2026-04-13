@@ -231,6 +231,8 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 | Key | Type | Purpose |
 |-----|------|---------|
 | `mm_sound` | `'true'` \| `'false'` | Sound effects preference |
+| `mm_seen_questions` | JSON `string[]` | Mental Maths cross-session dedup — `displayString` values of recently seen questions, FIFO capped at 60 |
+| `mm_ss_seen_<grade>` | JSON `string[]` | Social Studies cross-session dedup — Firestore document IDs of recently seen questions for that grade, FIFO capped at 80. One key per grade (e.g. `mm_ss_seen_5`, `mm_ss_seen_8`). |
 
 ### Firebase Storage
 
@@ -329,6 +331,29 @@ generateUniqueQuestion(grade, operation, difficulty, seen: Set<string>):
 // RESET  → seen = {}
 
 // localStorage key: mm_seen_questions  (JSON array of displayString, max 60 entries, FIFO)
+```
+
+### Social Studies Cross-Session Deduplication
+```
+// On session start — fetchSocialStudiesQuestions(grade):
+seenIds = loadSeenIdsFromStorage(grade)   // reads mm_ss_seen_<grade> from localStorage
+unseen  = all.filter(q => q.id NOT IN seenIds)
+pool    = unseen.length >= 20 ? unseen : all   // fall back to full pool when nearly exhausted
+return shuffle(pool).slice(0, 20)
+
+// On session finish — useSocialStudiesGame advance(), finished branch:
+saveSeenIdsToStorage(grade, answeredQuestions.map(q => q.id))
+
+// saveSeenIdsToStorage(grade, newIds):
+existing = JSON.parse(localStorage.getItem('mm_ss_seen_<grade>') ?? '[]')
+combined = [...existing, ...newIds]
+localStorage.setItem('mm_ss_seen_<grade>', JSON.stringify(combined.slice(-80)))
+// FIFO, cap = 80 (matches total pool size per grade)
+// Natural reset: once all 80 IDs are in the ring buffer subsequent sessions
+// refill the unseen pool as the oldest IDs age out
+
+// localStorage key: mm_ss_seen_<grade>  (JSON string[], max 80 entries, FIFO)
+// One key per grade: mm_ss_seen_3 … mm_ss_seen_12
 ```
 
 ### Score Calculation

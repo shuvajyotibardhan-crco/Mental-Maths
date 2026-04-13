@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { fetchSocialStudiesQuestions, saveSocialStudiesSession } from '../firebase/socialStudies'
+import { fetchSocialStudiesQuestions, saveSocialStudiesSession, saveSeenIdsToStorage } from '../firebase/socialStudies'
 import type { Grade } from '../types/question'
 import type { SocialStudiesQuestion, SocialStudiesAnsweredQuestion } from '../types/socialStudies'
 
@@ -84,6 +84,9 @@ export function useSocialStudiesGame(userId: string, grade: Grade) {
         // Session finished — save asynchronously, don't block UI
         const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
         const accuracy = newAnswered.filter((a) => a.isCorrect).length / newAnswered.length
+
+        // Persist seen question IDs for cross-session deduplication
+        saveSeenIdsToStorage(grade, newAnswered.map((a) => a.question.id))
 
         saveSocialStudiesSession({
           userId,
