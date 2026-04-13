@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { updateUserProfile, getRecoveryEmailByUsername, saveUsernameLookup, deleteAllUserData } from '../../firebase/firestore'
-import { logoutUser, changePassword, setRecoveryEmailOnAuth, getFirebaseErrorMessage, deleteCurrentUser } from '../../firebase/auth'
+import { updateUserProfile, getRecoveryEmailByUsername, deleteAllUserData } from '../../firebase/firestore'
+import { logoutUser, changePassword, updateRecoveryEmail, getFirebaseErrorMessage, deleteCurrentUser } from '../../firebase/auth'
 import { GRADE_OPTIONS, AVATAR_OPTIONS } from '../../constants/gradeConfig'
 import type { Grade } from '../../types'
 
@@ -96,16 +96,13 @@ export function ProfileScreen({ isAdmin = false, isSuperAdmin = false }: { isAdm
     setRecoverySaving(true)
     try {
       const trimmed = recoveryEmailInput.trim() || undefined
-      if (trimmed) await setRecoveryEmailOnAuth(trimmed)
-      await saveUsernameLookup(profile.username, trimmed)
+      await updateRecoveryEmail(trimmed)
       setRecoveryEmail(trimmed ?? '')
       setEditingRecovery(false)
-      setRecoverySuccess(trimmed ? 'Check your inbox — click the verification link to activate this recovery email.' : 'Recovery email removed.')
+      setRecoverySuccess(trimmed ? 'Recovery email updated successfully.' : 'Recovery email removed.')
     } catch (err: unknown) {
       const code = (err as { code?: string }).code ?? ''
-      if (code === 'auth/requires-recent-login') {
-        setRecoveryError('Please log out and log back in before updating your recovery email.')
-      } else if (code === 'auth/email-already-in-use') {
+      if (code === 'already-exists') {
         setRecoveryError('This email is already linked to another account.')
       } else {
         setRecoveryError('Failed to save. Please try again.')

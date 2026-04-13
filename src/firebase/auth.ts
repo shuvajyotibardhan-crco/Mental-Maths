@@ -4,11 +4,11 @@ import {
   signOut,
   updateProfile,
   updatePassword,
-  verifyBeforeUpdateEmail,
   sendPasswordResetEmail,
   deleteUser,
 } from 'firebase/auth'
-import { auth } from './config'
+import { httpsCallable } from 'firebase/functions'
+import { auth, functions } from './config'
 
 const SYNTHETIC_DOMAIN = 'mentalmaths.app'
 
@@ -22,7 +22,9 @@ export async function registerUser(
   displayName: string,
   recoveryEmail?: string,
 ): Promise<string> {
-  const authEmail = recoveryEmail?.trim() || usernameToEmail(username)
+  // Always use synthetic email for Firebase Auth — recovery email is stored in
+  // Firestore only and used solely for sendPasswordResetEmail.
+  const authEmail = usernameToEmail(username)
   const credential = await createUserWithEmailAndPassword(auth, authEmail, password)
   await updateProfile(credential.user, { displayName })
   return credential.user.uid
@@ -46,10 +48,9 @@ export async function loginUser(
   }
 }
 
-export async function setRecoveryEmailOnAuth(recoveryEmail: string): Promise<void> {
-  const user = auth.currentUser
-  if (!user) throw new Error('No authenticated user')
-  await verifyBeforeUpdateEmail(user, recoveryEmail)
+export async function updateRecoveryEmail(newEmail: string | undefined): Promise<void> {
+  const fn = httpsCallable(functions, 'updateRecoveryEmail')
+  await fn({ newEmail: newEmail ?? null })
 }
 
 export async function logoutUser(): Promise<void> {
