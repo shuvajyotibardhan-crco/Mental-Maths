@@ -20,7 +20,7 @@ export async function registerUser(
   username: string,
   password: string,
   displayName: string,
-  recoveryEmail?: string,
+  _recoveryEmail?: string,
 ): Promise<string> {
   // Always use synthetic email for Firebase Auth — recovery email is stored in
   // Firestore only and used solely for sendPasswordResetEmail.
