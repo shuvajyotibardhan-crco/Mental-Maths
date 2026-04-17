@@ -52,7 +52,7 @@ interface AnsweredQuestion extends Question {
 ```
 
 ### SessionRecord
-Stored in Firestore collection `sessions`. Shared by both Mental Maths and Social Studies sessions.
+Stored in Firestore collection `sessions`. Shared by Mental Maths, Social Studies, and Word-O-Meter sessions.
 
 ```typescript
 interface SessionRecord {
@@ -60,18 +60,22 @@ interface SessionRecord {
   userId: string           // Firebase Auth UID
   timestamp: number        // Date.now()
   grade: Grade
-  subject?: 'mentalMaths' | 'socialStudies'  // absent = mentalMaths (backward compat)
-  operation: OperationType | null  // null for Social Studies sessions
-  difficulty: Difficulty | null    // null for Social Studies sessions
-  mode: GameMode           // 'fixed' for Social Studies
-  totalQuestions: number   // questions attempted
-  correctAnswers: number
-  accuracy: number         // correctAnswers / totalQuestions (0–1)
+  subject?: 'mentalMaths' | 'socialStudies' | 'wordOMeter'  // absent = mentalMaths (backward compat)
+  operation: OperationType | null  // null for non-Maths sessions
+  difficulty: Difficulty | null    // null for non-Maths sessions
+  mode: GameMode           // 'fixed' for non-Maths sessions
+  totalQuestions: number   // 1 for Word-O-Meter
+  correctAnswers: number   // 1 (won) or 0 (lost) for Word-O-Meter
+  accuracy: number         // 100 (won) or 0 (lost) for Word-O-Meter
   score: number
   timeTakenSeconds: number
-  bestStreak: number
-  isHighScore: boolean     // always false for Social Studies (no HS system)
+  bestStreak: number       // 0 for Word-O-Meter (not applicable)
+  isHighScore: boolean     // always false for non-Maths sessions
   challengeId?: string     // game code if from multiplayer challenge (Maths or Social Studies)
+  // Word-O-Meter specific (only present when subject === 'wordOMeter')
+  word?: string            // the target word (UPPERCASE)
+  won?: boolean            // true if player guessed correctly
+  attemptsUsed?: number    // number of guesses made
 }
 ```
 
@@ -120,6 +124,44 @@ interface SocialStudiesSession {
   bestStreak: number
   isHighScore: boolean // always false
   challengeId?: string // game code if from multiplayer challenge
+}
+```
+
+### WOMWord
+Defined in `src/data/wordOMeterData.ts` (static bundle — never persisted to Firestore).
+
+```typescript
+interface WOMWord {
+  word: string           // UPPERCASE target word
+  letterCount: number    // 3–8
+  grade: Grade           // grade this word is assigned to in the pool
+  meanings: string[]     // 1–2 definitions
+  partOfSpeech: string[] // e.g. ['noun', 'verb']
+  synonyms: string[]     // 1–3 synonyms
+  antonyms: string[]     // 0–2 antonyms
+  blend?: string         // 7–8 letter words only: notable blend/pattern hint
+}
+```
+
+### WOMSession
+Shape passed to `saveWordOMeterSession`; persisted as a `SessionRecord` in Firestore.
+
+```typescript
+interface WOMSession {
+  id: string            // assigned by Firestore on write
+  userId: string
+  timestamp: number
+  grade: Grade
+  subject: 'wordOMeter'
+  word: string          // the target word (UPPERCASE)
+  letterCount: number
+  won: boolean
+  attemptsUsed: number  // 1–6
+  maxAttempts: number   // always 6
+  hintsUsed: number     // count of hints consumed
+  score: number         // max(10, 100 − (attemptsUsed−1)×12 − hintsUsed×8) on win; 0 on loss
+  timeTakenSeconds: number
+  challengeId?: string  // reserved for future multiplayer support
 }
 ```
 
@@ -238,6 +280,7 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 | `mm_sound` | `'true'` \| `'false'` | Sound effects preference |
 | `mm_seen_questions` | JSON `string[]` | Mental Maths cross-session dedup — `displayString` values of recently seen questions, FIFO capped at 60 |
 | `mm_ss_seen_<grade>` | JSON `string[]` | Social Studies cross-session dedup — Firestore document IDs of recently seen questions for that grade, FIFO capped at 80. One key per grade (e.g. `mm_ss_seen_5`, `mm_ss_seen_8`). |
+| `mm_wom_seen_<letterCount>` | JSON `string[]` | Word-O-Meter cross-session dedup — UPPERCASE word strings recently used, FIFO capped at 60. One key per letter count (e.g. `mm_wom_seen_3`, `mm_wom_seen_5`). |
 
 ### Firebase Storage
 
@@ -359,6 +402,62 @@ localStorage.setItem('mm_ss_seen_<grade>', JSON.stringify(combined.slice(-80)))
 
 // localStorage key: mm_ss_seen_<grade>  (JSON string[], max 80 entries, FIFO)
 // One key per grade: mm_ss_seen_3 … mm_ss_seen_12
+```
+
+### Word-O-Meter Guess Evaluation
+```
+evaluateGuess(guess: string, target: string) → WOMTile[]:
+  result = guess.split('').map(letter → { letter, state: 'absent' })
+  counts = frequency map of target letters
+
+  // Pass 1: correct positions
+  for i in 0..target.length-1:
+    if guess[i] == target[i]:
+      result[i].state = 'correct'
+      counts[target[i]]--
+
+  // Pass 2: present letters (only for tiles not already 'correct')
+  for i in 0..target.length-1:
+    if result[i].state == 'correct': continue
+    letter = guess[i]
+    if counts[letter] > 0:
+      result[i].state = 'present'
+      counts[letter]--
+
+  return result
+// Two-pass order prevents double-counting when a letter appears multiple
+// times (e.g. guessing "SPEED" for "SHADE" — first S is correct, second
+// S would not be marked present because the target S is exhausted).
+```
+
+### Word-O-Meter Score Formula
+```
+calcScore(won, attemptsUsed, hintsUsed):
+  if !won: return 0
+  return max(10, 100 − (attemptsUsed − 1) × 12 − hintsUsed × 8)
+
+// Examples:
+//   win in 1 attempt, 0 hints → 100
+//   win in 3 attempts, 1 hint → max(10, 100 − 24 − 8) = 68
+//   win in 6 attempts, 0 hints → max(10, 100 − 60) = 40
+//   loss → 0
+```
+
+### Word-O-Meter Word Selection
+```
+pickWord(grade, letterCount):
+  pool = getWordPool(grade, letterCount)   // all words at or below grade for letterCount
+  if pool.empty: return null
+  seen = loadSeenWordsFromStorage(letterCount)  // Set<string> from localStorage
+  unseen = pool.filter(w → !seen.has(w.word))
+  candidates = unseen.length > 0 ? unseen : pool  // fall back to full pool if all seen
+  return shuffle(candidates)[0]
+
+saveSeenWordToStorage(letterCount, word):
+  existing = JSON.parse(localStorage.getItem('mm_wom_seen_<letterCount>') ?? '[]')
+  combined = [...existing, word]
+  localStorage.setItem('mm_wom_seen_<letterCount>', JSON.stringify(combined.slice(-60)))
+// FIFO, cap = 60. Natural reset once all words exhausted.
 ```
 
 ### Score Calculation
@@ -626,7 +725,11 @@ Mental Maths/
     │   ├── user.ts               # UserProfile
     │   ├── challenge.ts          # Challenge, ChallengePlayer, ChallengeConfig, ChallengeStatus
     │   ├── admin.ts              # AuditEntry, AdminActionType
-    │   └── socialStudies.ts      # SocialStudiesQuestion, SocialStudiesAnsweredQuestion, SocialStudiesSession
+    │   ├── socialStudies.ts      # SocialStudiesQuestion, SocialStudiesAnsweredQuestion, SocialStudiesSession
+    │   └── wordOMeter.ts         # WOMWord, WOMSession, WOMTile, WOMTileState, WOMHintType, WOMHintResult
+    │
+    ├── data/
+    │   └── wordOMeterData.ts     # Static word bank; GRADE_LETTER_OPTIONS; getWordPool(grade, letterCount)
     │
     ├── firebase/
     │   ├── config.ts             # Firebase app init; exports app, auth, db, storage
@@ -634,7 +737,8 @@ Mental Maths/
     │   ├── firestore.ts          # All Firestore CRUD (users, sessions, high scores)
     │   ├── challenge.ts          # Challenge CRUD + onSnapshot subscription
     │   ├── admin.ts              # Admin ops: isAdmin check, user search, reset/merge/move, audit log
-    │   └── socialStudies.ts      # fetchSocialStudiesQuestions, saveSocialStudiesSession
+    │   ├── socialStudies.ts      # fetchSocialStudiesQuestions, saveSocialStudiesSession
+    │   └── wordOMeter.ts         # pickWord, saveSeenWordToStorage, saveWordOMeterSession
     │
     ├── context/
     │   ├── AuthContext.tsx       # onAuthStateChanged → profile fetch
@@ -647,7 +751,8 @@ Mental Maths/
     │   ├── useChallengeListener.ts   # onSnapshot wrapper for challenge doc
     │   ├── useChallengeGame.ts       # Mental Maths multiplayer logic (pre-gen questions + Firestore sync)
     │   ├── useChallengeSSGame.ts     # SS multiplayer logic (MC questions + Firestore sync)
-    │   └── useSocialStudiesGame.ts   # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
+    │   ├── useSocialStudiesGame.ts   # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
+    │   └── useWordOMeterGame.ts      # WOM solo game (guess eval, hints, score, dedup, save)
     │
     ├── engine/
     │   ├── questionGenerator.ts  # Pure: grade+op+diff → Question, generateQuestionBatch
@@ -665,7 +770,7 @@ Mental Maths/
         │   └── GradeSelector.tsx # Shared grade picker (4-column grid); used by all setup screens
         │
         ├── layout/
-        │   ├── AppShell.tsx      # Screen router; mounts GameProvider + SocialStudiesShell
+        │   ├── AppShell.tsx      # Screen router; mounts GameProvider + SocialStudiesShell + WordOMeterShell
         │   ├── Header.tsx        # Brand + user avatar nav
         │   └── BottomNav.tsx     # Home/History/Profile/Settings tabs
         │
@@ -688,7 +793,10 @@ Mental Maths/
         │   ├── ChallengeResultsScreen.tsx        # Leaderboard + stats + session save
         │   ├── SocialStudiesSetupScreen.tsx      # Grade info + Start Quiz button
         │   ├── SocialStudiesGameScreen.tsx       # MCQ gameplay with reveal + auto-advance
-        │   └── SocialStudiesResultsScreen.tsx    # Score, accuracy, streak, incorrect review
+        │   ├── SocialStudiesResultsScreen.tsx    # Score, accuracy, streak, incorrect review
+        │   ├── WordOMeterSetupScreen.tsx         # Grade + letter count selector + Start Game
+        │   ├── WordOMeterGameScreen.tsx          # Wordle-style tile grid + QWERTY keyboard + hints
+        │   └── WordOMeterResultsScreen.tsx       # Word revealed + definition + replay grid + stats
         │
         └── game/
             ├── QuestionCard.tsx  # Question text + correct/wrong feedback

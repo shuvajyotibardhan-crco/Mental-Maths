@@ -29,3 +29,5 @@ export type {
   SocialStudiesAnsweredQuestion,
   SocialStudiesSession,
 } from './socialStudies'
+
+export type { WOMWord, WOMSession, WOMTile, WOMTileState, WOMHintType, WOMHintResult } from './wordOMeter'

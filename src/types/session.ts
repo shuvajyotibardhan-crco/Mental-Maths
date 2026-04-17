@@ -5,7 +5,7 @@ export interface SessionRecord {
   userId: string
   timestamp: number
   grade: Grade
-  subject?: 'mentalMaths' | 'socialStudies'  // optional for backward compat; absent = mentalMaths
+  subject?: 'mentalMaths' | 'socialStudies' | 'wordOMeter'  // optional for backward compat; absent = mentalMaths
   operation: OperationType
   difficulty: Difficulty
   mode: GameMode
@@ -17,6 +17,10 @@ export interface SessionRecord {
   bestStreak: number
   isHighScore: boolean
   challengeId?: string
+  // Word-O-Meter specific (only present when subject === 'wordOMeter')
+  word?: string
+  won?: boolean
+  attemptsUsed?: number
 }
 
 export interface HighScoreEntry {

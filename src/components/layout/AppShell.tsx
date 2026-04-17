@@ -26,6 +26,11 @@ import { AdminScreen } from '../screens/AdminScreen'
 import { SocialStudiesSetupScreen } from '../screens/SocialStudiesSetupScreen'
 import { SocialStudiesGameScreen } from '../screens/SocialStudiesGameScreen'
 import { SocialStudiesResultsScreen } from '../screens/SocialStudiesResultsScreen'
+import { WordOMeterSetupScreen } from '../screens/WordOMeterSetupScreen'
+import { WordOMeterGameScreen } from '../screens/WordOMeterGameScreen'
+import { WordOMeterResultsScreen } from '../screens/WordOMeterResultsScreen'
+import { useWordOMeterGame } from '../../hooks/useWordOMeterGame'
+import { GRADE_LETTER_OPTIONS } from '../../data/wordOMeterData'
 import type { Grade } from '../../types'
 
 function SocialStudiesShell({
@@ -98,6 +103,82 @@ function SocialStudiesShell({
   return null
 }
 
+function WordOMeterShell({
+  screen,
+  setScreen,
+}: {
+  screen: string
+  setScreen: (s: string) => void
+}) {
+  const { user, profile } = useAuth()
+  const [selectedGrade, setSelectedGrade] = useState<Grade>(
+    (): Grade => profile?.grade ?? 'KG',
+  )
+  const [selectedLetterCount, setSelectedLetterCount] = useState<number>(3)
+
+  const { state, startGame, typeLetter, deleteLetter, submitGuess, useHint, forceFinish, reset } =
+    useWordOMeterGame(user?.uid ?? '')
+
+  const handleGradeChange = useCallback((grade: Grade) => {
+    setSelectedGrade(grade)
+    const opts = GRADE_LETTER_OPTIONS[grade] ?? [3, 4, 5]
+    if (!opts.includes(selectedLetterCount)) setSelectedLetterCount(opts[0]!)
+  }, [selectedLetterCount])
+
+  const handleStart = useCallback(() => {
+    startGame(selectedGrade, selectedLetterCount)
+    setScreen('wom-game')
+  }, [startGame, selectedGrade, selectedLetterCount, setScreen])
+
+  const handlePlayAgain = useCallback(() => {
+    reset()
+    setScreen('wom-setup')
+  }, [reset, setScreen])
+
+  useEffect(() => {
+    if ((state.status === 'won' || state.status === 'lost') && screen === 'wom-game') {
+      const t = setTimeout(() => setScreen('wom-results'), 1600)
+      return () => clearTimeout(t)
+    }
+  }, [state.status, screen, setScreen])
+
+  if (screen === 'wom-setup') {
+    return (
+      <WordOMeterSetupScreen
+        onNavigate={setScreen}
+        selectedGrade={selectedGrade}
+        selectedLetterCount={selectedLetterCount}
+        onGradeChange={handleGradeChange}
+        onLetterCountChange={setSelectedLetterCount}
+        onStart={handleStart}
+      />
+    )
+  }
+  if (screen === 'wom-game') {
+    return (
+      <WordOMeterGameScreen
+        gameState={state}
+        onTypeLetter={typeLetter}
+        onDeleteLetter={deleteLetter}
+        onSubmitGuess={submitGuess}
+        onUseHint={useHint}
+        onEndGame={forceFinish}
+        onNavigate={setScreen}
+      />
+    )
+  }
+  if (screen === 'wom-results') {
+    return (
+      <WordOMeterResultsScreen
+        gameState={state}
+        onPlayAgain={handlePlayAgain}
+        onNavigate={setScreen}
+      />
+    )
+  }
+  return null
+}
+
 export function AppShell() {
   const { user, profile, loading } = useAuth()
   const [screen, setScreen] = useState('home')
@@ -156,8 +237,9 @@ export function AppShell() {
   }
 
   const isSsScreen = screen === 'ss-game'
+  const isWomGameScreen = screen === 'wom-game'
   // Only hide nav during active gameplay
-  const isGameScreen = screen === 'game' || screen === 'challenge-game' || isSsScreen
+  const isGameScreen = screen === 'game' || screen === 'challenge-game' || isSsScreen || isWomGameScreen
 
   function handleChallengeCreated(gameCode: string) {
     setChallengeCode(gameCode)
@@ -170,6 +252,7 @@ export function AppShell() {
   }
 
   const isSocialStudiesScreen = screen === 'ss-setup' || screen === 'ss-game' || screen === 'ss-results'
+  const isWomScreen = screen === 'wom-setup' || screen === 'wom-game' || screen === 'wom-results'
 
   return (
     <GameProvider>
@@ -203,6 +286,9 @@ export function AppShell() {
           {screen === 'admin' && userIsAdmin && <AdminScreen onNavigate={setScreen} isSuperAdmin={userIsSuperAdmin} />}
           {isSocialStudiesScreen && (
             <SocialStudiesShell screen={screen} setScreen={setScreen} />
+          )}
+          {isWomScreen && (
+            <WordOMeterShell screen={screen} setScreen={setScreen} />
           )}
         </main>
         {!isGameScreen && (

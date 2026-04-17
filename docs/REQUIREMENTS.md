@@ -528,6 +528,52 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 
 ---
 
+## Feature 19 — Word-O-Meter (Wordle-style vocabulary game)
+
+**User story:** As a student in any grade (KG–12), I want to guess a hidden word using colour-coded letter feedback so that I can build vocabulary while having fun.
+
+**Acceptance Criteria:**
+1. A "Word-O-Meter" subject card shall appear on the Home screen alongside Mental Maths and Social Studies.
+2. The setup screen shall include a **grade selector** (KG–12) and a **letter count selector** showing only the counts available for the chosen grade (3–5 for KG–2, 4–6 for Gr 3–5, 5–7 for Gr 6–8, 6–8 for Gr 9–12).
+3. Grade and letter count are per-quiz and do not affect the user's profile.
+4. The game shall give the player **6 attempts** to guess a hidden word of the chosen letter count.
+5. After each guess, each tile shall be colour-coded: green (correct letter, correct position), yellow (correct letter, wrong position), grey (letter not in the word).
+6. The player shall type guesses using an on-screen QWERTY keyboard or a physical keyboard. Each key on the on-screen keyboard shall reflect the best state seen so far (green > yellow > grey).
+7. Submitting a guess with fewer letters than the required count shall show an error message and shake the current row.
+8. Up to 8 hint types shall be available during play (not all types available for every word): Part of Speech, Vowel Count, Synonym, Antonym, First Letter, Last Letter, Middle Letter, Word Blend. Each hint may only be used once.
+9. Each hint used shall be displayed as text below the grid for the remainder of the session.
+10. Scoring: win = max(10, 100 − (attempts−1) × 12 − hints × 8); loss = 0. Maximum score is 100 (first attempt, no hints).
+11. When the game ends (won or lost), a 1.6-second pause shall show the final grid state, then navigate to the results screen.
+12. The results screen shall display: the word (UPPERCASE), its definition(s), a compact replay grid, score, attempts used, hints used, and part of speech + synonyms.
+13. An **End Game** button shall be available at all times during play. If at least 1 guess was made, the partial session is saved and the player is taken to results.
+14. Each completed or early-ended session shall be saved to the shared `sessions` Firestore collection with `subject: 'wordOMeter'`.
+15. Words seen in previous sessions for the same letter count shall be deprioritised (cross-session deduplication via localStorage, cap 60 per letter count); once all words have been seen the full pool is reused.
+16. "Play Again" shall return to the setup screen (grade and letter count remembered); "Home" returns to Home.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Log in as any user | Word-O-Meter card visible on Home |
+| Tap Word-O-Meter | Setup screen with grade selector and letter count buttons |
+| Select Grade KG | Letter count buttons show 3, 4, 5 |
+| Select Grade 9 | Letter count buttons show 6, 7, 8 |
+| Tap Start Game | Game screen shows 6×N tile grid + keyboard |
+| Type 3 letters and tap ✓ | Error "Enter a 5-letter word" (for 5-letter game); row shakes |
+| Type correct-length guess | Tiles colour-code green/yellow/grey correctly |
+| Guess the correct word | Row turns all green; 1.6 s delay; results screen with score ≥ 10 |
+| Exhaust all 6 attempts | Results screen shows the word revealed, score 0 |
+| Tap 💡 First Letter hint | Hint appears below grid: 'First letter: "X"'; hint button removed |
+| Check score after win with 2 attempts + 1 hint | Score = max(10, 100 − 12 − 8) = 80 |
+| Tap End Game after 2 guesses | Session saved; results screen shown |
+| Tap End Game before any guess | No session saved; results screen shown |
+| Check Firestore | Session doc with `subject: 'wordOMeter'`, `won`, `attemptsUsed`, `score` |
+| Check History | Session listed as "Word-O-Meter" with ✓ Solved / ✗ Not solved |
+| Complete 60 sessions for same letter count | Next session still shows a word (pool resets) |
+| Tap Play Again | Setup screen; same grade + letter count pre-selected |
+
+---
+
 ## Feature 17 — Super Admin Role
 
 **User story:** As the sole super admin, I want to manage who has admin access, so that I can grant or revoke admin privileges without touching the Firebase Console.

@@ -38,6 +38,14 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
             <span className="text-3xl">🌍</span>
             <span className="text-sm">Social Studies</span>
           </button>
+
+          <button
+            onClick={() => onNavigate('wom-setup')}
+            className="flex flex-col items-center gap-2 py-5 bg-amber-500 text-white font-bold rounded-3xl shadow-lg hover:bg-amber-600 hover:shadow-xl active:scale-95 transition-all cursor-pointer col-span-2"
+          >
+            <span className="text-3xl">🔤</span>
+            <span className="text-sm">Word-O-Meter</span>
+          </button>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
