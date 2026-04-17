@@ -156,8 +156,8 @@ interface WOMSession {
   word: string          // the target word (UPPERCASE)
   letterCount: number
   won: boolean
-  attemptsUsed: number  // 1–6
-  maxAttempts: number   // always 6
+  attemptsUsed: number  // 1–N (where N = letterCount)
+  maxAttempts: number   // equals letterCount (square grid)
   hintsUsed: number     // count of hints consumed
   score: number         // max(10, 100 − (attemptsUsed−1)×12 − hintsUsed×8) on win; 0 on loss
   timeTakenSeconds: number
