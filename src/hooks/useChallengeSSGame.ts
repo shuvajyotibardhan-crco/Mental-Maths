@@ -59,6 +59,7 @@ export function useChallengeSSGame({ gameCode, uid, questions }: UseChallengeSSG
           bestStreak,
           finished,
           timeTakenSeconds,
+          lastActiveAt: Date.now(),
         }).catch(console.error)
       }, 100)
     },

@@ -29,6 +29,7 @@ export interface ChallengePlayer {
   bestStreak: number
   finished: boolean
   timeTakenSeconds: number | null
+  lastActiveAt?: number
 }
 
 export interface Challenge {

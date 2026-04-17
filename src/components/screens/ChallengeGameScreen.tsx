@@ -76,6 +76,8 @@ function ChallengeGameInner({
   const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null)
   const feedbackTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const navigatedRef = useRef(false)
+  const currentChallengeRef = useRef(currentChallenge)
+  useEffect(() => { currentChallengeRef.current = currentChallenge }, [currentChallenge])
 
   const isTimed = challenge.config.mode === 'timed'
 
@@ -102,13 +104,31 @@ function ChallengeGameInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Once this player finishes, check immediately and every 10 s for stragglers/disconnects.
+  // A player is counted done if: they finished normally, they ARE the current player (local
+  // state is authoritative — avoids waiting on our own Firestore write), or they haven't
+  // sent any progress update in 2 minutes (treat as disconnected/quit).
   useEffect(() => {
-    if (!game.finished || !currentChallenge || navigatedRef.current) return
-    const allFinished = Object.values(currentChallenge.players).every((p) => p.finished)
-    if (allFinished && currentChallenge.status !== 'finished') {
-      finishChallenge(gameCode).catch(console.error)
+    if (!game.finished || navigatedRef.current) return
+
+    const DISCONNECT_MS = 120_000
+
+    const check = () => {
+      const ch = currentChallengeRef.current
+      if (!ch || navigatedRef.current || ch.status === 'finished') return
+      const now = Date.now()
+      const allDone = Object.entries(ch.players).every(([pUid, p]) =>
+        p.finished ||
+        pUid === uid ||
+        now - (p.lastActiveAt ?? now) > DISCONNECT_MS,
+      )
+      if (allDone) finishChallenge(gameCode).catch(console.error)
     }
-  }, [game.finished, currentChallenge, gameCode])
+
+    check()
+    const interval = setInterval(check, 10_000)
+    return () => clearInterval(interval)
+  }, [game.finished, uid, gameCode])
 
   useEffect(() => {
     if (currentChallenge?.status === 'finished' && !navigatedRef.current) {
@@ -246,6 +266,8 @@ function ChallengeSSGameInner({
   const { challenge: liveChallenge } = useChallengeListener(gameCode)
   const currentChallenge = liveChallenge ?? challenge
   const navigatedRef = useRef(false)
+  const currentChallengeRef = useRef(currentChallenge)
+  useEffect(() => { currentChallengeRef.current = currentChallenge }, [currentChallenge])
 
   const questions = challenge.questions as SocialStudiesQuestion[]
   const game = useChallengeSSGame({ gameCode, uid, questions })
@@ -257,14 +279,30 @@ function ChallengeSSGameInner({
     return () => clearTimeout(timer)
   }, [game.revealed, game.advance])
 
-  // When this player finishes, check if all done → mark challenge finished
+  // Once this player finishes, check immediately and every 10 s.
+  // Treats current player as done via local state, and disconnected players
+  // (no update in 2 min) as done.
   useEffect(() => {
-    if (!game.finished || !currentChallenge || navigatedRef.current) return
-    const allFinished = Object.values(currentChallenge.players).every((p) => p.finished)
-    if (allFinished && currentChallenge.status !== 'finished') {
-      finishChallenge(gameCode).catch(console.error)
+    if (!game.finished || navigatedRef.current) return
+
+    const DISCONNECT_MS = 120_000
+
+    const check = () => {
+      const ch = currentChallengeRef.current
+      if (!ch || navigatedRef.current || ch.status === 'finished') return
+      const now = Date.now()
+      const allDone = Object.entries(ch.players).every(([pUid, p]) =>
+        p.finished ||
+        pUid === uid ||
+        now - (p.lastActiveAt ?? now) > DISCONNECT_MS,
+      )
+      if (allDone) finishChallenge(gameCode).catch(console.error)
     }
-  }, [game.finished, currentChallenge, gameCode])
+
+    check()
+    const interval = setInterval(check, 10_000)
+    return () => clearInterval(interval)
+  }, [game.finished, uid, gameCode])
 
   // Navigate to results when challenge status becomes 'finished'
   useEffect(() => {

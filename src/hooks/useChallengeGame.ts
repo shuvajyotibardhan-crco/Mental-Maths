@@ -48,6 +48,7 @@ export function useChallengeGame({ gameCode, uid, questions, config }: UseChalle
           bestStreak,
           finished,
           timeTakenSeconds,
+          lastActiveAt: Date.now(),
         }).catch(console.error)
       }, 100)
     },
