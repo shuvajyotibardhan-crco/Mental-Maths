@@ -226,7 +226,7 @@ export function useWordOMeterGame(userId: string) {
   const useHint = useCallback((type: WOMHintType) => {
     setState((s) => {
       if (s.status !== 'playing' || !s.word || !s.availableHints.includes(type)) return s
-      const maxHints = s.letterCount <= 5 ? 1 : 2
+      const maxHints = s.letterCount <= 4 ? 1 : s.letterCount <= 6 ? 2 : 3
       if (s.hintsUsed.length >= maxHints) return s
       const hint: WOMHintResult = { type, text: generateHintText(type, s.word) }
       const newHintsUsed = [...s.hintsUsed, hint]
