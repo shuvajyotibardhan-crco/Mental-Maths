@@ -63,7 +63,7 @@ export function WordOMeterSetupScreen({
       <div className="w-full max-w-xs bg-white/80 rounded-3xl shadow p-5 space-y-3">
         <div className="flex items-center justify-between">
           <span className="text-gray-600 font-medium">Attempts</span>
-          <span className="font-bold text-primary-dark">6</span>
+          <span className="font-bold text-primary-dark">{selectedLetterCount}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-gray-600 font-medium">Letters</span>
