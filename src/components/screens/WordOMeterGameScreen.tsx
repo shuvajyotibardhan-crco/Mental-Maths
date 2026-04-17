@@ -161,7 +161,7 @@ export function WordOMeterGameScreen({
       {availableHints.length > 0 && (
         <div className="px-4 py-1.5 shrink-0">
           {(() => {
-            const maxHints = letterCount <= 5 ? 1 : 2
+            const maxHints = letterCount <= 4 ? 1 : letterCount <= 6 ? 2 : 3
             const remaining = maxHints - hintsUsed.length
             return (
               <>

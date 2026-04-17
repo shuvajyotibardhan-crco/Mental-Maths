@@ -68,8 +68,8 @@ export async function joinChallenge(
 
   const challenge = snap.data() as Challenge
 
-  if (challenge.status !== 'waiting') {
-    throw new Error('This challenge has already started.')
+  if (challenge.status === 'finished') {
+    throw new Error('This challenge has already ended.')
   }
 
   if (challenge.players[profile.uid]) {
@@ -81,7 +81,7 @@ export async function joinChallenge(
     username: profile.username,
     name: profile.name,
     avatar: profile.avatar,
-    ready: false,
+    ready: challenge.status === 'playing', // skip lobby ready-check for late joiners
     score: 0,
     correctAnswers: 0,
     totalAnswered: 0,

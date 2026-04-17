@@ -246,9 +246,9 @@ export function AppShell() {
     setScreen('challenge-lobby')
   }
 
-  function handleChallengeJoined(gameCode: string) {
+  function handleChallengeJoined(gameCode: string, destination = 'challenge-lobby') {
     setChallengeCode(gameCode)
-    setScreen('challenge-lobby')
+    setScreen(destination)
   }
 
   const isSocialStudiesScreen = screen === 'ss-setup' || screen === 'ss-game' || screen === 'ss-results'

@@ -4,7 +4,7 @@ import { joinChallenge } from '../../firebase/challenge'
 
 interface JoinChallengeScreenProps {
   onNavigate: (screen: string) => void
-  onChallengeJoined: (gameCode: string) => void
+  onChallengeJoined: (gameCode: string, destination?: string) => void
 }
 
 export function JoinChallengeScreen({ onNavigate, onChallengeJoined }: JoinChallengeScreenProps) {
@@ -19,8 +19,9 @@ export function JoinChallengeScreen({ onNavigate, onChallengeJoined }: JoinChall
     setJoining(true)
 
     try {
-      await joinChallenge(code.trim().toUpperCase(), profile)
-      onChallengeJoined(code.trim().toUpperCase())
+      const joined = await joinChallenge(code.trim().toUpperCase(), profile)
+      const dest = joined.status === 'playing' ? 'challenge-game' : 'challenge-lobby'
+      onChallengeJoined(code.trim().toUpperCase(), dest)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to join challenge.')
       setJoining(false)

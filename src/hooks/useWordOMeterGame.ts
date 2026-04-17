@@ -66,6 +66,22 @@ function evaluateGuess(guess: string, target: string): WOMTile[] {
   return result
 }
 
+function filterPositionHints(hints: WOMHintType[], guesses: WOMTile[][], word: string): WOMHintType[] {
+  if (hints.length === 0) return hints
+  const correctPos = new Set<number>()
+  for (const row of guesses) {
+    row.forEach((tile, i) => { if (tile.state === 'correct') correctPos.add(i) })
+  }
+  if (correctPos.size === 0) return hints
+  const mid = Math.floor(word.length / 2)
+  return hints.filter((h) => {
+    if (h === 'revealFirst') return !correctPos.has(0)
+    if (h === 'revealLast') return !correctPos.has(word.length - 1)
+    if (h === 'revealMiddle') return !correctPos.has(mid)
+    return true
+  })
+}
+
 function computeAvailableHints(word: WOMWord): WOMHintType[] {
   const hints: WOMHintType[] = ['partOfSpeech', 'vowelCount', 'revealFirst', 'revealLast', 'revealMiddle']
   if (word.synonyms.length > 0) hints.push('synonym')
@@ -200,6 +216,7 @@ export function useWordOMeterGame(userId: string) {
       guesses: newGuesses,
       currentGuess: '',
       letterStates: newLetterStates,
+      availableHints: filterPositionHints(prev.availableHints, newGuesses, cur.word!.word),
       shake: false,
       error: null,
       validating: false,
@@ -209,7 +226,7 @@ export function useWordOMeterGame(userId: string) {
   const useHint = useCallback((type: WOMHintType) => {
     setState((s) => {
       if (s.status !== 'playing' || !s.word || !s.availableHints.includes(type)) return s
-      const maxHints = s.letterCount <= 5 ? 1 : 2
+      const maxHints = s.letterCount <= 4 ? 1 : s.letterCount <= 6 ? 2 : 3
       if (s.hintsUsed.length >= maxHints) return s
       const hint: WOMHintResult = { type, text: generateHintText(type, s.word) }
       const newHintsUsed = [...s.hintsUsed, hint]
