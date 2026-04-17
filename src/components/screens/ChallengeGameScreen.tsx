@@ -9,9 +9,79 @@ import { QuestionCard } from '../game/QuestionCard'
 import { NumberPad } from '../game/NumberPad'
 import { Timer } from '../game/Timer'
 import { ScoreBar } from '../game/ScoreBar'
-import type { Challenge, ChallengeConfig } from '../../types/challenge'
+import type { Challenge, ChallengeConfig, ChallengePlayer } from '../../types/challenge'
 import type { Question } from '../../types/question'
 import type { SocialStudiesQuestion } from '../../types/socialStudies'
+
+const DISCONNECT_MS = 120_000
+const WARN_AFTER_MS = 30_000
+
+function WaitingForPlayers({
+  players,
+  uid,
+  score,
+  scoreColor = 'text-primary',
+}: {
+  players: Record<string, ChallengePlayer>
+  uid: string
+  score: number
+  scoreColor?: string
+}) {
+  const [now, setNow] = useState(Date.now())
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000)
+    return () => clearInterval(id)
+  }, [])
+
+  const others = Object.entries(players).filter(([pUid]) => pUid !== uid)
+
+  return (
+    <div className="flex flex-col items-center justify-center h-dvh p-6 gap-5">
+      <div className="text-4xl animate-pulse">⏳</div>
+      <p className="text-xl font-semibold text-gray-700">Waiting for others…</p>
+
+      <div className="w-full max-w-sm space-y-2">
+        {others.map(([pUid, p]) => {
+          const inactive = p.lastActiveAt ? now - p.lastActiveAt : 0
+          const isWarning = !p.finished && inactive > WARN_AFTER_MS
+          const secsLeft = Math.max(0, Math.ceil((DISCONNECT_MS - inactive) / 1000))
+
+          return (
+            <div
+              key={pUid}
+              className={`flex items-center justify-between rounded-2xl px-4 py-3 ${
+                isWarning ? 'bg-amber-50 border border-amber-200' : 'bg-white/80'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-xl">{p.avatar}</span>
+                <span className="font-medium text-gray-700">{p.name}</span>
+              </div>
+              {p.finished ? (
+                <span className="text-emerald-600 font-semibold text-sm">Finished ✓</span>
+              ) : isWarning ? (
+                <div className="text-right">
+                  <p className="text-amber-600 text-xs font-semibold">No response</p>
+                  <p className="text-amber-500 text-xs">
+                    Auto-proceeding in{' '}
+                    <span className="font-bold tabular-nums">{secsLeft}s</span>
+                  </p>
+                </div>
+              ) : (
+                <span className="text-gray-400 text-sm animate-pulse">Playing…</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="bg-white/80 rounded-2xl p-4 text-center w-full max-w-sm">
+        <p className="text-sm text-gray-500">Your Score</p>
+        <p className={`text-3xl font-bold ${scoreColor}`}>⭐ {score}</p>
+      </div>
+    </div>
+  )
+}
 
 const SS_OPTION_LABELS = ['A', 'B', 'C', 'D'] as const
 
@@ -111,8 +181,6 @@ function ChallengeGameInner({
   useEffect(() => {
     if (!game.finished || navigatedRef.current) return
 
-    const DISCONNECT_MS = 120_000
-
     const check = () => {
       const ch = currentChallengeRef.current
       if (!ch || navigatedRef.current || ch.status === 'finished') return
@@ -177,17 +245,13 @@ function ChallengeGameInner({
   }
 
   if (game.finished && currentChallenge?.status !== 'finished') {
-    const totalPlayers = Object.keys(currentChallenge?.players ?? {}).length
-    const finishedPlayers = Object.values(currentChallenge?.players ?? {}).filter((p) => p.finished).length
     return (
-      <div className="flex flex-col items-center justify-center h-dvh p-6 gap-4">
-        <div className="text-4xl animate-pulse">Waiting for others...</div>
-        <p className="text-gray-500 text-lg">{finishedPlayers} / {totalPlayers} finished</p>
-        <div className="bg-white/80 rounded-2xl p-4 text-center">
-          <p className="text-sm text-gray-500">Your Score</p>
-          <p className="text-3xl font-bold text-primary">⭐ {game.score}</p>
-        </div>
-      </div>
+      <WaitingForPlayers
+        players={currentChallenge?.players ?? {}}
+        uid={uid}
+        score={game.score}
+        scoreColor="text-primary"
+      />
     )
   }
 
@@ -285,8 +349,6 @@ function ChallengeSSGameInner({
   useEffect(() => {
     if (!game.finished || navigatedRef.current) return
 
-    const DISCONNECT_MS = 120_000
-
     const check = () => {
       const ch = currentChallengeRef.current
       if (!ch || navigatedRef.current || ch.status === 'finished') return
@@ -312,19 +374,14 @@ function ChallengeSSGameInner({
     }
   }, [currentChallenge?.status, onNavigate])
 
-  // Waiting for others screen
   if (game.finished && currentChallenge?.status !== 'finished') {
-    const totalPlayers = Object.keys(currentChallenge?.players ?? {}).length
-    const finishedPlayers = Object.values(currentChallenge?.players ?? {}).filter((p) => p.finished).length
     return (
-      <div className="flex flex-col items-center justify-center h-dvh p-6 gap-4">
-        <div className="text-4xl animate-pulse">Waiting for others...</div>
-        <p className="text-gray-500 text-lg">{finishedPlayers} / {totalPlayers} finished</p>
-        <div className="bg-white/80 rounded-2xl p-4 text-center">
-          <p className="text-sm text-gray-500">Your Score</p>
-          <p className="text-3xl font-bold text-teal-600">⭐ {game.score}</p>
-        </div>
-      </div>
+      <WaitingForPlayers
+        players={currentChallenge?.players ?? {}}
+        uid={uid}
+        score={game.score}
+        scoreColor="text-teal-600"
+      />
     )
   }
 
