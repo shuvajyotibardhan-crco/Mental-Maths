@@ -18,11 +18,10 @@ export interface WOMGameState {
   letterStates: Record<string, WOMTileState>
   shake: boolean
   error: string | null
+  validating: boolean
   sessionId: string | null
   score: number
 }
-
-const MAX_ATTEMPTS = 6
 
 const initial: WOMGameState = {
   status: 'idle',
@@ -31,12 +30,13 @@ const initial: WOMGameState = {
   word: null,
   guesses: [],
   currentGuess: '',
-  maxAttempts: MAX_ATTEMPTS,
+  maxAttempts: 3,
   hintsUsed: [],
   availableHints: [],
   letterStates: {},
   shake: false,
   error: null,
+  validating: false,
   sessionId: null,
   score: 0,
 }
@@ -98,6 +98,8 @@ function calcScore(attemptsUsed: number, hintsUsed: number): number {
 export function useWordOMeterGame(userId: string) {
   const [state, setState] = useState<WOMGameState>(initial)
   const startTimeRef = useRef<number>(0)
+  const stateRef = useRef<WOMGameState>(initial)
+  stateRef.current = state
 
   const startGame = useCallback((grade: Grade, letterCount: number) => {
     const word = pickWord(grade, letterCount)
@@ -112,6 +114,7 @@ export function useWordOMeterGame(userId: string) {
       grade,
       letterCount,
       word,
+      maxAttempts: letterCount,
       availableHints: computeAvailableHints(word),
     })
   }, [])
@@ -130,63 +133,94 @@ export function useWordOMeterGame(userId: string) {
     })
   }, [])
 
-  const submitGuess = useCallback(() => {
-    setState((s) => {
-      if (s.status !== 'playing' || !s.word) return s
-      if (s.currentGuess.length !== s.letterCount) {
-        return { ...s, shake: true, error: `Enter a ${s.letterCount}-letter word` }
-      }
+  const submitGuess = useCallback(async () => {
+    const s = stateRef.current
+    if (s.status !== 'playing' || !s.word || s.validating) return
+    if (s.currentGuess.length !== s.letterCount) {
+      setState((prev) => ({ ...prev, shake: true, error: `Enter a ${prev.letterCount}-letter word` }))
+      return
+    }
 
-      const tiles = evaluateGuess(s.currentGuess, s.word.word)
-      const newGuesses = [...s.guesses, tiles]
-
-      const newLetterStates = { ...s.letterStates }
-      for (const tile of tiles) {
-        const cur = newLetterStates[tile.letter]
-        if (!cur || STATE_PRIORITY[tile.state] > STATE_PRIORITY[cur]) {
-          newLetterStates[tile.letter] = tile.state
+    // Validate against dictionary (skip if the guess IS the answer)
+    if (s.currentGuess !== s.word.word) {
+      setState((prev) => ({ ...prev, validating: true, error: null }))
+      try {
+        const res = await fetch(
+          `https://api.dictionaryapi.dev/api/v2/entries/en/${s.currentGuess.toLowerCase()}`
+        )
+        if (!res.ok) {
+          setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
+          return
         }
+      } catch {
+        // Network error — allow the word rather than blocking gameplay
       }
+      setState((prev) => ({ ...prev, validating: false }))
+    }
 
-      const won = tiles.every((t) => t.state === 'correct')
-      const lost = !won && newGuesses.length >= s.maxAttempts
+    // Re-read state after async gap; abort if the guess changed
+    const cur = stateRef.current
+    if (cur.currentGuess !== s.currentGuess || cur.status !== 'playing' || !cur.word) return
 
-      if (won || lost) {
-        const attemptsUsed = newGuesses.length
-        const score = won ? calcScore(attemptsUsed, s.hintsUsed.length) : 0
-        _finishSession(s.word, s.grade, won, attemptsUsed, s.maxAttempts, s.hintsUsed.length, score)
-        saveSeenWordToStorage(s.letterCount, s.word.word)
-        return {
-          ...s,
-          status: won ? 'won' : 'lost',
-          guesses: newGuesses,
-          currentGuess: '',
-          letterStates: newLetterStates,
-          score,
-          shake: false,
-          error: null,
-        }
+    const tiles = evaluateGuess(cur.currentGuess, cur.word.word)
+    const newGuesses = [...cur.guesses, tiles]
+
+    const newLetterStates = { ...cur.letterStates }
+    for (const tile of tiles) {
+      const existing = newLetterStates[tile.letter]
+      if (!existing || STATE_PRIORITY[tile.state] > STATE_PRIORITY[existing]) {
+        newLetterStates[tile.letter] = tile.state
       }
+    }
 
-      return {
-        ...s,
+    const won = tiles.every((t) => t.state === 'correct')
+    const lost = !won && newGuesses.length >= cur.maxAttempts
+
+    if (won || lost) {
+      const attemptsUsed = newGuesses.length
+      const score = won ? calcScore(attemptsUsed, cur.hintsUsed.length) : 0
+      _finishSession(cur.word, cur.grade, won, attemptsUsed, cur.maxAttempts, cur.hintsUsed.length, score)
+      saveSeenWordToStorage(cur.letterCount, cur.word.word)
+      setState((prev) => ({
+        ...prev,
+        status: won ? 'won' : 'lost',
         guesses: newGuesses,
         currentGuess: '',
         letterStates: newLetterStates,
+        score,
         shake: false,
         error: null,
-      }
-    })
+        validating: false,
+      }))
+      return
+    }
+
+    setState((prev) => ({
+      ...prev,
+      guesses: newGuesses,
+      currentGuess: '',
+      letterStates: newLetterStates,
+      shake: false,
+      error: null,
+      validating: false,
+    }))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const useHint = useCallback((type: WOMHintType) => {
     setState((s) => {
       if (s.status !== 'playing' || !s.word || !s.availableHints.includes(type)) return s
+      const maxHints = s.letterCount <= 5 ? 1 : 2
+      if (s.hintsUsed.length >= maxHints) return s
       const hint: WOMHintResult = { type, text: generateHintText(type, s.word) }
+      const newHintsUsed = [...s.hintsUsed, hint]
+      // Disable all remaining hints once limit is reached
+      const newAvailable = newHintsUsed.length >= maxHints
+        ? []
+        : s.availableHints.filter((h) => h !== type)
       return {
         ...s,
-        hintsUsed: [...s.hintsUsed, hint],
-        availableHints: s.availableHints.filter((h) => h !== type),
+        hintsUsed: newHintsUsed,
+        availableHints: newAvailable,
       }
     })
   }, [])

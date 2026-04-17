@@ -575,11 +575,11 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 1. A "Word-O-Meter" subject card shall appear on the Home screen alongside Mental Maths and Social Studies.
 2. The setup screen shall include a **grade selector** (KG–12) and a **letter count selector** showing only the counts available for the chosen grade (3–5 for KG–2, 4–6 for Gr 3–5, 5–7 for Gr 6–8, 6–8 for Gr 9–12).
 3. Grade and letter count are per-quiz and do not affect the user's profile.
-4. The game shall give the player **6 attempts** to guess a hidden word of the chosen letter count.
+4. The game shall give the player exactly **N attempts** equal to the letter count (square grid). A 3-letter word gets 3 attempts, a 5-letter word gets 5 attempts, etc.
 5. After each guess, each tile shall be colour-coded: green (correct letter, correct position), yellow (correct letter, wrong position), grey (letter not in the word).
-6. The player shall type guesses using an on-screen QWERTY keyboard or a physical keyboard. Each key on the on-screen keyboard shall reflect the best state seen so far (green > yellow > grey).
-7. Submitting a guess with fewer letters than the required count shall show an error message and shake the current row.
-8. Up to 8 hint types shall be available during play (not all types available for every word): Part of Speech, Vowel Count, Synonym, Antonym, First Letter, Last Letter, Middle Letter, Word Blend. Each hint may only be used once.
+6. The player shall type guesses using an on-screen QWERTY keyboard or a physical keyboard. Each key on the on-screen keyboard shall reflect the best state seen so far (green > yellow > grey). The on-screen **⌫** (delete) key shall be visually distinct (rose-coloured, wider); the physical Backspace key shall also delete the last typed letter without triggering browser back-navigation.
+7. Submitting a guess with fewer letters than the required count shall show an error message and shake the current row. Submitting a guess that is not a valid English word shall show an error "Not a valid English word" (validated against the Free Dictionary API; network errors are silently bypassed). A "Checking word…" indicator is shown while validation is in progress.
+8. Hint types available during play (not all types available for every word): Part of Speech, Vowel Count, Synonym, Antonym, First Letter, Last Letter, Middle Letter, Word Blend. **Hint limit: 3–5 letter words → 1 hint max; 6–8 letter words → 2 hints max.** Once the limit is reached all remaining hint buttons are disabled.
 9. Each hint used shall be displayed as text below the grid for the remainder of the session.
 10. Scoring: win = max(10, 100 − (attempts−1) × 12 − hints × 8); loss = 0. Maximum score is 100 (first attempt, no hints).
 11. When the game ends (won or lost), a 1.6-second pause shall show the final grid state, then navigate to the results screen.
@@ -597,12 +597,18 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 | Tap Word-O-Meter | Setup screen with grade selector and letter count buttons |
 | Select Grade KG | Letter count buttons show 3, 4, 5 |
 | Select Grade 9 | Letter count buttons show 6, 7, 8 |
-| Tap Start Game | Game screen shows 6×N tile grid + keyboard |
+| Tap Start Game | Game screen shows N×N square tile grid + keyboard |
+| Start 3-letter game | Grid is 3 rows × 3 columns (3 attempts) |
+| Start 7-letter game | Grid is 7 rows × 7 columns (7 attempts) |
+| Type junk letters and tap ✓ | Error "Not a valid English word"; row shakes |
 | Type 3 letters and tap ✓ | Error "Enter a 5-letter word" (for 5-letter game); row shakes |
+| Press physical Backspace | Last typed letter deleted (no browser back navigation) |
+| Tap ⌫ on-screen key | Last typed letter deleted; key is rose-coloured and wider than letter keys |
 | Type correct-length guess | Tiles colour-code green/yellow/grey correctly |
 | Guess the correct word | Row turns all green; 1.6 s delay; results screen with score ≥ 10 |
-| Exhaust all 6 attempts | Results screen shows the word revealed, score 0 |
-| Tap 💡 First Letter hint | Hint appears below grid: 'First letter: "X"'; hint button removed |
+| Exhaust all N attempts | Results screen shows the word revealed, score 0 |
+| Tap First Letter hint (3-letter word) | Hint shown; all remaining hint buttons disappear (1-hint limit) |
+| Tap 2nd hint (7-letter word) | Second hint shown; all remaining hint buttons disappear (2-hint limit) |
 | Check score after win with 2 attempts + 1 hint | Score = max(10, 100 − 12 − 8) = 80 |
 | Tap End Game after 2 guesses | Session saved; results screen shown |
 | Tap End Game before any guess | No session saved; results screen shown |

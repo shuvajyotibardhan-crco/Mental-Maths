@@ -39,19 +39,19 @@ export function WordOMeterGameScreen({
 }: WordOMeterGameScreenProps) {
   const {
     status, letterCount, guesses, currentGuess, maxAttempts,
-    letterStates, hintsUsed, availableHints, shake, error,
+    letterStates, hintsUsed, availableHints, shake, error, validating,
   } = gameState
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (status !== 'playing') return
-      if (e.key === 'Enter') onSubmitGuess()
-      else if (e.key === 'Backspace') onDeleteLetter()
+      if (status !== 'playing' || validating) return
+      if (e.key === 'Enter') { e.preventDefault(); onSubmitGuess() }
+      else if (e.key === 'Backspace') { e.preventDefault(); onDeleteLetter() }
       else if (/^[a-zA-Z]$/.test(e.key)) onTypeLetter(e.key)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [status, onTypeLetter, onDeleteLetter, onSubmitGuess])
+  }, [status, validating, onTypeLetter, onDeleteLetter, onSubmitGuess])
 
   if (status !== 'playing') return null
 
@@ -74,10 +74,14 @@ export function WordOMeterGameScreen({
   }
 
   function keyClass(key: string): string {
-    const base = 'flex-1 min-w-0 h-10 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-95 '
-    if (key === '⌫' || key === '✓') {
-      return base + 'bg-gray-300 text-gray-700 hover:bg-gray-400 text-base'
+    if (key === '⌫') {
+      return 'flex-[1.8] min-w-0 h-10 rounded-xl font-bold text-base transition-all cursor-pointer active:scale-95 bg-rose-100 text-rose-600 hover:bg-rose-200'
     }
+    if (key === '✓') {
+      const disabled = validating
+      return `flex-[1.8] min-w-0 h-10 rounded-xl font-bold text-base transition-all cursor-pointer active:scale-95 ${disabled ? 'bg-gray-200 text-gray-400' : 'bg-emerald-500 text-white hover:bg-emerald-600'}`
+    }
+    const base = 'flex-1 min-w-0 h-10 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-95 '
     switch (letterStates[key]) {
       case 'correct': return base + 'bg-emerald-500 text-white'
       case 'present': return base + 'bg-amber-400 text-white'
@@ -118,8 +122,11 @@ export function WordOMeterGameScreen({
         </button>
       </div>
 
-      {/* Error */}
-      {error && (
+      {/* Error / validating */}
+      {validating && (
+        <p className="text-center text-xs text-amber-600 px-4 pb-1 shrink-0">Checking word…</p>
+      )}
+      {!validating && error && (
         <p className="text-center text-xs text-red-500 px-4 pb-1 shrink-0 animate-slide-in">{error}</p>
       )}
 
@@ -153,17 +160,28 @@ export function WordOMeterGameScreen({
       {/* Available hints */}
       {availableHints.length > 0 && (
         <div className="px-4 py-1.5 shrink-0">
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
-            {availableHints.map((type) => (
-              <button
-                key={type}
-                onClick={() => onUseHint(type)}
-                className="shrink-0 px-2.5 py-1 bg-white/80 text-amber-700 text-xs font-medium rounded-xl border border-amber-200 hover:bg-amber-50 cursor-pointer active:scale-95 transition-all"
-              >
-                💡 {HINT_LABELS[type]}
-              </button>
-            ))}
-          </div>
+          {(() => {
+            const maxHints = letterCount <= 5 ? 1 : 2
+            const remaining = maxHints - hintsUsed.length
+            return (
+              <>
+                <p className="text-xs text-amber-600 mb-1">
+                  💡 {remaining} hint{remaining !== 1 ? 's' : ''} remaining
+                </p>
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                  {availableHints.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => onUseHint(type)}
+                      className="shrink-0 px-2.5 py-1 bg-white/80 text-amber-700 text-xs font-medium rounded-xl border border-amber-200 hover:bg-amber-50 cursor-pointer active:scale-95 transition-all"
+                    >
+                      {HINT_LABELS[type]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
         </div>
       )}
 
@@ -175,8 +193,10 @@ export function WordOMeterGameScreen({
             {row.map((key) => (
               <button
                 key={key}
+                disabled={validating && key !== '⌫'}
                 onPointerDown={(e) => {
                   e.preventDefault()
+                  if (validating && key !== '⌫') return
                   if (key === '⌫') onDeleteLetter()
                   else if (key === '✓') onSubmitGuess()
                   else onTypeLetter(key)
