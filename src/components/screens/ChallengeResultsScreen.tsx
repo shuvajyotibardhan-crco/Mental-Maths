@@ -48,6 +48,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
           timeTakenSeconds: me!.timeTakenSeconds ?? 0,
           bestStreak: me!.bestStreak,
           isHighScore: false,
+          challengeId: gameCode,
         })
         setSaved(true)
         return

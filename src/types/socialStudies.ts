@@ -30,4 +30,5 @@ export interface SocialStudiesSession {
   timeTakenSeconds: number
   bestStreak: number
   isHighScore: boolean
+  challengeId?: string
 }

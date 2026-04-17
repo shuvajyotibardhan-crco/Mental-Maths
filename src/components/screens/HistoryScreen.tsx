@@ -128,7 +128,7 @@ export function HistoryScreen() {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-semibold text-gray-800">
-                    {OPERATION_LABELS[s.operation]}
+                    {s.operation ? OPERATION_LABELS[s.operation] : 'Social Studies'}
                   </span>
                   {s.challengeId && (
                     <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">
@@ -138,7 +138,7 @@ export function HistoryScreen() {
                   {s.isHighScore && <span className="text-sm">🏆</span>}
                 </div>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {s.difficulty} • {s.mode === 'timed' ? '2 min' : '20 Qs'} • Grade {s.grade}
+                  {s.operation ? `${s.difficulty} • ${s.mode === 'timed' ? '2 min' : '20 Qs'} • ` : ''}Grade {s.grade}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {new Date(s.timestamp).toLocaleDateString()}

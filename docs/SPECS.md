@@ -71,7 +71,7 @@ interface SessionRecord {
   timeTakenSeconds: number
   bestStreak: number
   isHighScore: boolean     // always false for Social Studies (no HS system)
-  challengeId?: string     // game code if from multiplayer challenge (Maths only)
+  challengeId?: string     // game code if from multiplayer challenge (Maths or Social Studies)
 }
 ```
 
@@ -119,6 +119,7 @@ interface SocialStudiesSession {
   timeTakenSeconds: number
   bestStreak: number
   isHighScore: boolean // always false
+  challengeId?: string // game code if from multiplayer challenge
 }
 ```
 
@@ -436,8 +437,8 @@ waiting screen (WaitingForPlayers component):
     - "Finished ✓"        if p.finished=true
 
 results:
-  each player saves SessionRecord with challengeId=gameCode
-  personal/global high score checks run as normal
+  each player saves session with challengeId=gameCode (Maths: SessionRecord + high score checks; SS: SocialStudiesSession, no high score)
+  HistoryScreen shows Multiplayer badge for any session with challengeId set
 ```
 
 ### Session Purge
