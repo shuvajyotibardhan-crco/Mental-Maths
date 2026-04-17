@@ -303,7 +303,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 11. All players shall answer the same pre-generated/pre-fetched questions in the same order.
 12. During gameplay, a live mini-leaderboard shall show all players' scores in real time.
 13. An "End Game" button shall be available during any challenge game to quit early.
-14. When a player finishes (timer expires, all questions answered, or End Game), they shall see a waiting screen until all other players are done. A player who ends early (End Game) or has been inactive for 2 minutes (disconnect) shall be treated as finished so the remaining players are not blocked.
+14. When a player finishes (timer expires, all questions answered, or End Game), they shall see a waiting screen that shows each opponent's real-time status: "Playing…", "Finished ✓", or — after 30 seconds of inactivity — "No response · Auto-proceeding in Xs" with a live countdown. A player inactive for 2 minutes is treated as finished so the remaining players are not blocked.
 15. Once all players finish, a leaderboard screen shall rank players by score (tiebreak by time in fixed mode).
 16. Mental Maths challenge sessions shall be saved with high-score checking; Social Studies challenge sessions shall be saved as SS sessions (no high-score system).
 17. Challenge sessions in History shall display a "Multiplayer" badge.

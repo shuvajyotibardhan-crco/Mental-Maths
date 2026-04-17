@@ -427,7 +427,13 @@ finishChallenge(gameCode):   // any client, once local game.finished=true
   check every player: done if p.finished OR p is current player (local state) OR
                       now - p.lastActiveAt > 120 000 ms (disconnect)
   if all done → set status='finished', finishedAt=Date.now()
-  re-checked every 10 s on the waiting screen to catch late disconnects
+  re-checked every 10 s while on the waiting screen
+
+waiting screen (WaitingForPlayers component):
+  ticks every 1 s; for each opponent shows:
+    - "Playing…"          if active (lastActiveAt within 30 s)
+    - "No response · auto-proceeding in Xs" if inactive 30–120 s (live countdown)
+    - "Finished ✓"        if p.finished=true
 
 results:
   each player saves SessionRecord with challengeId=gameCode
