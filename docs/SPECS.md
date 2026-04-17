@@ -152,8 +152,9 @@ interface ChallengePlayer {
   correctAnswers: number
   totalAnswered: number
   bestStreak: number
-  finished: boolean           // true when game complete
+  finished: boolean           // true when game complete (natural or End Game)
   timeTakenSeconds: number | null
+  lastActiveAt?: number       // ms timestamp of last syncProgress write; used to detect disconnects
 }
 ```
 
@@ -419,11 +420,14 @@ startChallenge(gameCode):    // host only
 
 during game:
   each player steps through questions[0..N] locally
-  after each answer: updateDoc players.{uid}.{score,correctAnswers,totalAnswered,bestStreak}
-  on finish: set players.{uid}.finished=true, timeTakenSeconds
+  after each answer: updateDoc players.{uid}.{score,correctAnswers,totalAnswered,bestStreak,lastActiveAt}
+  on finish: set players.{uid}.finished=true, timeTakenSeconds, lastActiveAt
 
-finishChallenge(gameCode):   // any client, when all players finished
-  set status='finished', finishedAt=Date.now()
+finishChallenge(gameCode):   // any client, once local game.finished=true
+  check every player: done if p.finished OR p is current player (local state) OR
+                      now - p.lastActiveAt > 120 000 ms (disconnect)
+  if all done → set status='finished', finishedAt=Date.now()
+  re-checked every 10 s on the waiting screen to catch late disconnects
 
 results:
   each player saves SessionRecord with challengeId=gameCode
