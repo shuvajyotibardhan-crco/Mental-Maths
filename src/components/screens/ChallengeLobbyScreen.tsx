@@ -63,6 +63,7 @@ export function ChallengeLobbyScreen({ gameCode, onNavigate }: ChallengeLobbyScr
 
   const subject = challenge.config.subject ?? 'mentalMaths'
   const isSS = subject === 'socialStudies'
+  const isWOM = subject === 'wordOMeter'
 
   function configSummary() {
     if (isSS) {
@@ -73,6 +74,17 @@ export function ChallengeLobbyScreen({ gameCode, onNavigate }: ChallengeLobbyScr
           <span>Grade {challenge!.config.grade}</span>
           {' · '}
           <span>20 Questions</span>
+        </>
+      )
+    }
+    if (isWOM) {
+      return (
+        <>
+          <span className="font-semibold">Word-O-Meter</span>
+          {' · '}
+          <span>{challenge!.config.letterCount}-letter word</span>
+          {' · '}
+          <span>Grade {challenge!.config.grade}</span>
         </>
       )
     }

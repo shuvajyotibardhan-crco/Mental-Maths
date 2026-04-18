@@ -84,9 +84,9 @@ export function WordOMeterSetupScreen({
         </button>
         <button
           onClick={() => onNavigate('home')}
-          className="w-full py-4 bg-white/80 text-primary-dark font-semibold text-lg rounded-3xl shadow hover:shadow-md active:scale-95 transition-all cursor-pointer"
+          className="w-full py-3 text-gray-500 font-medium hover:text-gray-700 cursor-pointer"
         >
-          Back
+          ← Back
         </button>
       </div>
     </div>
