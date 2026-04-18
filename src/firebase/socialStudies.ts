@@ -23,6 +23,12 @@ function shuffle<T>(arr: T[]): T[] {
   return a
 }
 
+function shuffleOptions(q: SocialStudiesQuestion): SocialStudiesQuestion {
+  const correct = q.options[q.correctIndex]
+  const shuffled = shuffle([...q.options]) as [string, string, string, string]
+  return { ...q, options: shuffled, correctIndex: shuffled.indexOf(correct) as 0 | 1 | 2 | 3 }
+}
+
 export function loadSeenIdsFromStorage(grade: Grade): Set<string> {
   try {
     const raw = localStorage.getItem(SS_SEEN_LS_KEY(grade))
@@ -68,7 +74,7 @@ export async function fetchSocialStudiesQuestions(grade: Grade): Promise<SocialS
   const seenIds = loadSeenIdsFromStorage(grade)
   const unseen = all.filter((q) => !seenIds.has(q.id))
   const pool = unseen.length >= 20 ? unseen : all
-  return shuffle(pool).slice(0, 20)
+  return shuffle(pool).slice(0, 20).map(shuffleOptions)
 }
 
 /**
