@@ -129,10 +129,23 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
     )
   }
 
-  // WOM leaderboard: sort by score desc, then time asc (faster = better)
   const leaderboard = Object.entries(challenge.players)
     .map(([uid, p]) => ({ uid, ...p }))
     .sort((a, b) => {
+      if (isWOM) {
+        // Solved players before unsolved
+        if (a.correctAnswers !== b.correctAnswers) return b.correctAnswers - a.correctAnswers
+        if (a.correctAnswers === 0) return 0
+        // Both solved: fastest time wins
+        const aTime = a.timeTakenSeconds ?? Infinity
+        const bTime = b.timeTakenSeconds ?? Infinity
+        if (aTime !== bTime) return aTime - bTime
+        // Tie on time: fewest tries wins (totalAnswered = attemptsUsed)
+        if (a.totalAnswered !== b.totalAnswered) return a.totalAnswered - b.totalAnswered
+        // Tie on tries: fewest hints wins (bestStreak = hintsUsed)
+        return a.bestStreak - b.bestStreak
+      }
+      // Non-WOM: sort by score desc, then time asc
       if (b.score !== a.score) return b.score - a.score
       if (a.timeTakenSeconds != null && b.timeTakenSeconds != null) return a.timeTakenSeconds - b.timeTakenSeconds
       return 0
