@@ -49,7 +49,7 @@ export function HistoryScreen() {
 
   const totalGames = sessions.length
   const avgAccuracy = totalGames > 0
-    ? Math.round(sessions.reduce((s, r) => s + r.accuracy, 0) / totalGames)
+    ? parseFloat((sessions.reduce((s, r) => s + r.accuracy, 0) / totalGames).toFixed(2))
     : 0
 
   return (

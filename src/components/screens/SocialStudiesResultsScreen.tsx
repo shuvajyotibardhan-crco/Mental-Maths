@@ -14,7 +14,7 @@ export function SocialStudiesResultsScreen({
   const { answered, score, bestStreak } = gameState
   const total = answered.length
   const correct = answered.filter((a) => a.isCorrect).length
-  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
+  const accuracy = total > 0 ? parseFloat(((correct / total) * 100).toFixed(2)) : 0
 
   let emoji = '😔'
   let message = 'Keep practicing!'

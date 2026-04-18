@@ -1,7 +1,7 @@
 # DIVEL EDU QUIZ — Design
 
 ## High-Level Overview
-DIVEL EDU QUIZ is a single-page React application built with TypeScript and Tailwind CSS v4, backed by Firebase Authentication and Firestore. The app targets students from KG to Grade 12 and supports two subjects: **Mental Maths** (dynamically generated arithmetic questions across eight operation types) and **Social Studies** (multiple-choice quizzes seeded into Firestore from the US and Colorado curriculum for Grades 3–12). State is managed through React Context (auth, game, settings), routing is handled by a single AppShell component (no external router), and all game logic lives in pure modules decoupled from the UI. The design philosophy prioritises simplicity and child-friendly UX over feature breadth.
+DIVEL EDU QUIZ is a single-page React application built with TypeScript and Tailwind CSS v4, backed by Firebase Authentication and Firestore. The app targets students from KG to Grade 12 and supports three subjects: **Mental Maths** (dynamically generated arithmetic questions across eight operation types), **Social Studies** (multiple-choice quizzes seeded into Firestore from the US and Colorado curriculum for Grades 3–12), and **Word-O-Meter** (Wordle-style vocabulary game using a bundled static word bank across all grades). All three subjects support multiplayer challenge mode. State is managed through React Context (auth, game, settings), routing is handled by a single AppShell component (no external router), and all game logic lives in pure modules decoupled from the UI. The design philosophy prioritises simplicity and child-friendly UX over feature breadth.
 
 ---
 
@@ -139,10 +139,10 @@ Contact support form. Accessible from Settings (logged in) and from the Login sc
 Displays and edits user profile (avatar, name, grade), change password, recovery email, and account deletion. Delete Account shows a confirmation panel, then calls `deleteAllUserData` + `deleteCurrentUser` — deleting all Firestore data before removing the Auth account, which triggers automatic logout. The Delete Account button and confirmation panel are hidden when either `isAdmin` or `isSuperAdmin` is true, preventing any admin from removing their own account via the Profile screen.
 
 ### `src/components/screens/ChallengeCreateScreen.tsx`
-Challenge configuration screen. Has a subject selector (Mental Maths / Social Studies) and a grade selector (defaulting to profile grade). For Maths: shows operation, difficulty, and mode selectors. For SS: hides those and shows an info card. On create, fetches questions (generates for Maths; fetches from Firestore for SS) and writes the challenge doc.
+Challenge configuration screen. Has a subject selector (Mental Maths / Social Studies / Word-O-Meter) and a grade selector (defaulting to profile grade). For Maths: shows operation, difficulty, and mode selectors. For SS: hides those and shows an info card. For WOM: shows a letter count selector (3–8) and an info card; `pickWord` is called at creation time to pick and store the shared word. On create, fetches/generates questions and writes the challenge doc.
 
 ### `src/components/screens/ChallengeGameScreen.tsx`
-Multiplayer game screen. Branches on `challenge.config.subject` (defaulting to `'mentalMaths'` for backward compatibility). Renders `ChallengeGameInner` for Mental Maths (number pad + timer) or `ChallengeSSGameInner` for Social Studies (multiple choice + auto-advance). Both inners share the same live leaderboard pattern, waiting-for-others screen, and End Game button.
+Multiplayer game screen. Branches on `challenge.config.subject` (defaulting to `'mentalMaths'` for backward compatibility). Renders `ChallengeGameInner` for Mental Maths (number pad + timer), `ChallengeSSGameInner` for Social Studies (multiple choice + auto-advance), or `ChallengeWOMGameInner` for Word-O-Meter (Wordle-style grid + keyboard + hints). All three inners share the same live leaderboard pattern, waiting-for-others screen, and End Game button.
 
 ### `src/components/screens/LoginScreen.tsx`
 Handles login, forgot-password flow, and a "Contact Support" link that navigates to `ContactScreen` without requiring authentication.

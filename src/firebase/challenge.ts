@@ -10,12 +10,13 @@ import { db } from './config'
 import type { Challenge, ChallengePlayer, ChallengeConfig } from '../types/challenge'
 import type { Question } from '../types/question'
 import type { SocialStudiesQuestion } from '../types/socialStudies'
+import type { WOMWord } from '../types/wordOMeter'
 import type { UserProfile } from '../types/user'
 import { generateGameCode } from '../engine/gameCode'
 
 export async function createChallenge(
   config: ChallengeConfig,
-  questions: Question[] | SocialStudiesQuestion[],
+  questions: Question[] | SocialStudiesQuestion[] | WOMWord[],
   host: UserProfile,
 ): Promise<string> {
   // Generate a unique game code (retry on collision)

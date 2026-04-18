@@ -25,7 +25,7 @@ export function ResultsScreen({ onNavigate }: ResultsScreenProps) {
   const answered = state.answeredQuestions
   const correct = answered.filter((q) => q.isCorrect).length
   const total = answered.length
-  const accuracy = total > 0 ? Math.round((correct / total) * 100) : 0
+  const accuracy = total > 0 ? parseFloat(((correct / total) * 100).toFixed(2)) : 0
   const totalTimeMs = answered.reduce((sum, q) => sum + q.responseTimeMs, 0)
   const avgTimeMs = total > 0 ? Math.round(totalTimeMs / total) : 0
   const totalTimeSecs = Math.round(totalTimeMs / 1000)

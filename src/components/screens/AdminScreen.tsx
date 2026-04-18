@@ -354,7 +354,7 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
     ? Math.round(dashSessions.reduce((sum, s) => sum + s.score, 0) / dashSessions.length)
     : 0
   const avgAccuracy = dashSessions.length
-    ? Math.round(dashSessions.reduce((sum, s) => sum + s.accuracy, 0) / dashSessions.length)
+    ? parseFloat((dashSessions.reduce((sum, s) => sum + s.accuracy, 0) / dashSessions.length).toFixed(2))
     : 0
 
   return (

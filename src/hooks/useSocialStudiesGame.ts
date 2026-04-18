@@ -148,7 +148,7 @@ export function useSocialStudiesGame(userId: string) {
   ) {
     const timeTaken = Math.round((Date.now() - startTimeRef.current) / 1000)
     const accuracy = answered.length > 0
-      ? answered.filter((a) => a.isCorrect).length / answered.length
+      ? parseFloat(((answered.filter((a) => a.isCorrect).length / answered.length) * 100).toFixed(2))
       : 0
 
     saveSeenIdsToStorage(grade, answered.map((a) => a.question.id))

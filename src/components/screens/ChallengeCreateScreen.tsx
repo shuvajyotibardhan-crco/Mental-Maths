@@ -3,12 +3,14 @@ import { useAuth } from '../../context/AuthContext'
 import { getAvailableOperations, OPERATION_LABELS } from '../../constants/gradeConfig'
 import { generateQuestionBatch } from '../../engine/questionGenerator'
 import { fetchSocialStudiesQuestions } from '../../firebase/socialStudies'
+import { pickWord } from '../../firebase/wordOMeter'
 import { createChallenge } from '../../firebase/challenge'
 import { GradeSelector } from '../ui/GradeSelector'
 import type { OperationType, Difficulty, GameMode, Grade } from '../../types'
 import type { ChallengeSubject } from '../../types/challenge'
 
 const SS_GRADES: Grade[] = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+const WOM_LETTER_OPTIONS = [3, 4, 5, 6, 7, 8]
 
 interface ChallengeCreateScreenProps {
   onNavigate: (screen: string) => void
@@ -18,6 +20,7 @@ interface ChallengeCreateScreenProps {
 const SUBJECTS: { value: ChallengeSubject; label: string; icon: string }[] = [
   { value: 'mentalMaths', label: 'Mental Maths', icon: '🧮' },
   { value: 'socialStudies', label: 'Social Studies', icon: '🌍' },
+  { value: 'wordOMeter', label: 'Word-O-Meter', icon: '📝' },
 ]
 
 const DIFFICULTIES: { value: Difficulty; label: string; color: string }[] = [
@@ -39,17 +42,16 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
   const [operation, setOperation] = useState<OperationType>('addition')
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const [mode, setMode] = useState<GameMode>('fixed')
+  const [letterCount, setLetterCount] = useState(5)
   const [creating, setCreating] = useState(false)
 
   const availableOps = getAvailableOperations(grade)
   const isSS = subject === 'socialStudies'
+  const isWOM = subject === 'wordOMeter'
 
   function handleSubjectChange(s: ChallengeSubject) {
     setSubject(s)
-    // Ensure grade is valid for SS
-    if (s === 'socialStudies' && !SS_GRADES.includes(grade)) {
-      setGrade('3')
-    }
+    if (s === 'socialStudies' && !SS_GRADES.includes(grade)) setGrade('3')
   }
 
   async function handleCreate() {
@@ -62,6 +64,15 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         const gameCode = await createChallenge(
           { subject: 'socialStudies', grade, operation: null, difficulty: null, mode: 'fixed' },
           questions,
+          profile,
+        )
+        onChallengeCreated(gameCode)
+      } else if (isWOM) {
+        const word = pickWord(grade, letterCount)
+        if (!word) { setCreating(false); return }
+        const gameCode = await createChallenge(
+          { subject: 'wordOMeter', grade, operation: null, difficulty: null, mode: 'fixed', letterCount },
+          [word],
           profile,
         )
         onChallengeCreated(gameCode)
@@ -117,8 +128,30 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         />
       </div>
 
+      {/* Word-O-Meter only: Letter count */}
+      {isWOM && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Word Length</label>
+          <div className="grid grid-cols-6 gap-2">
+            {WOM_LETTER_OPTIONS.map((lc) => (
+              <button
+                key={lc}
+                onClick={() => setLetterCount(lc)}
+                className={`py-3 rounded-2xl font-bold transition-all cursor-pointer ${
+                  letterCount === lc
+                    ? 'bg-primary text-white shadow-md'
+                    : 'bg-white/80 text-gray-700 hover:bg-white'
+                }`}
+              >
+                {lc}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Mental Maths only: Operation */}
-      {!isSS && (
+      {!isSS && !isWOM && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Operation</label>
           <div className="grid grid-cols-2 gap-2">
@@ -150,7 +183,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Difficulty */}
-      {!isSS && (
+      {!isSS && !isWOM && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
           <div className="grid grid-cols-3 gap-2">
@@ -172,7 +205,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Mode */}
-      {!isSS && (
+      {!isSS && !isWOM && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
           <div className="grid grid-cols-2 gap-3">
@@ -201,6 +234,14 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         <div className="bg-teal-50 rounded-2xl p-4 text-sm text-teal-700 space-y-1">
           <p><span className="font-semibold">20 questions</span> · Multiple choice</p>
           <p>US & Colorado Curriculum · No time limit</p>
+        </div>
+      )}
+
+      {/* WOM info card */}
+      {isWOM && (
+        <div className="bg-violet-50 rounded-2xl p-4 text-sm text-violet-700 space-y-1">
+          <p><span className="font-semibold">Guess the same word</span> · Wordle-style</p>
+          <p>Score based on attempts, hints used, and time</p>
         </div>
       )}
 

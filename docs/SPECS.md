@@ -118,7 +118,7 @@ interface SocialStudiesSession {
   subject: 'socialStudies'
   totalQuestions: number
   correctAnswers: number
-  accuracy: number     // 0–1
+  accuracy: number     // 0–100 (e.g. 75.5 = 75.5%), max 2 decimal places
   score: number        // correctAnswers × 5 (max 100)
   timeTakenSeconds: number
   bestStreak: number
@@ -203,16 +203,21 @@ interface ChallengePlayer {
 
 ### ChallengeConfig
 ```typescript
-type ChallengeSubject = 'mentalMaths' | 'socialStudies'
+type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'wordOMeter'
 
 interface ChallengeConfig {
   subject?: ChallengeSubject   // optional for backward compat — absent = 'mentalMaths'
   grade: Grade
   operation?: OperationType | null  // Mental Maths only
   difficulty?: Difficulty | null    // Mental Maths only
-  mode: GameMode                    // SS always uses 'fixed'
+  mode: GameMode                    // SS/WOM always uses 'fixed'
+  letterCount?: number              // Word-O-Meter only (3–8)
 }
 ```
+
+For Word-O-Meter challenges: `questions` is `[WOMWord]` (single element). `ChallengePlayer` fields are reused as: `correctAnswers` = won (0/1), `totalAnswered` = attempts used, `bestStreak` = hints used, `timeTakenSeconds` = seconds taken.
+
+WOM score formula: `won ? max(10, 100 − (attempts−1)×12 − hints×8 − floor(seconds/15)) : 0`
 
 ### HighScoreEntry
 Stored in Firestore collections `highScores` (personal) and `globalHighScores`.
@@ -751,6 +756,7 @@ Mental Maths/
     │   ├── useChallengeListener.ts   # onSnapshot wrapper for challenge doc
     │   ├── useChallengeGame.ts       # Mental Maths multiplayer logic (pre-gen questions + Firestore sync)
     │   ├── useChallengeSSGame.ts     # SS multiplayer logic (MC questions + Firestore sync)
+    │   ├── useChallengeWOMGame.ts    # Word-O-Meter multiplayer logic (single shared word + Firestore sync)
     │   ├── useSocialStudiesGame.ts   # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
     │   └── useWordOMeterGame.ts      # WOM solo game (guess eval, hints, score, dedup, save)
     │

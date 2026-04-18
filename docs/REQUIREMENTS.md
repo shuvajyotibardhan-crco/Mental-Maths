@@ -291,22 +291,24 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 
 **Acceptance Criteria:**
 1. Home screen shall provide "Challenge Friends" and "Join Challenge" buttons.
-2. The challenge create screen shall offer a **subject selector** (Mental Maths / Social Studies) — challenge is not limited to one subject.
-3. A **grade selector** (defaulting to profile grade) shall appear for all subjects; valid grades are subject-specific (Mental Maths: KG–12; Social Studies: 3–12).
+2. The challenge create screen shall offer a **subject selector** (Mental Maths / Social Studies / Word-O-Meter) — challenge is not limited to one subject.
+3. A **grade selector** (defaulting to profile grade) shall appear for all subjects; valid grades are subject-specific (Mental Maths: KG–12; Social Studies: 3–12; Word-O-Meter: KG–12).
 4. For Mental Maths challenges: operation, difficulty, and mode (timed/fixed) shall be configurable.
 5. For Social Studies challenges: no operation/difficulty/mode config — always 20 multiple-choice questions, fixed mode.
-6. On creation, the system shall generate a unique 7-character alphanumeric game code.
-7. The code shall be displayed prominently in the lobby for sharing; the lobby shows the subject and grade.
-8. Friends shall join by entering the code on the Join Challenge screen.
-9. The lobby shall show all joined players with their avatars and names in real time.
-10. The host must have a "Start Game" button that is enabled only when at least 2 players have joined and all are ready.
-11. All players shall answer the same pre-generated/pre-fetched questions in the same order.
-12. During gameplay, a live mini-leaderboard shall show all players' scores in real time.
-13. An "End Game" button shall be available during any challenge game to quit early.
-14. When a player finishes (timer expires, all questions answered, or End Game), they shall see a waiting screen that shows each opponent's real-time status: "Playing…", "Finished ✓", or — after 30 seconds of inactivity — "No response · Auto-proceeding in Xs" with a live countdown. A player inactive for 2 minutes is treated as finished so the remaining players are not blocked.
-15. Once all players finish, a leaderboard screen shall rank players by score (tiebreak by time in fixed mode).
-16. Mental Maths challenge sessions shall be saved with high-score checking; Social Studies challenge sessions shall be saved as SS sessions (no high-score system).
-17. Challenge sessions in History shall display a "Multiplayer" badge.
+6. For Word-O-Meter challenges: a letter count selector (3–8) shall be shown; the host picks a word length and the system randomly picks one word from the pool for that grade and length; all players guess the same word.
+7. On creation, the system shall generate a unique 7-character alphanumeric game code.
+8. The code shall be displayed prominently in the lobby for sharing; the lobby shows the subject and grade.
+9. Friends shall join by entering the code on the Join Challenge screen.
+10. The lobby shall show all joined players with their avatars and names in real time.
+11. The host must have a "Start Game" button that is enabled only when at least 2 players have joined and all are ready.
+12. All players shall answer the same pre-generated/pre-fetched questions in the same order.
+13. During gameplay, a live mini-leaderboard shall show all players' scores in real time.
+14. An "End Game" button shall be available during any challenge game to quit early.
+15. When a player finishes (timer expires, all questions answered, or End Game), they shall see a waiting screen that shows each opponent's real-time status: "Playing…", "Finished ✓", or — after 30 seconds of inactivity — "No response · Auto-proceeding in Xs" with a live countdown. A player inactive for 2 minutes is treated as finished so the remaining players are not blocked.
+16. Once all players finish, a leaderboard screen shall rank players by score (tiebreak by time in fixed mode).
+17. Mental Maths challenge sessions shall be saved with high-score checking; Social Studies challenge sessions shall be saved as SS sessions; Word-O-Meter challenge sessions shall be saved as WOM sessions — none have a challenge high-score system.
+18. Challenge sessions in History shall display a "Multiplayer" badge.
+19. For Word-O-Meter challenges: score = `max(10, 100 − (attempts−1)×12 − hints×8 − floor(seconds/15))` if won; 0 if not solved. The revealed word shall be displayed on the results screen.
 
 **Test Plan:**
 
@@ -316,13 +318,17 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 | Select Social Studies, choose Grade 5 | Operation/difficulty/mode options hidden; SS info card shown |
 | Create SS challenge | Lobby shows "Social Studies · Grade 5 · 20 Questions" |
 | Select Mental Maths, configure and create | Lobby shows grade/operation/difficulty/mode |
+| Select Word-O-Meter, choose Grade 4, length 5 | Letter count buttons shown; WOM info card shown |
+| Create WOM challenge | Lobby shows "Word-O-Meter · 5-letter · Grade 4" |
 | Friend enters code on Join screen | Friend appears in lobby in real time |
 | Host taps Start with 1 player | Button disabled — need at least 2 |
 | Host taps Start with 2+ ready players | All players navigate to game screen simultaneously |
+| Play WOM challenge | Wordle-style grid shown; same word for all players; hints and keyboard available; live leaderboard visible |
 | Play SS challenge | Multiple-choice UI shown; auto-advance after 1.2 s; live leaderboard visible |
 | Tap End Game during SS challenge | Session finishes, waiting screen shown |
 | Answer questions during maths challenge | Same questions shown to all players; number pad + submit button |
 | All players finish | Leaderboard shows rankings with scores and stats |
+| WOM results shown | Revealed word displayed; player rows show "Solved in N tries" or "Not solved" |
 | Beat personal best in maths challenge | "New Personal Best!" banner shown |
 | View History after challenge | Session shows "Multiplayer" badge |
 
