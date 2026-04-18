@@ -66,12 +66,12 @@ interface SessionRecord {
   mode: GameMode           // 'fixed' for non-Maths sessions
   totalQuestions: number   // 1 for Word-O-Meter
   correctAnswers: number   // 1 (won) or 0 (lost) for Word-O-Meter
-  accuracy: number         // 100 (won) or 0 (lost) for Word-O-Meter
+  accuracy: number         // 0–100, max 2 decimal places (e.g. 75.5); 100 (won) or 0 (lost) for WOM
   score: number
   timeTakenSeconds: number
   bestStreak: number       // 0 for Word-O-Meter (not applicable)
   isHighScore: boolean     // always false for non-Maths sessions
-  challengeId?: string     // game code if from multiplayer challenge (Maths or Social Studies)
+  challengeId?: string     // game code if from multiplayer challenge (any subject)
   // Word-O-Meter specific (only present when subject === 'wordOMeter')
   word?: string            // the target word (UPPERCASE)
   won?: boolean            // true if player guessed correctly
