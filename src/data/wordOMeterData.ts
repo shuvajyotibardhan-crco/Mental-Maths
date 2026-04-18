@@ -30,7 +30,7 @@ function w(
   meanings: string[], partOfSpeech: string[], synonyms: string[], antonyms: string[],
   blend?: string,
 ): WOMWord {
-  return { word, letterCount: word.length, grade, meanings, partOfSpeech, synonyms, antonyms, blend }
+  return { word, letterCount: word.length, grade, meanings, partOfSpeech, synonyms, antonyms, ...(blend !== undefined ? { blend } : {}) }
 }
 
 export const ALL_WORDS: WOMWord[] = [
