@@ -3,8 +3,10 @@ import { useAuth } from '../../context/AuthContext'
 import { useChallengeListener } from '../../hooks/useChallengeListener'
 import { saveSession, checkAndUpdateHighScore, checkAndUpdateGlobalHighScore, getHighScores, getGlobalHighScore } from '../../firebase/firestore'
 import { saveSocialStudiesSession } from '../../firebase/socialStudies'
+import { saveWordOMeterSession } from '../../firebase/wordOMeter'
 import { OPERATION_LABELS } from '../../constants/gradeConfig'
 import type { SessionRecord, HighScoreKey } from '../../types'
+import type { WOMWord } from '../../types/wordOMeter'
 
 interface ChallengeResultsScreenProps {
   gameCode: string
@@ -22,6 +24,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
   const me = challenge && profile ? challenge.players[profile.uid] : null
   const subject = challenge?.config.subject ?? 'mentalMaths'
   const isSS = subject === 'socialStudies'
+  const isWOM = subject === 'wordOMeter'
 
   // Save session + (maths only) check high scores
   useEffect(() => {
@@ -48,6 +51,28 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
           timeTakenSeconds: me!.timeTakenSeconds ?? 0,
           bestStreak: me!.bestStreak,
           isHighScore: false,
+          challengeId: gameCode,
+        })
+        setSaved(true)
+        return
+      }
+
+      if (isWOM) {
+        // Word-O-Meter challenge — save as WOM session, no high-score system
+        const womWord = (challenge!.questions as WOMWord[])[0]!
+        await saveWordOMeterSession({
+          userId: profile!.uid,
+          timestamp: Date.now(),
+          grade: challenge!.config.grade,
+          subject: 'wordOMeter',
+          word: womWord.word,
+          letterCount: womWord.letterCount,
+          won: me!.correctAnswers > 0,
+          attemptsUsed: me!.totalAnswered,
+          maxAttempts: womWord.letterCount,
+          hintsUsed: me!.bestStreak,  // bestStreak repurposed as hintsUsed in WOM challenge
+          score: me!.score,
+          timeTakenSeconds: me!.timeTakenSeconds ?? 0,
           challengeId: gameCode,
         })
         setSaved(true)
@@ -101,11 +126,17 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
     )
   }
 
-  // Build leaderboard sorted by score (tiebreak: fewer time in fixed mode)
+  // Build leaderboard sorted by score.
+  // WOM tiebreak: fewer attempts → less time.
+  // Fixed-mode maths tiebreak: less time.
   const leaderboard = Object.entries(challenge.players)
     .map(([uid, p]) => ({ uid, ...p }))
     .sort((a, b) => {
       if (b.score !== a.score) return b.score - a.score
+      if (isWOM) {
+        if (a.totalAnswered !== b.totalAnswered) return a.totalAnswered - b.totalAnswered
+        if (a.timeTakenSeconds != null && b.timeTakenSeconds != null) return a.timeTakenSeconds - b.timeTakenSeconds
+      }
       if (challenge.config.mode === 'fixed' && a.timeTakenSeconds != null && b.timeTakenSeconds != null) {
         return a.timeTakenSeconds - b.timeTakenSeconds
       }
@@ -120,6 +151,10 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
 
   function gameSubtitle() {
     if (isSS) return `Social Studies · Grade ${challenge!.config.grade} · 20 Questions`
+    if (isWOM) {
+      const lc = challenge!.config.letterCount ?? (challenge!.questions as WOMWord[])[0]?.letterCount ?? '?'
+      return `Word-O-Meter · Grade ${challenge!.config.grade} · ${lc} Letters`
+    }
     const op = challenge!.config.operation ? OPERATION_LABELS[challenge!.config.operation] : '—'
     const mode = challenge!.config.mode === 'timed' ? '2 min' : '20 Qs'
     return `${op} · ${challenge!.config.difficulty ?? '—'} · ${mode}`
@@ -175,14 +210,24 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
                     <p className="font-semibold text-gray-800 truncate">
                       {isMe ? 'You' : player.name}
                     </p>
-                    <p className="text-xs text-gray-500">
-                      {player.correctAnswers}/{player.totalAnswered} ({accuracy}%)
-                      {player.timeTakenSeconds != null && ` · ${Math.floor(player.timeTakenSeconds / 60)}:${(player.timeTakenSeconds % 60).toString().padStart(2, '0')}`}
-                    </p>
+                    {isWOM ? (
+                      <p className="text-xs text-gray-500">
+                        {player.correctAnswers > 0
+                          ? `Solved in ${player.totalAnswered} attempt${player.totalAnswered !== 1 ? 's' : ''}`
+                          : 'Not solved'}
+                        {player.timeTakenSeconds != null && ` · ${Math.floor(player.timeTakenSeconds / 60)}:${(player.timeTakenSeconds % 60).toString().padStart(2, '0')}`}
+                        {player.bestStreak > 0 && ` · ${player.bestStreak} hint${player.bestStreak !== 1 ? 's' : ''}`}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-gray-500">
+                        {player.correctAnswers}/{player.totalAnswered} ({accuracy}%)
+                        {player.timeTakenSeconds != null && ` · ${Math.floor(player.timeTakenSeconds / 60)}:${(player.timeTakenSeconds % 60).toString().padStart(2, '0')}`}
+                      </p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-bold text-primary">⭐ {player.score}</p>
-                    {player.bestStreak >= 3 && (
+                    {!isWOM && player.bestStreak >= 3 && (
                       <p className="text-xs text-orange-500">🔥 {player.bestStreak}</p>
                     )}
                   </div>
@@ -196,24 +241,45 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
         {me && (
           <div className="bg-white/90 backdrop-blur rounded-3xl shadow-lg p-6">
             <h3 className="font-bold text-gray-700 text-center mb-3">Your Stats</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-emerald-50 rounded-2xl p-3 text-center">
-                <p className="text-xs text-gray-500">Rank</p>
-                <p className="text-2xl font-bold text-emerald-600">#{myRank}</p>
+            {isWOM ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-emerald-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Rank</p>
+                  <p className="text-2xl font-bold text-emerald-600">#{myRank}</p>
+                </div>
+                <div className="bg-amber-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Result</p>
+                  <p className="text-2xl font-bold text-amber-600">{me.correctAnswers > 0 ? '✓ Solved' : '✗ Failed'}</p>
+                </div>
+                <div className="bg-blue-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Attempts</p>
+                  <p className="text-2xl font-bold text-blue-600">{me.totalAnswered}</p>
+                </div>
+                <div className="bg-purple-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Score</p>
+                  <p className="text-2xl font-bold text-purple-600">⭐ {me.score}</p>
+                </div>
               </div>
-              <div className="bg-blue-50 rounded-2xl p-3 text-center">
-                <p className="text-xs text-gray-500">Accuracy</p>
-                <p className="text-2xl font-bold text-blue-600">{meAccuracy}%</p>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-emerald-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Rank</p>
+                  <p className="text-2xl font-bold text-emerald-600">#{myRank}</p>
+                </div>
+                <div className="bg-blue-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Accuracy</p>
+                  <p className="text-2xl font-bold text-blue-600">{meAccuracy}%</p>
+                </div>
+                <div className="bg-orange-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Best Streak</p>
+                  <p className="text-2xl font-bold text-orange-600">🔥 {me.bestStreak}</p>
+                </div>
+                <div className="bg-purple-50 rounded-2xl p-3 text-center">
+                  <p className="text-xs text-gray-500">Score</p>
+                  <p className="text-2xl font-bold text-purple-600">⭐ {me.score}</p>
+                </div>
               </div>
-              <div className="bg-orange-50 rounded-2xl p-3 text-center">
-                <p className="text-xs text-gray-500">Best Streak</p>
-                <p className="text-2xl font-bold text-orange-600">🔥 {me.bestStreak}</p>
-              </div>
-              <div className="bg-purple-50 rounded-2xl p-3 text-center">
-                <p className="text-xs text-gray-500">Score</p>
-                <p className="text-2xl font-bold text-purple-600">⭐ {me.score}</p>
-              </div>
-            </div>
+            )}
           </div>
         )}
 

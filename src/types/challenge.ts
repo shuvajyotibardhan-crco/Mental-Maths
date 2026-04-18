@@ -1,8 +1,9 @@
 import type { Grade, OperationType, Difficulty, GameMode, Question } from './question'
 import type { SocialStudiesQuestion } from './socialStudies'
+import type { WOMWord } from './wordOMeter'
 
 export type ChallengeStatus = 'waiting' | 'playing' | 'finished'
-export type ChallengeSubject = 'mentalMaths' | 'socialStudies'
+export type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'wordOMeter'
 
 export interface ChallengeConfig {
   /**
@@ -11,11 +12,13 @@ export interface ChallengeConfig {
    */
   subject?: ChallengeSubject
   grade: Grade
-  /** Mental Maths only. Null / absent for Social Studies challenges. */
+  /** Mental Maths only. Null / absent for other subjects. */
   operation?: OperationType | null
-  /** Mental Maths only. Null / absent for Social Studies challenges. */
+  /** Mental Maths only. Null / absent for other subjects. */
   difficulty?: Difficulty | null
   mode: GameMode
+  /** Word-O-Meter only. */
+  letterCount?: number
 }
 
 export interface ChallengePlayer {
@@ -43,7 +46,8 @@ export interface Challenge {
   /** Question array — type depends on config.subject:
    *  'mentalMaths'   → Question[]
    *  'socialStudies' → SocialStudiesQuestion[]
+   *  'wordOMeter'    → WOMWord[] (single element)
    */
-  questions: Question[] | SocialStudiesQuestion[]
+  questions: Question[] | SocialStudiesQuestion[] | WOMWord[]
   players: Record<string, ChallengePlayer>
 }

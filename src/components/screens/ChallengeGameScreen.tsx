@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { useChallengeListener } from '../../hooks/useChallengeListener'
 import { useChallengeGame } from '../../hooks/useChallengeGame'
 import { useChallengeSSGame } from '../../hooks/useChallengeSSGame'
+import { useChallengeWOMGame } from '../../hooks/useChallengeWOMGame'
 import { useTimer } from '../../hooks/useTimer'
 import { finishChallenge } from '../../firebase/challenge'
 import { QuestionCard } from '../game/QuestionCard'
@@ -12,6 +13,7 @@ import { ScoreBar } from '../game/ScoreBar'
 import type { Challenge, ChallengeConfig, ChallengePlayer } from '../../types/challenge'
 import type { Question } from '../../types/question'
 import type { SocialStudiesQuestion } from '../../types/socialStudies'
+import type { WOMWord, WOMTileState, WOMHintType } from '../../types/wordOMeter'
 
 const DISCONNECT_MS = 120_000
 const WARN_AFTER_MS = 30_000
@@ -21,11 +23,13 @@ function WaitingForPlayers({
   uid,
   score,
   scoreColor = 'text-primary',
+  extraLabel,
 }: {
   players: Record<string, ChallengePlayer>
   uid: string
   score: number
   scoreColor?: string
+  extraLabel?: string
 }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -39,6 +43,7 @@ function WaitingForPlayers({
     <div className="flex flex-col items-center justify-center h-dvh p-6 gap-5">
       <div className="text-4xl animate-pulse">⏳</div>
       <p className="text-xl font-semibold text-gray-700">Waiting for others…</p>
+      {extraLabel && <p className="text-sm text-gray-500">{extraLabel}</p>}
 
       <div className="w-full max-w-sm space-y-2">
         {others.map(([pUid, p]) => {
@@ -107,6 +112,17 @@ export function ChallengeGameScreen({ gameCode, onNavigate }: ChallengeGameScree
   if (subject === 'socialStudies') {
     return (
       <ChallengeSSGameInner
+        gameCode={gameCode}
+        challenge={challenge}
+        uid={profile.uid}
+        onNavigate={onNavigate}
+      />
+    )
+  }
+
+  if (subject === 'wordOMeter') {
+    return (
+      <ChallengeWOMGameInner
         gameCode={gameCode}
         challenge={challenge}
         uid={profile.uid}
@@ -483,6 +499,287 @@ function ChallengeSSGameInner({
         {game.revealed && (
           <p className="text-center text-xs text-gray-400 animate-pulse">Next question loading…</p>
         )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Word-O-Meter challenge game ──────────────────────────────────────────────
+
+const WOM_HINT_LABELS: Record<WOMHintType, string> = {
+  partOfSpeech: 'Part of Speech',
+  vowelCount: 'Vowel Count',
+  synonym: 'Synonym',
+  antonym: 'Antonym',
+  revealFirst: 'First Letter',
+  revealLast: 'Last Letter',
+  revealMiddle: 'Middle Letter',
+  commonBlend: 'Word Blend',
+}
+
+const WOM_KEYBOARD_ROWS = [
+  ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+  ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+  ['⌫', 'Z', 'X', 'C', 'V', 'B', 'N', 'M', '✓'],
+]
+
+function womTileClass(state: WOMTileState): string {
+  const base = 'flex items-center justify-center rounded-xl font-bold border-2 select-none '
+  switch (state) {
+    case 'correct': return base + 'bg-emerald-500 border-emerald-500 text-white'
+    case 'present': return base + 'bg-amber-400 border-amber-400 text-white'
+    case 'absent':  return base + 'bg-gray-400 border-gray-400 text-white'
+    case 'hinted':  return base + 'bg-blue-300 border-blue-300 text-white'
+    default:        return base + 'bg-white border-gray-300 text-gray-800'
+  }
+}
+
+function womTileSize(letterCount: number): string {
+  if (letterCount <= 4) return 'w-12 h-12 text-xl'
+  if (letterCount === 5) return 'w-11 h-11 text-lg'
+  if (letterCount === 6) return 'w-10 h-10 text-base'
+  return 'w-8 h-8 text-sm'
+}
+
+function ChallengeWOMGameInner({
+  gameCode,
+  challenge,
+  uid,
+  onNavigate,
+}: {
+  gameCode: string
+  challenge: Challenge
+  uid: string
+  onNavigate: (screen: string) => void
+}) {
+  const { profile } = useAuth()
+  const { challenge: liveChallenge } = useChallengeListener(gameCode)
+  const currentChallenge = liveChallenge ?? challenge
+  const navigatedRef = useRef(false)
+  const currentChallengeRef = useRef(currentChallenge)
+  useEffect(() => { currentChallengeRef.current = currentChallenge }, [currentChallenge])
+
+  const word = (challenge.questions as WOMWord[])[0]!
+  const game = useChallengeWOMGame({ gameCode, uid, word })
+
+  // Keyboard handler
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (game.finished || game.validating) return
+      if (e.key === 'Enter') { e.preventDefault(); game.submitGuess() }
+      else if (e.key === 'Backspace') { e.preventDefault(); game.deleteLetter() }
+      else if (/^[a-zA-Z]$/.test(e.key)) game.typeLetter(e.key)
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [game])
+
+  // Once finished, check if all players are done and trigger finishChallenge
+  useEffect(() => {
+    if (!game.finished || navigatedRef.current) return
+
+    const check = () => {
+      const ch = currentChallengeRef.current
+      if (!ch || navigatedRef.current || ch.status === 'finished') return
+      const now = Date.now()
+      const allDone = Object.entries(ch.players).every(([pUid, p]) =>
+        p.finished ||
+        pUid === uid ||
+        now - (p.lastActiveAt ?? now) > DISCONNECT_MS,
+      )
+      if (allDone) finishChallenge(gameCode).catch(console.error)
+    }
+
+    check()
+    const interval = setInterval(check, 10_000)
+    return () => clearInterval(interval)
+  }, [game.finished, uid, gameCode])
+
+  // Navigate to results when challenge finishes
+  useEffect(() => {
+    if (currentChallenge?.status === 'finished' && !navigatedRef.current) {
+      navigatedRef.current = true
+      onNavigate('challenge-results')
+    }
+  }, [currentChallenge?.status, onNavigate])
+
+  if (game.finished && currentChallenge?.status !== 'finished') {
+    const resultLabel = game.status === 'won'
+      ? `You solved it in ${game.guesses.length} attempt${game.guesses.length !== 1 ? 's' : ''}!`
+      : `The word was ${word.word}`
+    return (
+      <WaitingForPlayers
+        players={currentChallenge?.players ?? {}}
+        uid={uid}
+        score={game.score}
+        scoreColor="text-amber-600"
+        extraLabel={resultLabel}
+      />
+    )
+  }
+
+  const leaderboard = Object.entries(currentChallenge?.players ?? {})
+    .map(([pUid, p]) => ({ uid: pUid, ...p }))
+    .sort((a, b) => b.score - a.score)
+
+  const letterCount = word.letterCount
+  const tileSize = womTileSize(letterCount)
+
+  const rows = Array.from({ length: game.maxAttempts }, (_, i) => {
+    if (i < game.guesses.length) return game.guesses[i]!
+    if (i === game.guesses.length) {
+      return Array.from({ length: letterCount }, (_, j) => ({
+        letter: game.currentGuess[j] ?? '',
+        state: 'empty' as WOMTileState,
+      }))
+    }
+    return Array.from({ length: letterCount }, () => ({ letter: '', state: 'empty' as WOMTileState }))
+  })
+
+  function keyClass(key: string): string {
+    if (key === '⌫') {
+      return 'flex-[1.8] min-w-0 h-10 rounded-xl font-bold text-base transition-all cursor-pointer active:scale-95 bg-rose-100 text-rose-600 hover:bg-rose-200'
+    }
+    if (key === '✓') {
+      return `flex-[1.8] min-w-0 h-10 rounded-xl font-bold text-base transition-all cursor-pointer active:scale-95 ${
+        game.validating ? 'bg-gray-200 text-gray-400' : 'bg-emerald-500 text-white hover:bg-emerald-600'
+      }`
+    }
+    const base = 'flex-1 min-w-0 h-10 rounded-xl font-bold text-xs transition-all cursor-pointer active:scale-95 '
+    switch (game.letterStates[key]) {
+      case 'correct': return base + 'bg-emerald-500 text-white'
+      case 'present': return base + 'bg-amber-400 text-white'
+      case 'absent':  return base + 'bg-gray-400 text-white'
+      default:        return base + 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+    }
+  }
+
+  return (
+    <div className="flex flex-col h-dvh bg-gradient-to-b from-amber-50 to-white overflow-hidden">
+
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1 shrink-0">
+        <span className="text-sm font-medium text-gray-600">
+          Attempt {Math.min(game.guesses.length + 1, game.maxAttempts)} / {game.maxAttempts}
+        </span>
+        <span className="text-xs font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">
+          {letterCount} letters
+        </span>
+        <button
+          onClick={() => game.forceFinish()}
+          className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 bg-white/60 rounded-xl cursor-pointer"
+        >
+          End Game
+        </button>
+      </div>
+
+      {/* Mini leaderboard */}
+      <div className="flex gap-2 overflow-x-auto px-4 pb-1 shrink-0">
+        {leaderboard.map((p, i) => (
+          <div
+            key={p.uid}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
+              p.uid === profile?.uid ? 'bg-amber-100 text-amber-700' : 'bg-white/60 text-gray-600'
+            }`}
+          >
+            <span>{i === 0 ? '👑' : `#${i + 1}`}</span>
+            <span>{p.avatar}</span>
+            <span>{p.uid === profile?.uid ? 'You' : p.name}</span>
+            {p.finished
+              ? <span className="font-bold">{p.correctAnswers > 0 ? `✓ ${p.totalAnswered}` : '✗'}</span>
+              : <span className="font-bold animate-pulse">{p.totalAnswered > 0 ? `${p.totalAnswered}…` : '—'}</span>
+            }
+          </div>
+        ))}
+      </div>
+
+      {/* Error / validating */}
+      {game.validating && (
+        <p className="text-center text-xs text-amber-600 px-4 pb-1 shrink-0">Checking word…</p>
+      )}
+      {!game.validating && game.error && (
+        <p className="text-center text-xs text-red-500 px-4 pb-1 shrink-0">{game.error}</p>
+      )}
+
+      {/* Tile grid */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-1.5 px-4 min-h-0">
+        {rows.map((row, ri) => (
+          <div
+            key={ri}
+            className={`flex gap-1.5 ${ri === game.guesses.length && game.shake ? 'animate-shake' : ''}`}
+          >
+            {row.map((tile, ci) => (
+              <div key={ci} className={`${tileSize} ${womTileClass(tile.state)}`}>
+                {tile.letter}
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* Hints used */}
+      {game.hintsUsed.length > 0 && (
+        <div className="px-4 py-1.5 shrink-0 space-y-1">
+          {game.hintsUsed.map((h, i) => (
+            <p key={i} className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-1">
+              💡 {h.text}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {/* Available hints */}
+      {game.availableHints.length > 0 && (
+        <div className="px-4 py-1.5 shrink-0">
+          {(() => {
+            const maxHints = letterCount <= 4 ? 1 : letterCount <= 6 ? 2 : 3
+            const remaining = maxHints - game.hintsUsed.length
+            return (
+              <>
+                <p className="text-xs text-amber-600 mb-1">
+                  💡 {remaining} hint{remaining !== 1 ? 's' : ''} remaining
+                </p>
+                <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+                  {game.availableHints.map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => game.useHint(type)}
+                      className="shrink-0 px-2.5 py-1 bg-white/80 text-amber-700 text-xs font-medium rounded-xl border border-amber-200 hover:bg-amber-50 cursor-pointer active:scale-95 transition-all"
+                    >
+                      {WOM_HINT_LABELS[type]}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )
+          })()}
+        </div>
+      )}
+
+      {/* QWERTY keyboard */}
+      <div className="px-2 pb-3 pt-1 shrink-0 space-y-1.5">
+        {WOM_KEYBOARD_ROWS.map((row, ri) => (
+          <div key={ri} className="flex gap-1">
+            {ri === 1 && <div className="flex-[0.5]" />}
+            {row.map((key) => (
+              <button
+                key={key}
+                disabled={game.validating && key !== '⌫'}
+                onPointerDown={(e) => {
+                  e.preventDefault()
+                  if (game.validating && key !== '⌫') return
+                  if (key === '⌫') game.deleteLetter()
+                  else if (key === '✓') game.submitGuess()
+                  else game.typeLetter(key)
+                }}
+                className={keyClass(key)}
+              >
+                {key}
+              </button>
+            ))}
+            {ri === 1 && <div className="flex-[0.5]" />}
+          </div>
+        ))}
       </div>
     </div>
   )

@@ -3,12 +3,15 @@ import { useAuth } from '../../context/AuthContext'
 import { getAvailableOperations, OPERATION_LABELS } from '../../constants/gradeConfig'
 import { generateQuestionBatch } from '../../engine/questionGenerator'
 import { fetchSocialStudiesQuestions } from '../../firebase/socialStudies'
+import { pickWord } from '../../firebase/wordOMeter'
+import { GRADE_LETTER_OPTIONS } from '../../data/wordOMeterData'
 import { createChallenge } from '../../firebase/challenge'
 import { GradeSelector } from '../ui/GradeSelector'
 import type { OperationType, Difficulty, GameMode, Grade } from '../../types'
 import type { ChallengeSubject } from '../../types/challenge'
 
 const SS_GRADES: Grade[] = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+const WOM_GRADES: Grade[] = ['KG', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
 
 interface ChallengeCreateScreenProps {
   onNavigate: (screen: string) => void
@@ -18,6 +21,7 @@ interface ChallengeCreateScreenProps {
 const SUBJECTS: { value: ChallengeSubject; label: string; icon: string }[] = [
   { value: 'mentalMaths', label: 'Mental Maths', icon: '🧮' },
   { value: 'socialStudies', label: 'Social Studies', icon: '🌍' },
+  { value: 'wordOMeter', label: 'Word-O-Meter', icon: '🔤' },
 ]
 
 const DIFFICULTIES: { value: Difficulty; label: string; color: string }[] = [
@@ -39,16 +43,33 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
   const [operation, setOperation] = useState<OperationType>('addition')
   const [difficulty, setDifficulty] = useState<Difficulty>('easy')
   const [mode, setMode] = useState<GameMode>('fixed')
+  const [letterCount, setLetterCount] = useState<number>(3)
   const [creating, setCreating] = useState(false)
 
   const availableOps = getAvailableOperations(grade)
   const isSS = subject === 'socialStudies'
+  const isWOM = subject === 'wordOMeter'
+
+  const womLetterOptions = GRADE_LETTER_OPTIONS[grade] ?? [3, 4, 5]
 
   function handleSubjectChange(s: ChallengeSubject) {
     setSubject(s)
-    // Ensure grade is valid for SS
     if (s === 'socialStudies' && !SS_GRADES.includes(grade)) {
       setGrade('3')
+    }
+    if (s === 'wordOMeter') {
+      const g = WOM_GRADES.includes(grade) ? grade : 'KG'
+      setGrade(g)
+      const opts = GRADE_LETTER_OPTIONS[g] ?? [3, 4, 5]
+      setLetterCount(opts[0]!)
+    }
+  }
+
+  function handleGradeChange(g: Grade) {
+    setGrade(g)
+    if (isWOM) {
+      const opts = GRADE_LETTER_OPTIONS[g] ?? [3, 4, 5]
+      if (!opts.includes(letterCount)) setLetterCount(opts[0]!)
     }
   }
 
@@ -62,6 +83,15 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         const gameCode = await createChallenge(
           { subject: 'socialStudies', grade, operation: null, difficulty: null, mode: 'fixed' },
           questions,
+          profile,
+        )
+        onChallengeCreated(gameCode)
+      } else if (isWOM) {
+        const word = pickWord(grade, letterCount)
+        if (!word) throw new Error('No words available for this grade and letter count.')
+        const gameCode = await createChallenge(
+          { subject: 'wordOMeter', grade, operation: null, difficulty: null, mode: 'fixed', letterCount },
+          [word],
           profile,
         )
         onChallengeCreated(gameCode)
@@ -89,18 +119,18 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       {/* Subject Selection */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">Subject</label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {SUBJECTS.map((s) => (
             <button
               key={s.value}
               onClick={() => handleSubjectChange(s.value)}
-              className={`py-3 px-3 rounded-2xl text-sm font-medium flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              className={`py-3 px-2 rounded-2xl text-xs font-medium flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
                 subject === s.value
                   ? 'bg-primary text-white shadow-md'
                   : 'bg-white/80 text-gray-700 hover:bg-white'
               }`}
             >
-              <span>{s.icon}</span>
+              <span className="text-lg">{s.icon}</span>
               <span>{s.label}</span>
             </button>
           ))}
@@ -112,8 +142,8 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
         <GradeSelector
           value={grade}
-          onChange={setGrade}
-          allowedGrades={isSS ? SS_GRADES : undefined}
+          onChange={handleGradeChange}
+          allowedGrades={isSS ? SS_GRADES : isWOM ? WOM_GRADES : undefined}
         />
       </div>
 
@@ -196,11 +226,41 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         </div>
       )}
 
+      {/* WOM only: Letter count */}
+      {isWOM && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Letter Count</label>
+          <div className="flex gap-2">
+            {womLetterOptions.map((count) => (
+              <button
+                key={count}
+                onClick={() => setLetterCount(count)}
+                className={`flex-1 py-3 rounded-2xl font-bold text-lg transition-all cursor-pointer ${
+                  letterCount === count
+                    ? 'bg-amber-500 text-white shadow-md'
+                    : 'bg-white/80 text-gray-600 hover:bg-amber-50'
+                }`}
+              >
+                {count}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* SS info card */}
       {isSS && (
         <div className="bg-teal-50 rounded-2xl p-4 text-sm text-teal-700 space-y-1">
           <p><span className="font-semibold">20 questions</span> · Multiple choice</p>
           <p>US & Colorado Curriculum · No time limit</p>
+        </div>
+      )}
+
+      {/* WOM info card */}
+      {isWOM && (
+        <div className="bg-amber-50 rounded-2xl p-4 text-sm text-amber-700 space-y-1">
+          <p><span className="font-semibold">1 word</span> · {letterCount} letters · Wordle-style</p>
+          <p>Score based on attempts, time & hints used</p>
         </div>
       )}
 
