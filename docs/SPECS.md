@@ -227,7 +227,7 @@ interface HighScoreEntry {
   score: number
   date: number              // Date.now()
   sessionId: string
-  timeTakenSeconds?: number // used as tiebreaker in fixed mode
+  timeTakenSeconds?: number // used as tiebreaker in fixed mode and WOM challenges
 }
 ```
 

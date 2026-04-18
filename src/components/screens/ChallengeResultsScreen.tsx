@@ -129,6 +129,9 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
     )
   }
 
+  // Sort by score desc; tiebreak by time asc only for WOM and fixed-mode Mental Maths
+  // (timed-mode MM and SS have no meaningful time tiebreak)
+  const useTimeTiebreak = isWOM || challenge.config.mode === 'fixed'
   const leaderboard = Object.entries(challenge.players)
     .map(([uid, p]) => ({ uid, ...p }))
     .sort((a, b) => {
@@ -147,7 +150,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
       }
       // Non-WOM: sort by score desc, then time asc
       if (b.score !== a.score) return b.score - a.score
-      if (a.timeTakenSeconds != null && b.timeTakenSeconds != null) return a.timeTakenSeconds - b.timeTakenSeconds
+      if (useTimeTiebreak && a.timeTakenSeconds != null && b.timeTakenSeconds != null) return a.timeTakenSeconds - b.timeTakenSeconds
       return 0
     })
 
