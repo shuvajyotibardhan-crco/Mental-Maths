@@ -305,10 +305,10 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 13. During gameplay, a live mini-leaderboard shall show all players' scores in real time.
 14. An "End Game" button shall be available during any challenge game to quit early.
 15. When a player finishes (timer expires, all questions answered, or End Game), they shall see a waiting screen that shows each opponent's real-time status: "Playing…", "Finished ✓", or — after 30 seconds of inactivity — "No response · Auto-proceeding in Xs" with a live countdown. A player inactive for 2 minutes is treated as finished so the remaining players are not blocked.
-16. Once all players finish, a leaderboard screen shall rank players by score (tiebreak by time — faster wins — applies in fixed-mode Mental Maths and Word-O-Meter challenges; timed-mode Mental Maths and Social Studies use score only).
+16. Once all players finish, a leaderboard screen shall rank players by score. For Mental Maths: score desc, tiebreak by time asc in fixed mode only (timed mode uses score only). For Social Studies: score desc only. For Word-O-Meter: solved players rank above unsolved; among solvers, ranked by time asc, then tries asc, then hints asc.
 17. Mental Maths challenge sessions shall be saved with high-score checking; Social Studies challenge sessions shall be saved as SS sessions; Word-O-Meter challenge sessions shall be saved as WOM sessions — none have a challenge high-score system.
 18. Challenge sessions in History shall display a "Multiplayer" badge.
-19. For Word-O-Meter challenges: score = `max(10, 100 − (attempts−1)×12 − hints×8 − floor(seconds/15))` if won; 0 if not solved. The revealed word shall be displayed on the results screen.
+19. For Word-O-Meter challenges: challenge score = `max(1, round((10000 − secs×10 − (attempts−1)×5 − hints×2) / 100))` if won; 0 if not solved (time is the primary factor so faster solvers always rank higher). Solo score formula is different: `max(10, 100 − (attempts−1)×12 − hints×8)` (no time factor). The revealed word shall be displayed on the results screen.
 
 **Test Plan:**
 

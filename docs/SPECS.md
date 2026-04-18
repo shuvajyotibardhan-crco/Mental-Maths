@@ -217,7 +217,9 @@ interface ChallengeConfig {
 
 For Word-O-Meter challenges: `questions` is `[WOMWord]` (single element). `ChallengePlayer` fields are reused as: `correctAnswers` = won (0/1), `totalAnswered` = attempts used, `bestStreak` = hints used, `timeTakenSeconds` = seconds taken.
 
-WOM score formula: `won ? max(10, 100 − (attempts−1)×12 − hints×8 − floor(seconds/15)) : 0`
+WOM challenge score formula: `won ? max(1, round((10000 − secs×10 − (attempts−1)×5 − hints×2) / 100)) : 0` (time-primary; faster solvers always outscore slower ones with same tries/hints)
+WOM solo score formula: `won ? max(10, 100 − (attempts−1)×12 − hints×8) : 0` (no time factor)
+WOM challenge leaderboard sort: solved players first; among solvers: time asc → tries asc → hints asc; unsolved rank last.
 
 ### HighScoreEntry
 Stored in Firestore collections `highScores` (personal) and `globalHighScores`.
@@ -437,15 +439,17 @@ evaluateGuess(guess: string, target: string) → WOMTile[]:
 
 ### Word-O-Meter Score Formula
 ```
+// Solo
 calcScore(won, attemptsUsed, hintsUsed):
   if !won: return 0
   return max(10, 100 − (attemptsUsed − 1) × 12 − hintsUsed × 8)
+// Examples: win in 1 attempt, 0 hints → 100; win in 3 attempts, 1 hint → 68; loss → 0
 
-// Examples:
-//   win in 1 attempt, 0 hints → 100
-//   win in 3 attempts, 1 hint → max(10, 100 − 24 − 8) = 68
-//   win in 6 attempts, 0 hints → max(10, 100 − 60) = 40
-//   loss → 0
+// Challenge (time is primary so faster solver always ranks #1)
+calcScore(won, attemptsUsed, hintsUsed, timeSecs):
+  if !won: return 0
+  return max(1, round((10000 − timeSecs × 10 − (attemptsUsed − 1) × 5 − hintsUsed × 2) / 100))
+// Max penalty from tries+hints ≈ 36 raw pts → ~4 s of time advantage always wins
 ```
 
 ### Word-O-Meter Word Selection
