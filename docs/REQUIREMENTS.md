@@ -295,7 +295,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 3. A **grade selector** (defaulting to profile grade) shall appear for all subjects; valid grades are subject-specific (Mental Maths: KG–12; Social Studies: 3–12; Word-O-Meter: KG–12).
 4. For Mental Maths challenges: operation, difficulty, and mode (timed/fixed) shall be configurable.
 5. For Social Studies challenges: no operation/difficulty/mode config — always 20 multiple-choice questions, fixed mode.
-6. For Word-O-Meter challenges: a letter count selector (3–8) shall be shown; the host picks a word length and the system randomly picks one word from the pool for that grade and length; all players guess the same word.
+6. For Word-O-Meter challenges: a letter count selector shall be shown with only the counts valid for the selected grade (same rules as solo play: 3–5 for KG–2, 4–6 for Gr 3–5, 5–7 for Gr 6–8, 6–8 for Gr 9–12); if the grade changes to one where the current letter count is invalid, it resets to the first valid option; the host picks a word length and the system randomly picks one word from the pool for that grade and length; all players guess the same word.
 7. On creation, the system shall generate a unique 7-character alphanumeric game code.
 8. The code shall be displayed prominently in the lobby for sharing; the lobby shows the subject and grade.
 9. Friends shall join by entering the code on the Join Challenge screen.
