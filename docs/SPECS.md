@@ -177,7 +177,7 @@ interface Challenge {
   startedAt: number | null
   finishedAt: number | null
   config: ChallengeConfig
-  questions: Question[]         // pre-generated (20 for fixed, 60 for timed)
+  questions: Question[] | SocialStudiesQuestion[] | WOMWord[]  // type depends on subject; WOM = [WOMWord] (single element)
   players: Record<string, ChallengePlayer>
 }
 ```

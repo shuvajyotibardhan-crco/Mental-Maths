@@ -111,6 +111,9 @@ Custom hook encapsulating all Social Studies solo game logic. Grade is passed to
 ### `src/hooks/useChallengeSSGame.ts`
 Multiplayer Social Studies game hook. Mirrors `useChallengeGame` but for multiple-choice questions. Takes `gameCode`, `uid`, and `questions: SocialStudiesQuestion[]`. On each answer, debounces a `updatePlayerProgress` Firestore write (100 ms). Exposes `selectAnswer`, `advance`, and `forceFinish`. Scoring: 5 points per correct answer (max 100).
 
+### `src/hooks/useChallengeWOMGame.ts`
+Multiplayer Word-O-Meter game hook. Takes `gameCode`, `uid`, and the pre-determined `WOMWord` from the challenge doc. Runs the same Wordle evaluation logic as the solo hook but syncs progress to Firestore via `updatePlayerProgress`. `ChallengePlayer` fields are reused: `correctAnswers` = won (0/1), `totalAnswered` = attempts used, `bestStreak` = hints used. Score formula: `max(10, 100 − (attempts−1)×12 − hints×8 − floor(seconds/15))` if won; 0 if lost. Exposes `typeLetter`, `deleteLetter`, `submitGuess`, `useHint`, `forceFinish`.
+
 ### `src/firebase/socialStudies.ts`
 Four exports: `fetchSocialStudiesQuestions(grade)` — queries the `socialStudiesQuestions` Firestore collection filtered by grade (limit 80), loads previously seen question IDs from localStorage (`mm_ss_seen_<grade>`), filters to unseen questions, falls back to the full pool if fewer than 20 unseen remain, shuffles and returns 20; `saveSocialStudiesSession(session)` — writes to the shared `sessions` collection with `subject: 'socialStudies'` and null values for Maths-only fields; `loadSeenIdsFromStorage(grade)` / `saveSeenIdsToStorage(grade, ids)` — FIFO localStorage helpers capped at 80 entries (one per grade) implementing cross-session deduplication.
 
