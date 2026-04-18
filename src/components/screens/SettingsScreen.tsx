@@ -15,7 +15,7 @@ export function SettingsScreen({ onNavigate }: SettingsScreenProps) {
         <div className="flex items-center justify-between">
           <div>
             <p className="font-medium text-gray-800">Sound Effects</p>
-            <p className="text-sm text-gray-500">Play sounds for correct/wrong answers</p>
+            <p className="text-sm text-gray-500">Play a sound for wrong answers</p>
           </div>
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
