@@ -6,11 +6,11 @@ import { fetchSocialStudiesQuestions } from '../../firebase/socialStudies'
 import { pickWord } from '../../firebase/wordOMeter'
 import { createChallenge } from '../../firebase/challenge'
 import { GradeSelector } from '../ui/GradeSelector'
+import { GRADE_LETTER_OPTIONS } from '../../data/wordOMeterData'
 import type { OperationType, Difficulty, GameMode, Grade } from '../../types'
 import type { ChallengeSubject } from '../../types/challenge'
 
 const SS_GRADES: Grade[] = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
-const WOM_LETTER_OPTIONS = [3, 4, 5, 6, 7, 8]
 
 interface ChallengeCreateScreenProps {
   onNavigate: (screen: string) => void
@@ -48,10 +48,19 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
   const availableOps = getAvailableOperations(grade)
   const isSS = subject === 'socialStudies'
   const isWOM = subject === 'wordOMeter'
+  const womLetterOptions = GRADE_LETTER_OPTIONS[grade] ?? [3, 4, 5]
 
   function handleSubjectChange(s: ChallengeSubject) {
     setSubject(s)
     if (s === 'socialStudies' && !SS_GRADES.includes(grade)) setGrade('3')
+  }
+
+  function handleGradeChange(g: Grade) {
+    setGrade(g)
+    if (isWOM) {
+      const options = GRADE_LETTER_OPTIONS[g] ?? [3, 4, 5]
+      if (!options.includes(letterCount)) setLetterCount(options[0]!)
+    }
   }
 
   async function handleCreate() {
@@ -123,7 +132,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
         <GradeSelector
           value={grade}
-          onChange={setGrade}
+          onChange={handleGradeChange}
           allowedGrades={isSS ? SS_GRADES : undefined}
         />
       </div>
@@ -133,7 +142,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Word Length</label>
           <div className="grid grid-cols-6 gap-2">
-            {WOM_LETTER_OPTIONS.map((lc) => (
+            {womLetterOptions.map((lc) => (
               <button
                 key={lc}
                 onClick={() => setLetterCount(lc)}
