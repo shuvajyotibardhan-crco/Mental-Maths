@@ -211,7 +211,7 @@ interface ChallengeConfig {
   operation?: OperationType | null  // Mental Maths only
   difficulty?: Difficulty | null    // Mental Maths only
   mode: GameMode                    // SS/WOM always uses 'fixed'
-  letterCount?: number              // Word-O-Meter only (3–8)
+  letterCount?: number              // Word-O-Meter only; valid values are grade-restricted (see GRADE_LETTER_OPTIONS)
 }
 ```
 
