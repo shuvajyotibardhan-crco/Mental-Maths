@@ -542,7 +542,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 2. The setup screen shall include a **grade selector** restricted to Grades 3–12 (the only grades with question content); it defaults to the user's profile grade (clamped to 3 if below).
 3. Grade is per-quiz — changing the grade on the setup screen does not affect the user's profile.
 4. Each quiz session shall present 20 questions drawn randomly from the `socialStudiesQuestions` Firestore collection for the **selected** grade.
-5. Questions shall have four answer options (A–D); the correct answer shall be revealed immediately after selection.
+5. Questions shall have four answer options (A–D) presented in a **randomised order** (shuffled independently per question at fetch time, regardless of the order stored in Firestore); the correct answer shall be revealed immediately after selection.
 6. After selecting an answer, the correct option shall highlight green and any wrong selection shall highlight red; the next question shall load automatically after 1.2 seconds.
 7. Score increments by 5 points per correct answer (max 100).
 8. A running score and question counter shall be visible throughout the quiz.
