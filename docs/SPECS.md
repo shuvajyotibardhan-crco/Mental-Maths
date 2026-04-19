@@ -394,7 +394,14 @@ generateUniqueQuestion(grade, operation, difficulty, seen: Set<string>):
 seenIds = loadSeenIdsFromStorage(grade)   // reads mm_ss_seen_<grade> from localStorage
 unseen  = all.filter(q => q.id NOT IN seenIds)
 pool    = unseen.length >= 20 ? unseen : all   // fall back to full pool when nearly exhausted
-return shuffle(pool).slice(0, 20)
+questions = shuffle(pool).slice(0, 20)
+// Shuffle each question's options (Fisher-Yates) and update correctIndex to match,
+// so the correct answer is never biased toward a fixed position (e.g. always option B).
+return questions.map(q => {
+  correct = q.options[q.correctIndex]
+  shuffled = shuffle([...q.options])
+  return { ...q, options: shuffled, correctIndex: shuffled.indexOf(correct) }
+})
 
 // On session finish — useSocialStudiesGame advance(), finished branch:
 saveSeenIdsToStorage(grade, answeredQuestions.map(q => q.id))
