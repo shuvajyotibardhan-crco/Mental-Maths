@@ -156,15 +156,13 @@ export function useChallengeWOMGame({ gameCode, uid, word }: UseChallengeWOMGame
     if (s.currentGuess !== word.word) {
       setState((prev) => ({ ...prev, validating: true, error: null }))
       try {
-        const res = await fetch(
-          `https://api.dictionaryapi.dev/api/v2/entries/en/${s.currentGuess.toLowerCase()}`
-        )
-        if (!res.ok) {
+        const { default: wordSet } = await import(`../data/wordlists/wom-${s.letterCount}`)
+        if (!wordSet.has(s.currentGuess)) {
           setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
           setTimeout(() => setState((prev) => ({ ...prev, shake: false })), 600)
           return
         }
-      } catch { /* Network error — allow rather than block */ }
+      } catch { /* Wordlist failed to load — allow rather than block */ }
       setState((prev) => ({ ...prev, validating: false }))
     }
 
