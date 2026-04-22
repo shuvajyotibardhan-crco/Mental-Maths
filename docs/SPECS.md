@@ -723,10 +723,12 @@ Mental Maths/
 │
 ├── scripts/
 │   ├── reset.mjs                 # Dev utility: wipe all Firebase data
-│   └── seedSocialStudies.mjs     # Seeds socialStudiesQuestions collection
-│                                 # 800 questions, 80/grade (grades 3–12)
-│                                 # Requires serviceAccount.json (git-ignored)
-│                                 # Uses preferRest:true to avoid Node v24 gRPC issue
+│   ├── seedSocialStudies.mjs     # Seeds socialStudiesQuestions collection
+│   │                             # 800 questions, 80/grade (grades 3–12)
+│   │                             # Requires serviceAccount.json (git-ignored)
+│   │                             # Uses preferRest:true to avoid Node v24 gRPC issue
+│   └── generate-wordlists.cjs    # Generates src/data/wordlists/wom-{3..8}.ts from sowpods npm pkg
+│                                 # Run: node scripts/generate-wordlists.cjs
 │
 └── src/
     ├── main.tsx                  # ReactDOM.createRoot entry
@@ -745,7 +747,14 @@ Mental Maths/
     │   └── wordOMeter.ts         # WOMWord, WOMSession, WOMTile, WOMTileState, WOMHintType, WOMHintResult
     │
     ├── data/
-    │   └── wordOMeterData.ts     # Static word bank; GRADE_LETTER_OPTIONS; getWordPool(grade, letterCount)
+    │   ├── wordOMeterData.ts     # Static word bank; GRADE_LETTER_OPTIONS; getWordPool(grade, letterCount)
+    │   └── wordlists/            # SOWPODS word lists for guess validation (auto-generated, do not edit)
+    │       ├── wom-3.ts          # 1,292 3-letter words → ReadonlySet<string>
+    │       ├── wom-4.ts          # 5,454 4-letter words → ReadonlySet<string>
+    │       ├── wom-5.ts          # 12,478 5-letter words → ReadonlySet<string>
+    │       ├── wom-6.ts          # 22,157 6-letter words → ReadonlySet<string>
+    │       ├── wom-7.ts          # 32,909 7-letter words → ReadonlySet<string>
+    │       └── wom-8.ts          # 40,161 8-letter words → ReadonlySet<string>
     │
     ├── firebase/
     │   ├── config.ts             # Firebase app init; exports app, auth, db, storage

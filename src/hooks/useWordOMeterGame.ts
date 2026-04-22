@@ -157,19 +157,17 @@ export function useWordOMeterGame(userId: string) {
       return
     }
 
-    // Validate against dictionary (skip if the guess IS the answer)
+    // Validate against local SOWPODS word list (skip if the guess IS the answer)
     if (s.currentGuess !== s.word.word) {
       setState((prev) => ({ ...prev, validating: true, error: null }))
       try {
-        const res = await fetch(
-          `https://api.dictionaryapi.dev/api/v2/entries/en/${s.currentGuess.toLowerCase()}`
-        )
-        if (!res.ok) {
+        const { default: wordSet } = await import(`../data/wordlists/wom-${s.letterCount}`)
+        if (!wordSet.has(s.currentGuess)) {
           setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
           return
         }
       } catch {
-        // Network error — allow the word rather than blocking gameplay
+        // Wordlist failed to load — allow rather than block gameplay
       }
       setState((prev) => ({ ...prev, validating: false }))
     }
