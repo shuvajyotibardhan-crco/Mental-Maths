@@ -8,6 +8,7 @@ const fs = require('fs')
 const serviceAccount = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'))
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) })
 const db = admin.firestore()
+db.settings({ preferRest: true })
 
 const questions = [
 

@@ -24,6 +24,7 @@ if (!serviceAccountPath) {
 const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'))
 admin.initializeApp({ credential: admin.credential.cert(serviceAccount) })
 const db = admin.firestore()
+db.settings({ preferRest: true })
 
 const questions = [
 
