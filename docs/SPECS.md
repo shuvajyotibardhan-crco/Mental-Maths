@@ -52,7 +52,7 @@ interface AnsweredQuestion extends Question {
 ```
 
 ### SessionRecord
-Stored in Firestore collection `sessions`. Shared by Mental Maths, Social Studies, and Word-O-Meter sessions.
+Stored in Firestore collection `sessions`. Shared by Mental Maths, Social Studies, Science, and Word-O-Meter sessions.
 
 ```typescript
 interface SessionRecord {
@@ -60,7 +60,7 @@ interface SessionRecord {
   userId: string           // Firebase Auth UID
   timestamp: number        // Date.now()
   grade: Grade
-  subject?: 'mentalMaths' | 'socialStudies' | 'wordOMeter'  // absent = mentalMaths (backward compat)
+  subject?: 'mentalMaths' | 'socialStudies' | 'science' | 'wordOMeter'  // absent = mentalMaths (backward compat)
   operation: OperationType | null  // null for non-Maths sessions
   difficulty: Difficulty | null    // null for non-Maths sessions
   mode: GameMode           // 'fixed' for non-Maths sessions
@@ -127,6 +127,53 @@ interface SocialStudiesSession {
 }
 ```
 
+### ScienceQuestion
+Stored in Firestore collection `scienceQuestions`.
+
+```typescript
+interface ScienceQuestion {
+  id: string                        // Firestore auto-generated doc ID
+  grade: Grade                      // '5'–'12'
+  question: string
+  options: [string, string, string, string]  // four answer choices (shuffled at fetch time)
+  correctIndices: number[]          // sorted indices of correct options (1–4 correct)
+  topic: string                     // 'Biology' | 'Chemistry' | 'Physics' | 'Earth Science'
+}
+```
+
+### ScienceAnsweredQuestion
+In-memory only — used in `useScienceGame` state and `ScienceResultsScreen`.
+
+```typescript
+interface ScienceAnsweredQuestion {
+  question: ScienceQuestion
+  selectedIndices: number[]   // indices the player selected
+  isCorrect: boolean          // true only if selectedIndices matches correctIndices exactly
+  answeredAt: number          // Date.now()
+}
+```
+
+### ScienceSession
+Shape passed to `saveScienceSession`; persisted as a `SessionRecord` in Firestore.
+
+```typescript
+interface ScienceSession {
+  id: string            // assigned by Firestore on write
+  userId: string
+  timestamp: number
+  grade: Grade          // selected grade for the session
+  subject: 'science'
+  totalQuestions: number
+  correctAnswers: number
+  accuracy: number      // 0–100, 2 decimal places
+  score: number         // 5 pts × correct answers (max 100)
+  timeTakenSeconds: number
+  bestStreak: number
+  isHighScore: boolean  // always false (no high score tracking for Science)
+  challengeId?: string  // game code if from multiplayer challenge
+}
+```
+
 ### WOMWord
 Defined in `src/data/wordOMeterData.ts` (static bundle — never persisted to Firestore).
 
@@ -177,7 +224,7 @@ interface Challenge {
   startedAt: number | null
   finishedAt: number | null
   config: ChallengeConfig
-  questions: Question[] | SocialStudiesQuestion[] | WOMWord[]  // type depends on subject; WOM = [WOMWord] (single element)
+  questions: Question[] | SocialStudiesQuestion[] | ScienceQuestion[] | WOMWord[]  // type depends on subject; WOM = [WOMWord] (single element)
   players: Record<string, ChallengePlayer>
 }
 ```
@@ -203,7 +250,7 @@ interface ChallengePlayer {
 
 ### ChallengeConfig
 ```typescript
-type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'wordOMeter'
+type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'science' | 'wordOMeter'
 
 interface ChallengeConfig {
   subject?: ChallengeSubject   // optional for backward compat — absent = 'mentalMaths'
@@ -279,6 +326,7 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 | `admins` | Firebase UID | `{ role?, username?, addedAt? }` |
 | `auditLog` | auto | AuditEntry fields |
 | `socialStudiesQuestions` | auto | SocialStudiesQuestion fields (seeded via script) |
+| `scienceQuestions` | auto | ScienceQuestion fields (seeded via script, grade '5'–'12') |
 
 ### localStorage
 
@@ -287,6 +335,7 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 | `mm_sound` | `'true'` \| `'false'` | Sound effects preference |
 | `mm_seen_questions` | JSON `string[]` | Mental Maths cross-session dedup — `displayString` values of recently seen questions, FIFO capped at 60 |
 | `mm_ss_seen_<grade>` | JSON `string[]` | Social Studies cross-session dedup — Firestore document IDs of recently seen questions for that grade, FIFO capped at 80. One key per grade (e.g. `mm_ss_seen_5`, `mm_ss_seen_8`). |
+| `mm_sci_seen_<grade>` | JSON `string[]` | Science cross-session dedup — Firestore document IDs of recently seen questions for that grade, FIFO capped at 100 (5 × 20). One key per grade (e.g. `mm_sci_seen_5`, `mm_sci_seen_8`). |
 | `mm_wom_seen_<letterCount>` | JSON `string[]` | Word-O-Meter cross-session dedup — UPPERCASE word strings recently used, FIFO capped at 60. One key per letter count (e.g. `mm_wom_seen_3`, `mm_wom_seen_5`). |
 
 ### Firebase Storage
@@ -416,6 +465,34 @@ localStorage.setItem('mm_ss_seen_<grade>', JSON.stringify(combined.slice(-80)))
 
 // localStorage key: mm_ss_seen_<grade>  (JSON string[], max 80 entries, FIFO)
 // One key per grade: mm_ss_seen_3 … mm_ss_seen_12
+```
+
+### Science Question Fetch & Cross-Session Deduplication
+```
+// On session start — fetchScienceQuestions(grade):
+pool = ['5', '6', ..., grade]   // cumulative grades from 5 up to selected grade
+all  = Firestore.query('scienceQuestions', where grade IN pool, limit 200)
+seenIds = loadScienceSeenIds(grade)   // reads mm_sci_seen_<grade> from localStorage
+unseen  = all.filter(q => q.id NOT IN seenIds)
+selected = unseen.length >= 20 ? unseen : all   // fall back to full pool when nearly exhausted
+questions = shuffle(selected).slice(0, 20)
+// Shuffle each question's options (Fisher-Yates) and update correctIndices:
+return questions.map(q => {
+  correctAnswers = q.correctIndices.map(i => q.options[i])
+  shuffled = shuffle([...q.options])
+  newCorrectIndices = correctAnswers.map(a => shuffled.indexOf(a)).sort()
+  return { ...q, options: shuffled, correctIndices: newCorrectIndices }
+})
+
+// On session finish — useScienceGame _finishSession():
+saveScienceSeenIds(grade, answeredQuestions.map(q => q.question.id))
+
+// saveScienceSeenIds(grade, newIds):
+existing = JSON.parse(localStorage.getItem('mm_sci_seen_<grade>') ?? '[]')
+combined = [...existing, ...newIds]
+localStorage.setItem('mm_sci_seen_<grade>', JSON.stringify(combined.slice(-100)))
+// FIFO, cap = 100 (5 sessions × 20 questions)
+// One key per grade: mm_sci_seen_5 … mm_sci_seen_12
 ```
 
 ### Word-O-Meter Guess Evaluation
@@ -727,6 +804,10 @@ Mental Maths/
 │   │                             # 800 questions, 80/grade (grades 3–12)
 │   │                             # Requires serviceAccount.json (git-ignored)
 │   │                             # Uses preferRest:true to avoid Node v24 gRPC issue
+│   ├── seed-science-questions.cjs    # Seeds scienceQuestions for Grades 5–6
+│   │                                 # Requires serviceAccount.json (git-ignored)
+│   ├── seed-science-grade7-8.cjs     # Seeds scienceQuestions for Grades 7–8
+│   │                                 # Requires serviceAccount.json (git-ignored)
 │   └── generate-wordlists.cjs    # Generates src/data/wordlists/wom-{3..8}.ts from sowpods npm pkg
 │                                 # Run: node scripts/generate-wordlists.cjs
 │
@@ -744,6 +825,7 @@ Mental Maths/
     │   ├── challenge.ts          # Challenge, ChallengePlayer, ChallengeConfig, ChallengeStatus
     │   ├── admin.ts              # AuditEntry, AdminActionType
     │   ├── socialStudies.ts      # SocialStudiesQuestion, SocialStudiesAnsweredQuestion, SocialStudiesSession
+    │   ├── science.ts            # ScienceQuestion, ScienceAnsweredQuestion, ScienceSession
     │   └── wordOMeter.ts         # WOMWord, WOMSession, WOMTile, WOMTileState, WOMHintType, WOMHintResult
     │
     ├── data/
@@ -763,6 +845,7 @@ Mental Maths/
     │   ├── challenge.ts          # Challenge CRUD + onSnapshot subscription
     │   ├── admin.ts              # Admin ops: isAdmin check, user search, reset/merge/move, audit log
     │   ├── socialStudies.ts      # fetchSocialStudiesQuestions, saveSocialStudiesSession
+    │   ├── science.ts            # fetchScienceQuestions (cumulative pool), saveScienceSession, dedup helpers
     │   └── wordOMeter.ts         # pickWord, saveSeenWordToStorage, saveWordOMeterSession
     │
     ├── context/
@@ -776,9 +859,11 @@ Mental Maths/
     │   ├── useChallengeListener.ts   # onSnapshot wrapper for challenge doc
     │   ├── useChallengeGame.ts       # Mental Maths multiplayer logic (pre-gen questions + Firestore sync)
     │   ├── useChallengeSSGame.ts     # SS multiplayer logic (MC questions + Firestore sync)
-    │   ├── useChallengeWOMGame.ts    # Word-O-Meter multiplayer logic (single shared word + Firestore sync)
-    │   ├── useSocialStudiesGame.ts   # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
-    │   └── useWordOMeterGame.ts      # WOM solo game (guess eval, hints, score, dedup, save)
+    │   ├── useChallengeWOMGame.ts      # Word-O-Meter multiplayer logic (single shared word + Firestore sync)
+    │   ├── useChallengeScienceGame.ts  # Science multiplayer logic (multi-select MC + Firestore sync)
+    │   ├── useSocialStudiesGame.ts     # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
+    │   ├── useScienceGame.ts           # Science solo quiz (multi-select, cumulative pool, dedup, save)
+    │   └── useWordOMeterGame.ts        # WOM solo game (guess eval, hints, score, dedup, save)
     │
     ├── engine/
     │   ├── questionGenerator.ts  # Pure: grade+op+diff → Question, generateQuestionBatch
@@ -796,7 +881,7 @@ Mental Maths/
         │   └── GradeSelector.tsx # Shared grade picker (4-column grid); used by all setup screens
         │
         ├── layout/
-        │   ├── AppShell.tsx      # Screen router; mounts GameProvider + SocialStudiesShell + WordOMeterShell
+        │   ├── AppShell.tsx      # Screen router; mounts GameProvider + SocialStudiesShell + ScienceShell + WordOMeterShell
         │   ├── Header.tsx        # Brand + user avatar nav
         │   └── BottomNav.tsx     # Home/History/Profile/Settings tabs
         │
@@ -820,6 +905,9 @@ Mental Maths/
         │   ├── SocialStudiesSetupScreen.tsx      # Grade info + Start Quiz button
         │   ├── SocialStudiesGameScreen.tsx       # MCQ gameplay with reveal + auto-advance
         │   ├── SocialStudiesResultsScreen.tsx    # Score, accuracy, streak, incorrect review
+        │   ├── ScienceSetupScreen.tsx            # Grade selector (5–12) + cumulative pool info + Start
+        │   ├── ScienceGameScreen.tsx             # Multi-select MC gameplay + Check Answer + End Game
+        │   ├── ScienceResultsScreen.tsx          # Score, accuracy, streak, incorrect review
         │   ├── WordOMeterSetupScreen.tsx         # Grade + letter count selector + Start Game
         │   ├── WordOMeterGameScreen.tsx          # Wordle-style tile grid + QWERTY keyboard + hints
         │   └── WordOMeterResultsScreen.tsx       # Word revealed + definition + replay grid + stats

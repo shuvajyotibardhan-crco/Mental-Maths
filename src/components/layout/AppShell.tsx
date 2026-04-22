@@ -4,6 +4,7 @@ import { purgeOldSessions } from '../../firebase/firestore'
 import { checkIsAdmin, checkIsSuperAdmin } from '../../firebase/admin'
 import { GameProvider } from '../../context/GameContext'
 import { useSocialStudiesGame } from '../../hooks/useSocialStudiesGame'
+import { useScienceGame } from '../../hooks/useScienceGame'
 import { Header } from './Header'
 import { BottomNav } from './BottomNav'
 import { LoginScreen } from '../screens/LoginScreen'
@@ -26,6 +27,9 @@ import { AdminScreen } from '../screens/AdminScreen'
 import { SocialStudiesSetupScreen } from '../screens/SocialStudiesSetupScreen'
 import { SocialStudiesGameScreen } from '../screens/SocialStudiesGameScreen'
 import { SocialStudiesResultsScreen } from '../screens/SocialStudiesResultsScreen'
+import { ScienceSetupScreen } from '../screens/ScienceSetupScreen'
+import { ScienceGameScreen } from '../screens/ScienceGameScreen'
+import { ScienceResultsScreen } from '../screens/ScienceResultsScreen'
 import { WordOMeterSetupScreen } from '../screens/WordOMeterSetupScreen'
 import { WordOMeterGameScreen } from '../screens/WordOMeterGameScreen'
 import { WordOMeterResultsScreen } from '../screens/WordOMeterResultsScreen'
@@ -94,6 +98,74 @@ function SocialStudiesShell({
   if (screen === 'ss-results') {
     return (
       <SocialStudiesResultsScreen
+        gameState={state}
+        onPlayAgain={handlePlayAgain}
+        onNavigate={setScreen}
+      />
+    )
+  }
+  return null
+}
+
+function ScienceShell({
+  screen,
+  setScreen,
+}: {
+  screen: string
+  setScreen: (s: string) => void
+}) {
+  const { user, profile } = useAuth()
+  const [selectedGrade, setSelectedGrade] = useState<Grade>(
+    (): Grade => {
+      const g = profile?.grade ?? '5'
+      return (['5','6','7','8','9','10','11','12'].includes(g) ? g : '5') as Grade
+    },
+  )
+
+  const { state, startGame, toggleOption, submitAnswer, advance, forceFinish, reset } =
+    useScienceGame(user?.uid ?? '')
+
+  const handleStart = useCallback(async () => {
+    await startGame(selectedGrade)
+    setScreen('sci-game')
+  }, [startGame, selectedGrade, setScreen])
+
+  const handlePlayAgain = useCallback(() => {
+    reset()
+    setScreen('sci-setup')
+  }, [reset, setScreen])
+
+  useEffect(() => {
+    if (state.status === 'finished' && screen === 'sci-game') {
+      setScreen('sci-results')
+    }
+  }, [state.status, screen, setScreen])
+
+  if (screen === 'sci-setup') {
+    return (
+      <ScienceSetupScreen
+        onNavigate={setScreen}
+        selectedGrade={selectedGrade}
+        onGradeChange={setSelectedGrade}
+        onStart={handleStart}
+      />
+    )
+  }
+  if (screen === 'sci-game') {
+    return (
+      <ScienceGameScreen
+        gameState={state}
+        onToggleOption={toggleOption}
+        onSubmitAnswer={submitAnswer}
+        onAdvance={advance}
+        onEndGame={forceFinish}
+        onNavigate={setScreen}
+      />
+    )
+  }
+  if (screen === 'sci-results') {
+    return (
+      <ScienceResultsScreen
         gameState={state}
         onPlayAgain={handlePlayAgain}
         onNavigate={setScreen}
@@ -237,9 +309,10 @@ export function AppShell() {
   }
 
   const isSsScreen = screen === 'ss-game'
+  const isSciGameScreen = screen === 'sci-game'
   const isWomGameScreen = screen === 'wom-game'
   // Only hide nav during active gameplay
-  const isGameScreen = screen === 'game' || screen === 'challenge-game' || isSsScreen || isWomGameScreen
+  const isGameScreen = screen === 'game' || screen === 'challenge-game' || isSsScreen || isSciGameScreen || isWomGameScreen
 
   function handleChallengeCreated(gameCode: string) {
     setChallengeCode(gameCode)
@@ -252,6 +325,7 @@ export function AppShell() {
   }
 
   const isSocialStudiesScreen = screen === 'ss-setup' || screen === 'ss-game' || screen === 'ss-results'
+  const isScienceScreen = screen === 'sci-setup' || screen === 'sci-game' || screen === 'sci-results'
   const isWomScreen = screen === 'wom-setup' || screen === 'wom-game' || screen === 'wom-results'
 
   return (
@@ -286,6 +360,9 @@ export function AppShell() {
           {screen === 'admin' && userIsAdmin && <AdminScreen onNavigate={setScreen} isSuperAdmin={userIsSuperAdmin} />}
           {isSocialStudiesScreen && (
             <SocialStudiesShell screen={screen} setScreen={setScreen} />
+          )}
+          {isScienceScreen && (
+            <ScienceShell screen={screen} setScreen={setScreen} />
           )}
           {isWomScreen && (
             <WordOMeterShell screen={screen} setScreen={setScreen} />

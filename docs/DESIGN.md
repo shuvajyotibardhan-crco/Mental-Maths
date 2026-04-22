@@ -1,7 +1,7 @@
 # DIVEL EDU QUIZ — Design
 
 ## High-Level Overview
-DIVEL EDU QUIZ is a single-page React application built with TypeScript and Tailwind CSS v4, backed by Firebase Authentication and Firestore. The app targets students from KG to Grade 12 and supports three subjects: **Mental Maths** (dynamically generated arithmetic questions across eight operation types), **Social Studies** (multiple-choice quizzes seeded into Firestore from the US and Colorado curriculum for Grades 3–12), and **Word-O-Meter** (Wordle-style vocabulary game using a bundled static word bank across all grades). All three subjects support multiplayer challenge mode. State is managed through React Context (auth, game, settings), routing is handled by a single AppShell component (no external router), and all game logic lives in pure modules decoupled from the UI. The design philosophy prioritises simplicity and child-friendly UX over feature breadth.
+DIVEL EDU QUIZ is a single-page React application built with TypeScript and Tailwind CSS v4, backed by Firebase Authentication and Firestore. The app targets students from KG to Grade 12 and supports four subjects: **Mental Maths** (dynamically generated arithmetic questions across eight operation types), **Social Studies** (multiple-choice quizzes seeded into Firestore from the US and Colorado curriculum for Grades 3–12), **Science** (multiple-select quizzes covering Biology, Chemistry, Physics, and Earth Science for Grades 5–12, seeded into Firestore), and **Word-O-Meter** (Wordle-style vocabulary game using a bundled static word bank across all grades). All four subjects support multiplayer challenge mode. State is managed through React Context (auth, game, settings), routing is handled by a single AppShell component (no external router), and all game logic lives in pure modules decoupled from the UI. The design philosophy prioritises simplicity and child-friendly UX over feature breadth.
 
 ---
 
@@ -129,6 +129,27 @@ Six auto-generated TypeScript files (`wom-3.ts` through `wom-8.ts`), each export
 ### `src/hooks/useWordOMeterGame.ts`
 Custom hook encapsulating all Word-O-Meter solo game logic. `startGame(grade, letterCount)` picks a word and initialises state; `maxAttempts` is set to `letterCount` (square grid — N letters → N attempts). `typeLetter` / `deleteLetter` manage the current-row buffer. `submitGuess` is async: it dynamically imports the SOWPODS word list for the current letter count (`src/data/wordlists/wom-{N}.ts`) and checks the guess against it — if not found, the guess is rejected with "Not a valid English word" (load failures are silently bypassed to avoid blocking gameplay); it then evaluates the guess letter-by-letter against the target using a two-pass algorithm (correct positions first, then present letters, to handle duplicates correctly), updates `guesses` and `letterStates`, and transitions to `won`/`lost` when appropriate. A `validating` boolean prevents duplicate submits during the async import. `useHint(type)` consumes an available hint; hint limit is enforced (1 max for 3–5 letter words, 2 max for 6–8 letter words) — once the limit is reached `availableHints` is cleared. `forceFinish` ends the session early. `_finishSession` calls `saveWordOMeterSession` and `saveSeenWordToStorage` asynchronously. Score: `max(10, 100 − (attemptsUsed−1) × 12 − hintsUsed × 8)` on win; 0 on loss.
 
+### `src/types/science.ts`
+Type definitions for the Science subject: `ScienceQuestion` (id, grade, question, four options, `correctIndices` array, topic), `ScienceAnsweredQuestion` (question, selectedIndices, isCorrect, answeredAt), `ScienceSession` (saved to Firestore `sessions` collection with `subject: 'science'`).
+
+### `src/firebase/science.ts`
+Four exports: `fetchScienceQuestions(grade)` — queries the `scienceQuestions` Firestore collection using a cumulative grade pool (Grades 5 through the selected grade, via `gradesUpTo()`), limit 200, loads seen IDs from localStorage (`mm_sci_seen_<grade>`), prefers unseen questions, falls back to full pool if fewer than 20 unseen, shuffles options per question (Fisher-Yates, updates `correctIndices`), and returns 20 questions; `saveScienceSession(session)` — writes to the shared `sessions` collection with `subject: 'science'` and null for Maths-only fields; `loadScienceSeenIds(grade)` / `saveScienceSeenIds(grade, ids)` — FIFO localStorage helpers capped at 100 entries (5 sessions × 20 questions per grade).
+
+### `src/hooks/useScienceGame.ts`
+Custom hook for the Science solo game. `startGame(grade)` fetches questions and sets status to `'playing'`. `toggleOption(index)` toggles an option in `selectedIndices` (multi-select). `submitAnswer()` transitions to `revealed: true`; requires at least one option selected. `advance()` records the answered question (correct if selected indices match `correctIndices` exactly), updates score (5 pts per correct), streak, bestStreak, and moves to the next question or transitions to `'finished'`. `forceFinish()` saves and ends early if any questions answered. `_finishSession` calls `saveScienceSession` and `saveScienceSeenIds` asynchronously.
+
+### `src/hooks/useChallengeScienceGame.ts`
+Multiplayer Science game hook. Takes `gameCode`, `uid`, and pre-fetched `ScienceQuestion[]`. Same `toggleOption`/`submitAnswer`/`advance` logic as the solo hook. Syncs score, correctAnswers, totalAnswered, bestStreak, and finished status to Firestore via `updatePlayerProgress` (debounced 100 ms). `forceFinish` marks the player done and triggers a final sync.
+
+### `src/components/screens/ScienceSetupScreen.tsx`
+Setup screen for the Science solo quiz. Grade selector limited to Grades 5–12. Shows a summary card (20 questions, multi-select MC, cumulative grade pool). Orange accent colour throughout.
+
+### `src/components/screens/ScienceGameScreen.tsx`
+Science game screen. Displays topic badge + "Select all that apply" badge (for multi-correct questions), question card, four option buttons with checkbox indicators, a Check Answer button (disabled until at least one option selected), and an End Game button. After submission: correct options turn green, incorrectly selected options turn red, remaining options grey out. Auto-advances after 2 seconds. Option styling matches the SS game screen pattern but uses orange as the accent colour.
+
+### `src/components/screens/ScienceResultsScreen.tsx`
+Results screen showing emoji/message, score (out of 100), correct count, accuracy %, best streak, and a scrollable list of incorrectly answered questions with the correct option(s) highlighted in green.
+
 ### `src/firebase/admin.ts`
 All admin-specific Firestore operations. Functions: `checkIsAdmin`, `checkIsSuperAdmin`, `searchUsersByPrefix` (prefix range query, min 4 chars), `uploadSupportingFile`, `getAuditLog`, `adminResetPassword`, `adminMergeUsers`, `adminMoveScores`, `adminDeleteUser`, `getDashboardSessions`, `getAdminList`, `addAdmin`, `removeAdmin`. Every action writes an `auditLog` entry regardless of outcome. Batch writes (400 ops/batch) handle large session transfers. `adminResetPassword` and `adminDeleteUser` call Cloud Functions for server-side Auth operations.
 
@@ -145,10 +166,10 @@ Contact support form. Accessible from Settings (logged in) and from the Login sc
 Displays and edits user profile (avatar, name, grade), change password, recovery email, and account deletion. Delete Account shows a confirmation panel, then calls `deleteAllUserData` + `deleteCurrentUser` — deleting all Firestore data before removing the Auth account, which triggers automatic logout. The Delete Account button and confirmation panel are hidden when either `isAdmin` or `isSuperAdmin` is true, preventing any admin from removing their own account via the Profile screen.
 
 ### `src/components/screens/ChallengeCreateScreen.tsx`
-Challenge configuration screen. Has a subject selector (Mental Maths / Social Studies / Word-O-Meter) and a grade selector (defaulting to profile grade). For Maths: shows operation, difficulty, and mode selectors. For SS: hides those and shows an info card. For WOM: shows a letter count selector restricted to the counts valid for the selected grade (via `GRADE_LETTER_OPTIONS`), matching solo play rules; selecting a new grade resets the letter count if the current one is no longer valid; `pickWord` is called at creation time to pick and store the shared word. On create, fetches/generates questions and writes the challenge doc.
+Challenge configuration screen. Has a subject selector (Mental Maths / Social Studies / Science / Word-O-Meter) and a grade selector (defaulting to profile grade, clamped per subject). For Maths: shows operation, difficulty, and mode selectors. For SS / Science: hides those and shows an info card. For WOM: shows a letter count selector restricted to the counts valid for the selected grade (via `GRADE_LETTER_OPTIONS`), matching solo play rules; selecting a new grade resets the letter count if the current one is no longer valid; `pickWord` is called at creation time to pick and store the shared word. On create, fetches/generates questions and writes the challenge doc.
 
 ### `src/components/screens/ChallengeGameScreen.tsx`
-Multiplayer game screen. Branches on `challenge.config.subject` (defaulting to `'mentalMaths'` for backward compatibility). Renders `ChallengeGameInner` for Mental Maths (number pad + timer), `ChallengeSSGameInner` for Social Studies (multiple choice + auto-advance), or `ChallengeWOMGameInner` for Word-O-Meter (Wordle-style grid + keyboard + hints). All three inners share the same live leaderboard pattern, waiting-for-others screen, and End Game button.
+Multiplayer game screen. Branches on `challenge.config.subject` (defaulting to `'mentalMaths'` for backward compatibility). Renders `ChallengeGameInner` for Mental Maths (number pad + timer), `ChallengeSSGameInner` for Social Studies (multiple choice + auto-advance), `ChallengeScienceGameInner` for Science (multiple-select MC + Check Answer + 2 s auto-advance), or `ChallengeWOMGameInner` for Word-O-Meter (Wordle-style grid + keyboard + hints). All four inners share the same live leaderboard pattern, waiting-for-others screen, and End Game button.
 
 ### `src/components/screens/LoginScreen.tsx`
 Handles login, forgot-password flow, and a "Contact Support" link that navigates to `ContactScreen` without requiring authentication.
@@ -207,6 +228,9 @@ The original implementation used `api.dictionaryapi.dev` to validate player gues
 
 **Why seed Social Studies questions into Firestore instead of generating them?**
 Unlike Maths, Social Studies content is factual and curriculum-specific — it cannot be algorithmically generated. Pre-seeding 800 questions (80 per grade, Grades 3–12) via `scripts/seedSocialStudies.mjs` allows question authors to add, edit, and remove content without a code deploy. The app fetches up to 80 questions per grade and randomly serves 20, providing variety across sessions.
+
+**Why seed Science questions into Firestore instead of generating them?**
+Same rationale as Social Studies. Science content (Biology, Chemistry, Physics, Earth Science) is factual and topic-specific. Questions are seeded via `scripts/seed-science-questions.cjs` (Grades 5–6) and `scripts/seed-science-grade7-8.cjs` (Grades 7–8). The cumulative pool design (Grades 5 through selected grade) means a Grade 8 student's session draws from all four grade banks, giving broader variety without requiring a separate question fetch per grade. The dedup cap of 100 (5 × 20) prevents question repeats across 5 consecutive sessions per grade level.
 
 **Why session purging on startup?**
 Firestore bills per document read. Purging sessions older than 6 months on app startup keeps the history collection lean and costs predictable.

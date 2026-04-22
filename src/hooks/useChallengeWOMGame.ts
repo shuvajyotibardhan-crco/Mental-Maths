@@ -156,7 +156,7 @@ export function useChallengeWOMGame({ gameCode, uid, word }: UseChallengeWOMGame
     if (s.currentGuess !== word.word) {
       setState((prev) => ({ ...prev, validating: true, error: null }))
       try {
-        const { default: wordSet } = await import(`../data/wordlists/wom-${s.letterCount}`)
+        const { default: wordSet } = await import(`../data/wordlists/wom-${word.letterCount}`)
         if (!wordSet.has(s.currentGuess)) {
           setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
           setTimeout(() => setState((prev) => ({ ...prev, shake: false })), 600)

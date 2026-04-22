@@ -622,3 +622,50 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 | Check History | Session listed as "Word-O-Meter" with ✓ Solved / ✗ Not solved |
 | Complete 60 sessions for same letter count | Next session still shows a word (pool resets) |
 | Tap Play Again | Setup screen; same grade + letter count pre-selected |
+
+---
+
+## Feature 20 — Science Quiz
+
+**User story:** As a student in Grade 5–12, I want to answer multiple-select science questions covering Biology, Chemistry, Physics, and Earth Science so that I can test and expand my science knowledge.
+
+**Acceptance Criteria:**
+1. A "Science" subject card shall appear on the Home screen alongside Mental Maths, Social Studies, and Word-O-Meter.
+2. The setup screen shall include a **grade selector** (Grades 5–12 only). The default grade comes from the user's profile (clamped to the Science range).
+3. Grade is per-quiz and does not affect the user's profile grade.
+4. Each session shall draw 20 questions from a cumulative pool covering **Grades 5 through the selected grade** (e.g. selecting Grade 8 pulls from Grades 5, 6, 7, and 8).
+5. Questions are **multiple-select**: one or more of the four options may be correct. Questions with multiple correct answers shall display a "Select all that apply" badge.
+6. The player selects any number of options (toggle), then taps **Check Answer** to submit. The submission button shall be disabled until at least one option is selected.
+7. After submission, correct options highlight green and incorrectly selected options highlight red. The player cannot change their answer after submitting.
+8. After a 2-second reveal, the game auto-advances to the next question.
+9. An **End Game** button shall be available at all times. If at least 1 question was answered, the partial session is saved to Firestore and the results screen is shown.
+10. Scoring: 5 points per fully-correct answer (all required options selected, no extras); 0 for a partial or wrong answer. Maximum score is 100 (20 × 5).
+11. The results screen shall display: emoji + message, total score (out of 100), correct count, accuracy %, best streak, and a scrollable review of incorrect answers with the correct option(s) shown.
+12. "Play Again" returns to the setup screen. "Home" returns to Home.
+13. Each completed or early-ended session shall be saved to the shared `sessions` Firestore collection with `subject: 'science'`.
+14. Cross-session deduplication via localStorage (key `mm_sci_seen_<grade>`, cap 100): unseen questions are preferred; once all 100 recently-seen IDs fill the cap the full pool is reused.
+15. Science shall be available as a **multiplayer challenge subject**: host selects Science in `ChallengeCreateScreen`; all players answer the same 20 pre-fetched questions; live leaderboard via Firestore `onSnapshot`.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Log in as any user | Science 🔬 card visible on Home |
+| Tap Science | Setup screen with grade selector (Grades 5–12) and Start Quiz button |
+| Profile grade is Grade 3 | Setup screen defaults to Grade 5 (clamped) |
+| Select Grade 7, tap Start Quiz | 20 questions loaded from Grades 5–7 pool |
+| Question with 2 correct answers | "Select all that apply" badge shown |
+| Tap one option | Option highlights orange (selected); Check Answer becomes active |
+| Tap Check Answer | Correct options highlight green; wrong selections highlight red |
+| Answer correct question | Score increases by 5 |
+| Wait 2 seconds after reveal | Game auto-advances to next question |
+| Complete all 20 questions | Results screen shown with score, correct count, accuracy, streak |
+| Tap End Game at question 5 | Session saved (5 questions); results screen shown |
+| Tap End Game before answering any question | No session saved; results screen shown |
+| Check Firestore | Session doc with `subject: 'science'` written |
+| Complete a session, start another | Questions from the first session are deprioritised |
+| Complete 5 sessions (100 questions seen) | Pool resets; questions reappear |
+| Tap Play Again | Returns to setup screen |
+| Tap Home | Home screen shown |
+| Create challenge with Science subject | Challenge created; lobby shows Science |
+| All players complete Science challenge | Results screen with leaderboard |

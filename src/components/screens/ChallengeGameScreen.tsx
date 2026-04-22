@@ -4,6 +4,7 @@ import { useChallengeListener } from '../../hooks/useChallengeListener'
 import { useChallengeGame } from '../../hooks/useChallengeGame'
 import { useChallengeSSGame } from '../../hooks/useChallengeSSGame'
 import { useChallengeWOMGame } from '../../hooks/useChallengeWOMGame'
+import { useChallengeScienceGame } from '../../hooks/useChallengeScienceGame'
 import { useTimer } from '../../hooks/useTimer'
 import { finishChallenge } from '../../firebase/challenge'
 import { QuestionCard } from '../game/QuestionCard'
@@ -14,6 +15,7 @@ import type { Challenge, ChallengeConfig, ChallengePlayer } from '../../types/ch
 import type { Question } from '../../types/question'
 import type { SocialStudiesQuestion } from '../../types/socialStudies'
 import type { WOMWord, WOMHintType, WOMTileState } from '../../types/wordOMeter'
+import type { ScienceQuestion } from '../../types/science'
 
 const DISCONNECT_MS = 120_000
 const WARN_AFTER_MS = 30_000
@@ -109,6 +111,17 @@ export function ChallengeGameScreen({ gameCode, onNavigate }: ChallengeGameScree
   if (subject === 'socialStudies') {
     return (
       <ChallengeSSGameInner
+        gameCode={gameCode}
+        challenge={challenge}
+        uid={profile.uid}
+        onNavigate={onNavigate}
+      />
+    )
+  }
+
+  if (subject === 'science') {
+    return (
+      <ChallengeScienceGameInner
         gameCode={gameCode}
         challenge={challenge}
         uid={profile.uid}
@@ -492,6 +505,211 @@ function ChallengeSSGameInner({
             </button>
           ))}
         </div>
+
+        {game.revealed && (
+          <p className="text-center text-xs text-gray-400 animate-pulse">Next question loading…</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Science challenge game ───────────────────────────────────────────────────
+
+const SCI_OPTION_LABELS = ['A', 'B', 'C', 'D'] as const
+
+function ChallengeScienceGameInner({
+  gameCode,
+  challenge,
+  uid,
+  onNavigate,
+}: {
+  gameCode: string
+  challenge: Challenge
+  uid: string
+  onNavigate: (screen: string) => void
+}) {
+  const { profile } = useAuth()
+  const { challenge: liveChallenge } = useChallengeListener(gameCode)
+  const currentChallenge = liveChallenge ?? challenge
+  const navigatedRef = useRef(false)
+  const currentChallengeRef = useRef(currentChallenge)
+  useEffect(() => { currentChallengeRef.current = currentChallenge }, [currentChallenge])
+
+  const questions = challenge.questions as ScienceQuestion[]
+  const game = useChallengeScienceGame({ gameCode, uid, questions })
+
+  // Auto-advance 2 s after answer is revealed
+  useEffect(() => {
+    if (!game.revealed) return
+    const timer = setTimeout(game.advance, 2000)
+    return () => clearTimeout(timer)
+  }, [game.revealed, game.advance])
+
+  useEffect(() => {
+    if (!game.finished || navigatedRef.current) return
+    const check = () => {
+      const ch = currentChallengeRef.current
+      if (!ch || navigatedRef.current || ch.status === 'finished') return
+      const now = Date.now()
+      const allDone = Object.entries(ch.players).every(([pUid, p]) =>
+        p.finished ||
+        pUid === uid ||
+        now - (p.lastActiveAt ?? now) > DISCONNECT_MS,
+      )
+      if (allDone) finishChallenge(gameCode).catch(console.error)
+    }
+    check()
+    const interval = setInterval(check, 10_000)
+    return () => clearInterval(interval)
+  }, [game.finished, uid, gameCode])
+
+  useEffect(() => {
+    if (currentChallenge?.status === 'finished' && !navigatedRef.current) {
+      navigatedRef.current = true
+      onNavigate('challenge-results')
+    }
+  }, [currentChallenge?.status, onNavigate])
+
+  if (game.finished && currentChallenge?.status !== 'finished') {
+    return (
+      <WaitingForPlayers
+        players={currentChallenge?.players ?? {}}
+        uid={uid}
+        score={game.score}
+        scoreColor="text-orange-600"
+      />
+    )
+  }
+
+  if (!game.currentQuestion) return null
+
+  const leaderboard = Object.entries(currentChallenge?.players ?? {})
+    .map(([pUid, p]) => ({ uid: pUid, ...p }))
+    .sort((a, b) => b.score - a.score)
+
+  const total = questions.length
+  const progress = (game.currentIndex / total) * 100
+  const isMultiSelect = game.currentQuestion.correctIndices.length > 1
+  const canSubmit = game.selectedIndices.length > 0 && !game.revealed
+
+  function optionClass(idx: number) {
+    const base = 'w-full text-left px-4 py-3 rounded-2xl font-medium text-sm transition-all border-2 flex items-center gap-3 '
+    const isSelected = game.selectedIndices.includes(idx)
+    const isCorrect = game.currentQuestion!.correctIndices.includes(idx)
+    if (!game.revealed) {
+      return base + (isSelected
+        ? 'bg-orange-50 border-orange-400 text-orange-800'
+        : 'bg-white border-gray-200 hover:border-orange-300 hover:bg-orange-50 active:scale-95 cursor-pointer')
+    }
+    if (isCorrect) return base + 'bg-emerald-100 border-emerald-500 text-emerald-800'
+    if (isSelected && !isCorrect) return base + 'bg-red-100 border-red-400 text-red-700'
+    return base + 'bg-white border-gray-200 text-gray-400'
+  }
+
+  function checkboxClass(idx: number) {
+    const isSelected = game.selectedIndices.includes(idx)
+    const isCorrect = game.revealed && game.currentQuestion!.correctIndices.includes(idx)
+    const isWrong = game.revealed && isSelected && !game.currentQuestion!.correctIndices.includes(idx)
+    const base = 'w-5 h-5 rounded flex items-center justify-center border-2 flex-shrink-0 text-xs font-bold '
+    if (isCorrect) return base + 'bg-emerald-500 border-emerald-500 text-white'
+    if (isWrong) return base + 'bg-red-400 border-red-400 text-white'
+    if (isSelected) return base + 'bg-orange-500 border-orange-500 text-white'
+    return base + 'bg-white border-gray-300'
+  }
+
+  return (
+    <div className="flex flex-col h-dvh bg-gradient-to-b from-orange-50 to-white">
+      {/* Progress bar */}
+      <div className="w-full h-1.5 bg-gray-200">
+        <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${progress}%` }} />
+      </div>
+
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <span className="text-xs text-gray-500 font-medium">
+          Q {game.currentIndex + 1}/{total}
+        </span>
+        <span className="text-xs font-bold text-orange-600">Score: {game.score}</span>
+        <button
+          onClick={() => game.forceFinish()}
+          className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 bg-white/60 rounded-xl cursor-pointer"
+        >
+          End Game
+        </button>
+      </div>
+
+      {/* Mini leaderboard */}
+      <div className="flex gap-2 overflow-x-auto px-4 pb-1">
+        {leaderboard.map((p, i) => (
+          <div
+            key={p.uid}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap ${
+              p.uid === profile?.uid ? 'bg-orange-100 text-orange-700' : 'bg-white/60 text-gray-600'
+            }`}
+          >
+            <span>{i === 0 ? '👑' : `#${i + 1}`}</span>
+            <span>{p.avatar}</span>
+            <span>{p.uid === profile?.uid ? 'You' : p.name}</span>
+            <span className="font-bold">⭐{p.score}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex-1 flex flex-col px-4 py-3 gap-3 overflow-y-auto">
+        {/* Badges */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="self-start px-3 py-1 bg-orange-100 text-orange-700 text-xs font-semibold rounded-full">
+            {game.currentQuestion.topic}
+          </div>
+          {isMultiSelect && (
+            <div className="px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">
+              Select all that apply
+            </div>
+          )}
+        </div>
+
+        {/* Question */}
+        <div className="bg-white rounded-3xl shadow-md p-4">
+          <p className="text-sm font-semibold text-gray-800 leading-snug">
+            {game.currentQuestion.question}
+          </p>
+        </div>
+
+        {/* Options */}
+        <div className="space-y-2">
+          {game.currentQuestion.options.map((opt, idx) => {
+            const isSelected = game.selectedIndices.includes(idx)
+            const isCorrect = game.revealed && game.currentQuestion!.correctIndices.includes(idx)
+            const isWrong = game.revealed && isSelected && !game.currentQuestion!.correctIndices.includes(idx)
+            return (
+              <button
+                key={idx}
+                onClick={() => !game.revealed && game.toggleOption(idx)}
+                className={optionClass(idx)}
+                disabled={game.revealed}
+              >
+                <div className={checkboxClass(idx)}>
+                  {isCorrect && '✓'}
+                  {isWrong && '✗'}
+                  {!game.revealed && isSelected && '✓'}
+                </div>
+                <span className="font-bold text-primary mr-1">{SCI_OPTION_LABELS[idx]}.</span>
+                <span className="flex-1">{opt}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        {!game.revealed && (
+          <button
+            onClick={() => game.submitAnswer()}
+            disabled={!canSubmit}
+            className="w-full py-3 bg-orange-500 text-white font-bold rounded-2xl shadow transition-all cursor-pointer hover:bg-orange-600 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Check Answer
+          </button>
+        )}
 
         {game.revealed && (
           <p className="text-center text-xs text-gray-400 animate-pulse">Next question loading…</p>

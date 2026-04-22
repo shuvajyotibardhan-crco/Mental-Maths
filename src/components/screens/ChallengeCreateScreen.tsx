@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext'
 import { getAvailableOperations, OPERATION_LABELS } from '../../constants/gradeConfig'
 import { generateQuestionBatch } from '../../engine/questionGenerator'
 import { fetchSocialStudiesQuestions } from '../../firebase/socialStudies'
+import { fetchScienceQuestions } from '../../firebase/science'
 import { pickWord } from '../../firebase/wordOMeter'
 import { createChallenge } from '../../firebase/challenge'
 import { GradeSelector } from '../ui/GradeSelector'
@@ -11,6 +12,7 @@ import type { OperationType, Difficulty, GameMode, Grade } from '../../types'
 import type { ChallengeSubject } from '../../types/challenge'
 
 const SS_GRADES: Grade[] = ['3', '4', '5', '6', '7', '8', '9', '10', '11', '12']
+const SCI_GRADES: Grade[] = ['5', '6', '7', '8', '9', '10', '11', '12']
 
 interface ChallengeCreateScreenProps {
   onNavigate: (screen: string) => void
@@ -20,6 +22,7 @@ interface ChallengeCreateScreenProps {
 const SUBJECTS: { value: ChallengeSubject; label: string; icon: string }[] = [
   { value: 'mentalMaths', label: 'Mental Maths', icon: '🧮' },
   { value: 'socialStudies', label: 'Social Studies', icon: '🌍' },
+  { value: 'science', label: 'Science', icon: '🔬' },
   { value: 'wordOMeter', label: 'Word-O-Meter', icon: '📝' },
 ]
 
@@ -47,12 +50,14 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
 
   const availableOps = getAvailableOperations(grade)
   const isSS = subject === 'socialStudies'
+  const isSci = subject === 'science'
   const isWOM = subject === 'wordOMeter'
   const womLetterOptions = GRADE_LETTER_OPTIONS[grade] ?? [3, 4, 5]
 
   function handleSubjectChange(s: ChallengeSubject) {
     setSubject(s)
     if (s === 'socialStudies' && !SS_GRADES.includes(grade)) setGrade('3')
+    if (s === 'science' && !SCI_GRADES.includes(grade)) setGrade('5')
   }
 
   function handleGradeChange(g: Grade) {
@@ -72,6 +77,14 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         const questions = await fetchSocialStudiesQuestions(grade)
         const gameCode = await createChallenge(
           { subject: 'socialStudies', grade, operation: null, difficulty: null, mode: 'fixed' },
+          questions,
+          profile,
+        )
+        onChallengeCreated(gameCode)
+      } else if (isSci) {
+        const questions = await fetchScienceQuestions(grade)
+        const gameCode = await createChallenge(
+          { subject: 'science', grade, operation: null, difficulty: null, mode: 'fixed' },
           questions,
           profile,
         )
@@ -133,7 +146,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         <GradeSelector
           value={grade}
           onChange={handleGradeChange}
-          allowedGrades={isSS ? SS_GRADES : undefined}
+          allowedGrades={isSS ? SS_GRADES : isSci ? SCI_GRADES : undefined}
         />
       </div>
 
@@ -160,7 +173,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Operation */}
-      {!isSS && !isWOM && (
+      {!isSS && !isSci && !isWOM && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Operation</label>
           <div className="grid grid-cols-2 gap-2">
@@ -192,7 +205,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Difficulty */}
-      {!isSS && !isWOM && (
+      {!isSS && !isSci && !isWOM && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
           <div className="grid grid-cols-3 gap-2">
@@ -214,7 +227,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Mode */}
-      {!isSS && !isWOM && (
+      {!isSS && !isSci && !isWOM && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
           <div className="grid grid-cols-2 gap-3">
@@ -243,6 +256,14 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         <div className="bg-teal-50 rounded-2xl p-4 text-sm text-teal-700 space-y-1">
           <p><span className="font-semibold">20 questions</span> · Multiple choice</p>
           <p>US & Colorado Curriculum · No time limit</p>
+        </div>
+      )}
+
+      {/* Science info card */}
+      {isSci && (
+        <div className="bg-orange-50 rounded-2xl p-4 text-sm text-orange-700 space-y-1">
+          <p><span className="font-semibold">20 questions</span> · Multi-select multiple choice</p>
+          <p>Pool includes grades 5–{grade} · No time limit</p>
         </div>
       )}
 

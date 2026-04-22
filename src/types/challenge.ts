@@ -1,9 +1,10 @@
 import type { Grade, OperationType, Difficulty, GameMode, Question } from './question'
 import type { SocialStudiesQuestion } from './socialStudies'
 import type { WOMWord } from './wordOMeter'
+import type { ScienceQuestion } from './science'
 
 export type ChallengeStatus = 'waiting' | 'playing' | 'finished'
-export type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'wordOMeter'
+export type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science'
 
 export interface ChallengeConfig {
   /**
@@ -47,7 +48,8 @@ export interface Challenge {
    *  'mentalMaths'   → Question[]
    *  'socialStudies' → SocialStudiesQuestion[]
    *  'wordOMeter'    → [WOMWord] (single word)
+   *  'science'       → ScienceQuestion[]
    */
-  questions: Question[] | SocialStudiesQuestion[] | WOMWord[]
+  questions: Question[] | SocialStudiesQuestion[] | WOMWord[] | ScienceQuestion[]
   players: Record<string, ChallengePlayer>
 }
