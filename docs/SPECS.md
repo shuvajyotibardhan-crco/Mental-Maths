@@ -806,8 +806,10 @@ Mental Maths/
 │   │                             # Uses preferRest:true to avoid Node v24 gRPC issue
 │   ├── seed-science-questions.cjs    # Seeds scienceQuestions for Grades 5–6
 │   │                                 # Requires serviceAccount.json (git-ignored)
+│   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
 │   ├── seed-science-grade7-8.cjs     # Seeds scienceQuestions for Grades 7–8
 │   │                                 # Requires serviceAccount.json (git-ignored)
+│   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
 │   └── generate-wordlists.cjs    # Generates src/data/wordlists/wom-{3..8}.ts from sowpods npm pkg
 │                                 # Run: node scripts/generate-wordlists.cjs
 │
