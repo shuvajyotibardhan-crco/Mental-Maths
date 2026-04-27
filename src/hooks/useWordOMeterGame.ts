@@ -3,6 +3,18 @@ import { pickWord, saveSeenWordToStorage, saveWordOMeterSession } from '../fireb
 import type { Grade } from '../types/question'
 import type { WOMWord, WOMTile, WOMTileState, WOMHintType, WOMHintResult } from '../types/wordOMeter'
 
+async function loadWordlist(n: number): Promise<ReadonlySet<string>> {
+  switch (n) {
+    case 3: return (await import('../data/wordlists/wom-3')).default
+    case 4: return (await import('../data/wordlists/wom-4')).default
+    case 5: return (await import('../data/wordlists/wom-5')).default
+    case 6: return (await import('../data/wordlists/wom-6')).default
+    case 7: return (await import('../data/wordlists/wom-7')).default
+    case 8: return (await import('../data/wordlists/wom-8')).default
+    default: throw new Error(`No wordlist for ${n}-letter words`)
+  }
+}
+
 type GameStatus = 'idle' | 'playing' | 'won' | 'lost'
 
 export interface WOMGameState {
@@ -161,7 +173,7 @@ export function useWordOMeterGame(userId: string) {
     if (s.currentGuess !== s.word.word) {
       setState((prev) => ({ ...prev, validating: true, error: null }))
       try {
-        const { default: wordSet } = await import(`../data/wordlists/wom-${s.letterCount}`)
+        const wordSet = await loadWordlist(s.letterCount)
         if (!wordSet.has(s.currentGuess)) {
           setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
           return

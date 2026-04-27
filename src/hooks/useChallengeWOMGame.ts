@@ -2,6 +2,18 @@ import { useState, useCallback, useRef } from 'react'
 import { updatePlayerProgress } from '../firebase/challenge'
 import type { WOMWord, WOMTile, WOMTileState, WOMHintType, WOMHintResult } from '../types/wordOMeter'
 
+async function loadWordlist(n: number): Promise<ReadonlySet<string>> {
+  switch (n) {
+    case 3: return (await import('../data/wordlists/wom-3')).default
+    case 4: return (await import('../data/wordlists/wom-4')).default
+    case 5: return (await import('../data/wordlists/wom-5')).default
+    case 6: return (await import('../data/wordlists/wom-6')).default
+    case 7: return (await import('../data/wordlists/wom-7')).default
+    case 8: return (await import('../data/wordlists/wom-8')).default
+    default: throw new Error(`No wordlist for ${n}-letter words`)
+  }
+}
+
 type GameStatus = 'playing' | 'won' | 'lost'
 
 export interface ChallengeWOMGameState {
@@ -156,7 +168,7 @@ export function useChallengeWOMGame({ gameCode, uid, word }: UseChallengeWOMGame
     if (s.currentGuess !== word.word) {
       setState((prev) => ({ ...prev, validating: true, error: null }))
       try {
-        const { default: wordSet } = await import(`../data/wordlists/wom-${word.letterCount}`)
+        const wordSet = await loadWordlist(word.letterCount)
         if (!wordSet.has(s.currentGuess)) {
           setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
           setTimeout(() => setState((prev) => ({ ...prev, shake: false })), 600)
