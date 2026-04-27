@@ -812,9 +812,13 @@ Mental Maths/
 │   │                                 # Requires serviceAccount.json (git-ignored)
 │   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
 │   ├── seed-science-grade9-10.cjs    # Seeds scienceQuestions for Grades 9–10
-│   │                                 # 300 questions (150/grade); ~38 imageUrl + ~38 multi-select per grade
+│   │                                 # 245 questions (initial run); run supplement below to reach 150/grade
 │   │                                 # Requires serviceAccount.json (git-ignored)
 │   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
+│   ├── seed-science-grade9-10-supplement.cjs  # Tops up Grades 9–10 to 150 each
+│   │                                 # 55 questions (20 Gr 9 + 35 Gr 10); brings totals to 38 imageUrl + 38 multi-select per grade
+│   │                                 # Run AFTER seed-science-grade9-10.cjs
+│   │                                 # Requires serviceAccount.json (git-ignored)
 │   └── generate-wordlists.cjs    # Generates src/data/wordlists/wom-{3..8}.ts from sowpods npm pkg
 │                                 # Run: node scripts/generate-wordlists.cjs
 │
