@@ -7,9 +7,10 @@
 1. [x] Grades 5–6 seeded (seed-science-questions.cjs — 300 questions)
 2. [x] Grades 7–8 seeded (seed-science-grade7-8.cjs — 300 questions)
 3. [x] ScienceQuestion type, firebase/science.ts, hooks, screens, challenge integration complete
-4. [ ] Add imageUrl?: string to ScienceQuestion type
-5. [ ] Update ScienceGameScreen to render image if present
-6. [ ] Create scripts/seed-science-grade9-12.cjs (grades 9–12, 150 questions each, 38 with imageUrl, 38 multi-select)
+4. [x] Added imageUrl?: string to ScienceQuestion type
+5. [x] ScienceGameScreen renders image above question when imageUrl is present
+6. [x] Grades 9–10 seeded (seed-science-grade9-10.cjs + supplement) — 150 Qs each, 38 image, 38 multi-select
+7. [ ] Create scripts/seed-science-grade11-12.cjs and seed (grades 11–12, 150 Qs each, 38 imageUrl, 38 multi-select)
 
 ## Current Logic Context
 - ScienceQuestion: { id, grade, question, options[4], correctIndices[], topic }
@@ -44,7 +45,6 @@
     Qs each, ~38 multi-select + ~38 imageUrl per grade)
     
 ## Next Immediate Step
-- Run: node scripts/seed-science-grade9-12.cjs <service-account.json>
-- Seed 1 grade-1 subject combination at one time, so that you do not exceed output token maximum in a session
-- After seeding, verify counts in Firestore console
-- Update docs/REQUIREMENTS.md, DESIGN.md, SPECS.md with imageUrl field and grades 9–12
+- Write scripts/seed-science-grade11-12.cjs (150 Qs each, 38 imageUrl, 38 multi-select)
+- Run: node scripts/seed-science-grade11-12.cjs path/to/service-account.json
+- After seeding, update SPECS.md file inventory and DESIGN.md seeding rationale for grades 11–12
