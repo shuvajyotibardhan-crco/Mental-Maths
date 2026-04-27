@@ -11,7 +11,7 @@
 5. [x] ScienceGameScreen renders image above question when imageUrl is present
 6. [x] Grades 9–10 seeded (seed-science-grade9-10.cjs + supplement) — 150 Qs each, 38 image, 38 multi-select
 7. [x] Grade 11: seed-science-grade11.cjs written and run (150 Qs, 49 imageUrl, 38 multi-select) ✅
-8. [ ] Grade 12: seed-science-grade12.cjs — not yet written
+8. [x] Grade 12: seed-science-grade12.cjs written and run (150 Qs, 76 imageUrl, 64 multi-select) ✅
 
 
 ## Current Logic Context
@@ -47,6 +47,6 @@
     Qs each, ~38 multi-select + ~38 imageUrl per grade)
     
 ## Next Immediate Step
-- Write scripts/seed-science-grade12.cjs (150 Qs, ≥38 imageUrl, 38 multi-select)
-- Run: node scripts/seed-science-grade12.cjs mental-maths-fabc3-firebase-adminsdk-fbsvc-76db81f25e.json
-- After run: update SPECS.md file inventory and DESIGN.md for grades 11–12
+- All grades 5–12 now seeded ✅
+- Update SPECS.md and DESIGN.md to reflect Grade 12 seed script
+- Science Quiz seeding is complete

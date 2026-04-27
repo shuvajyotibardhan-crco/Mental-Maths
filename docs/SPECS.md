@@ -823,6 +823,10 @@ Mental Maths/
 │   │                                 # 150 questions; 49 imageUrl + 38 multi-select
 │   │                                 # Requires serviceAccount.json (git-ignored)
 │   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
+│   ├── seed-science-grade12.cjs      # Seeds scienceQuestions for Grade 12
+│   │                                 # 150 questions; 76 imageUrl + 64 multi-select
+│   │                                 # Requires serviceAccount.json (git-ignored)
+│   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
 │   └── generate-wordlists.cjs    # Generates src/data/wordlists/wom-{3..8}.ts from sowpods npm pkg
 │                                 # Run: node scripts/generate-wordlists.cjs
 │
