@@ -1,5 +1,12 @@
 # Mental Maths — Project Context
 
+## Global Rules
+
+See `/Users/shuvajyotibardhan/Projects/.claude_rules.md` for the full rules. Summary:
+- **Token Savings** — diffs only (no full-file rewrites), check/create `progress.md` before starting, no exploratory terminal commands, keep explanations brief.
+- **Documentation** — for every feature/bug: create/update requirements, design, specs, and tasks docs; seek approval before pushing each to git.
+- **progress.md** — always maintain using the template in the rules file to track current task, completed steps, and next action.
+
 ## What this is
 A mental maths practice app for kids/students. Vite + React + **TypeScript** + Tailwind CSS v4 + Firebase (Auth + Firestore).
 

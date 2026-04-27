@@ -125,7 +125,14 @@ export function ScienceGameScreen({
         </div>
 
         {/* Question */}
-        <div className="bg-white rounded-3xl shadow-md p-5">
+        <div className="bg-white rounded-3xl shadow-md p-5 flex flex-col gap-3">
+          {question.imageUrl && (
+            <img
+              src={question.imageUrl}
+              alt="Science diagram"
+              className="w-full max-h-48 object-contain rounded-xl bg-gray-50"
+            />
+          )}
           <p className="text-base font-semibold text-gray-800 leading-snug">{question.question}</p>
         </div>
 

@@ -138,6 +138,7 @@ interface ScienceQuestion {
   options: [string, string, string, string]  // four answer choices (shuffled at fetch time)
   correctIndices: number[]          // sorted indices of correct options (1–4 correct)
   topic: string                     // 'Biology' | 'Chemistry' | 'Physics' | 'Earth Science'
+  imageUrl?: string                 // optional Wikimedia Commons image shown above the question
 }
 ```
 
@@ -808,6 +809,10 @@ Mental Maths/
 │   │                                 # Requires serviceAccount.json (git-ignored)
 │   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
 │   ├── seed-science-grade7-8.cjs     # Seeds scienceQuestions for Grades 7–8
+│   │                                 # Requires serviceAccount.json (git-ignored)
+│   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
+│   ├── seed-science-grade9-10.cjs    # Seeds scienceQuestions for Grades 9–10
+│   │                                 # 300 questions (150/grade); ~38 imageUrl + ~38 multi-select per grade
 │   │                                 # Requires serviceAccount.json (git-ignored)
 │   │                                 # Uses preferRest:true to avoid Node v24 gRPC issue
 │   └── generate-wordlists.cjs    # Generates src/data/wordlists/wom-{3..8}.ts from sowpods npm pkg

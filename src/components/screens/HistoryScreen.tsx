@@ -130,9 +130,11 @@ export function HistoryScreen() {
                   <span className="font-semibold text-gray-800">
                     {s.subject === 'wordOMeter'
                       ? 'Word-O-Meter'
-                      : s.operation
-                        ? OPERATION_LABELS[s.operation]
-                        : 'Social Studies'}
+                      : s.subject === 'science'
+                        ? 'Science'
+                        : s.operation
+                          ? OPERATION_LABELS[s.operation]
+                          : 'Social Studies'}
                   </span>
                   {s.challengeId && (
                     <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">
@@ -144,9 +146,11 @@ export function HistoryScreen() {
                 <p className="text-xs text-gray-500 mt-0.5">
                   {s.subject === 'wordOMeter'
                     ? `"${s.word ?? ''}" • Grade ${s.grade}`
-                    : s.operation
-                      ? `${s.difficulty} • ${s.mode === 'timed' ? '2 min' : '20 Qs'} • Grade ${s.grade}`
-                      : `Grade ${s.grade}`}
+                    : s.subject === 'science'
+                      ? `Grade ${s.grade} • 20 Qs`
+                      : s.operation
+                        ? `${s.difficulty} • ${s.mode === 'timed' ? '2 min' : '20 Qs'} • Grade ${s.grade}`
+                        : `Grade ${s.grade}`}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {new Date(s.timestamp).toLocaleDateString()}

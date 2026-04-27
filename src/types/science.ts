@@ -7,6 +7,7 @@ export interface ScienceQuestion {
   options: [string, string, string, string]
   correctIndices: number[]   // sorted, 1–4 correct option indices
   topic: string              // e.g. 'Biology', 'Chemistry', 'Physics', 'Earth Science'
+  imageUrl?: string          // optional diagram/image shown above the question
 }
 
 export interface ScienceAnsweredQuestion {
