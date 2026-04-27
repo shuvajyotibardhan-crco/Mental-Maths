@@ -167,7 +167,8 @@ export function useWordOMeterGame(userId: string) {
           return
         }
       } catch {
-        // Wordlist failed to load — allow rather than block gameplay
+        setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
+        return
       }
       setState((prev) => ({ ...prev, validating: false }))
     }

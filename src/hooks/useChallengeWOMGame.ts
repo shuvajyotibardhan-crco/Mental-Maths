@@ -162,7 +162,11 @@ export function useChallengeWOMGame({ gameCode, uid, word }: UseChallengeWOMGame
           setTimeout(() => setState((prev) => ({ ...prev, shake: false })), 600)
           return
         }
-      } catch { /* Wordlist failed to load — allow rather than block */ }
+      } catch {
+        setState((prev) => ({ ...prev, validating: false, shake: true, error: 'Not a valid English word' }))
+        setTimeout(() => setState((prev) => ({ ...prev, shake: false })), 600)
+        return
+      }
       setState((prev) => ({ ...prev, validating: false }))
     }
 
