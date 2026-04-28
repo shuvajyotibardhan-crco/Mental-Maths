@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { getSessions } from '../../firebase/firestore'
-import { GRADE_OPTIONS } from '../../constants/gradeConfig'
+import { OPERATION_LABELS, GRADE_OPTIONS } from '../../constants/gradeConfig'
 import type { SessionRecord, Grade } from '../../types'
 
 type DateFilter = 'all' | 'today' | '7days' | '30days'
