@@ -1012,10 +1012,10 @@ The template must define these variables and set "To Email" to `app_admin@divel.
 
 ### Password Reset Email Sender
 Self-service password reset emails are sent from the `sendPasswordResetLink` Cloud Function via **nodemailer** (Gmail SMTP). Required environment variables (set in `functions/.env` during CI, sourced from GitHub Secrets):
-- `SMTP_USER` — Gmail address used to send (e.g. `app_admin@divel.me`)
-- `SMTP_PASS` — Gmail App Password for that account (requires 2FA enabled on the Google account)
+- `SMTP_USER` — Tuta email address used to send (`app_admin@divel.me`)
+- `SMTP_PASS` — Tuta account password for that address
 
-GitHub Secrets to add: `SMTP_USER`, `SMTP_PASS`.
+SMTP host: `smtp.tuta.com`, port 465, SSL. GitHub Secrets to add: `SMTP_USER`, `SMTP_PASS`.
 
 ### Admin Password Reset (Cloud Function)
 Admin-initiated password resets bypass email entirely. The admin sets a temporary password directly via the `adminSetPassword` Cloud Function:
