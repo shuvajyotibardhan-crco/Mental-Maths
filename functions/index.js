@@ -101,12 +101,12 @@ exports.updateRecoveryEmail = onCall(async (request) => {
       // auth/user-not-found means the email is free — continue
     }
 
-    // 1. Migrate Firebase Auth to synthetic email (fixes legacy users)
-    await auth.updateUser(uid, { email: syntheticEmail })
-    // 2. Store recovery email in Firestore
+    // Set Firebase Auth email to recovery email so sendPasswordResetEmail reaches the user
+    await auth.updateUser(uid, { email: trimmed })
+    // Store recovery email in Firestore for unauthenticated password-reset lookup
     await db.doc(`usernameLookup/${username.toLowerCase()}`).set({ reserved: true, recoveryEmail: trimmed })
   } else {
-    // Removing recovery email: migrate to synthetic, clear Firestore field
+    // Removing recovery email: fall back to synthetic so the account has a valid email
     await auth.updateUser(uid, { email: syntheticEmail })
     await db.doc(`usernameLookup/${username.toLowerCase()}`).set({ reserved: true })
   }
