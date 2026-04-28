@@ -352,10 +352,12 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 ### Synthetic Email Convention
 All accounts are created with a synthetic email: `username@mentalmaths.app`.
 
-When a recovery email is set via Profile or Registration:
-1. `verifyBeforeUpdateEmail(user, recoveryEmail)` is called — sends verification to the recovery address.
-2. On click, Firebase Auth updates the account's email to `recoveryEmail`.
+When a recovery email is set via Profile, the `updateRecoveryEmail` Cloud Function:
+1. Calls `auth.updateUser(uid, { email: recoveryEmail })` — sets Firebase Auth account email to the recovery address immediately.
+2. Stores `recoveryEmail` in Firestore `usernameLookup/{username}`.
 3. `sendPasswordResetEmail(auth, recoveryEmail)` then reaches the correct account.
+
+When recovery email is removed: Firebase Auth email reverts to `username@mentalmaths.app`.
 
 ### Login Fallback
 ```

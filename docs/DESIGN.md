@@ -188,7 +188,7 @@ Presentational game UI components. `QuestionCard` handles animation states (boun
 The app has a linear, predictable flow with no deep linking or browser back-button requirements. A simple `currentScreen` state in `AppShell` is sufficient and eliminates a dependency. Adding React Router would add complexity without benefit at this scale.
 
 **Why synthetic emails?**
-Firebase Authentication requires an email address. Rather than making email mandatory (which excludes young users who may not have one), a synthetic email (`username@mentalmaths.app`) is generated internally. Users never see it. A real recovery email can be optionally added for password reset — this is stored separately in `usernameLookup` and set as the Firebase Auth email via `verifyBeforeUpdateEmail`.
+Firebase Authentication requires an email address. Rather than making email mandatory (which excludes young users who may not have one), a synthetic email (`username@mentalmaths.app`) is generated internally. Users never see it. A real recovery email can be optionally added for password reset — this is stored in `usernameLookup` and set as the Firebase Auth account email directly via the `updateRecoveryEmail` Cloud Function (no verification step).
 
 **Why usernameLookup is a separate collection?**
 Username uniqueness must be checked before a Firebase Auth account is created. A dedicated `usernameLookup` collection with the username as the document ID allows an atomic existence check without querying the `users` collection (which requires auth). It also stores the recovery email for unauthenticated password-reset lookups.

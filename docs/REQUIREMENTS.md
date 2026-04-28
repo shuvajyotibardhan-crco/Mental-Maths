@@ -244,8 +244,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 4. Change Password shall not require the old password.
 5. If session is too old, a "log out and back in" message shall appear instead of changing.
 6. Recovery email can be added or updated; validation rules identical to registration.
-7. Saving a new recovery email shall trigger a Firebase verification email.
-8. Until the verification link is clicked, the recovery email is not active for password reset.
+7. Saving a new recovery email shall activate it immediately for password reset (no verification step).
 
 **Test Plan:**
 
