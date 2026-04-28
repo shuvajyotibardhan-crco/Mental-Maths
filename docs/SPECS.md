@@ -352,10 +352,16 @@ type HighScoreKey = `${Grade}_${OperationType}_${Difficulty}_${GameMode}`
 ### Synthetic Email Convention
 All accounts are created with a synthetic email: `username@mentalmaths.app`.
 
-When a recovery email is set via Profile or Registration:
-1. `verifyBeforeUpdateEmail(user, recoveryEmail)` is called — sends verification to the recovery address.
-2. On click, Firebase Auth updates the account's email to `recoveryEmail`.
-3. `sendPasswordResetEmail(auth, recoveryEmail)` then reaches the correct account.
+When a recovery email is set via Profile, the `updateRecoveryEmail` Cloud Function:
+1. Migrates (or keeps) the Firebase Auth account on the synthetic email (`username@mentalmaths.app`).
+2. Stores `recoveryEmail` in Firestore `usernameLookup/{username}`.
+
+Self-service password reset flow (`sendPasswordResetLink` Cloud Function):
+1. Client calls Cloud Function with `{ recoveryEmail }`.
+2. Function queries `usernameLookup` for the entry with matching `recoveryEmail`.
+3. If found, calls `admin.auth().generatePasswordResetLink(syntheticEmail)`.
+4. Sends the link to the recovery address via nodemailer (Gmail SMTP).
+5. Silently returns `{ success: true }` regardless — avoids email enumeration.
 
 ### Login Fallback
 ```
@@ -1005,10 +1011,11 @@ The template must define these variables and set "To Email" to `app_admin@divel.
 | `{{username}}` | User's app username |
 
 ### Password Reset Email Sender
-Self-service password reset emails (triggered by users from the login screen) are sent from `app_admin@divel.me`. Configuration:
-1. Firebase Console → Authentication → Email Templates → Password reset → Edit
-2. "From" set to `app_admin` with custom domain `@divel.me`
-3. Custom domain `divel.me` is verified — active in production.
+Self-service password reset emails are sent from the `sendPasswordResetLink` Cloud Function via **nodemailer** (Gmail SMTP). Required environment variables (set in `functions/.env` during CI, sourced from GitHub Secrets):
+- `SMTP_USER` — Gmail address used to send (e.g. `app_admin@divel.me`)
+- `SMTP_PASS` — Gmail App Password for that account (requires 2FA enabled on the Google account)
+
+GitHub Secrets to add: `SMTP_USER`, `SMTP_PASS`.
 
 ### Admin Password Reset (Cloud Function)
 Admin-initiated password resets bypass email entirely. The admin sets a temporary password directly via the `adminSetPassword` Cloud Function:
