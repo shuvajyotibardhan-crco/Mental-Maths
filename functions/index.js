@@ -2,61 +2,8 @@ const { onCall, HttpsError } = require('firebase-functions/v2/https')
 const { initializeApp } = require('firebase-admin/app')
 const { getAuth } = require('firebase-admin/auth')
 const { getFirestore } = require('firebase-admin/firestore')
-const nodemailer = require('nodemailer')
 
 initializeApp()
-
-/**
- * sendPasswordResetLink — looks up the Firebase Auth account by recovery email,
- * generates a reset link for the synthetic-email account, and emails it to the
- * user's real recovery address. Unauthenticated; never reveals whether an account exists.
- */
-exports.sendPasswordResetLink = onCall(async (request) => {
-  const { recoveryEmail } = request.data
-  if (!recoveryEmail || typeof recoveryEmail !== 'string') {
-    throw new HttpsError('invalid-argument', 'recoveryEmail is required.')
-  }
-
-  const db = getFirestore()
-  const auth = getAuth()
-  const email = recoveryEmail.toLowerCase().trim()
-
-  // Find the username whose recovery email matches
-  const snap = await db.collection('usernameLookup')
-    .where('recoveryEmail', '==', email)
-    .limit(1)
-    .get()
-
-  // Silently succeed if no match — avoid email enumeration
-  if (!snap.empty) {
-    const username = snap.docs[0].id
-    const syntheticEmail = `${username}@mentalmaths.app`
-
-    const resetLink = await auth.generatePasswordResetLink(syntheticEmail)
-
-    const transporter = nodemailer.createTransport({
-      host: 'smtp.tuta.com',
-      port: 465,
-      secure: true,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-    })
-
-    await transporter.sendMail({
-      from: `"Divel Edu Quiz" <${process.env.SMTP_USER}>`,
-      to: email,
-      subject: 'Reset your Divel Edu Quiz password',
-      html: `
-        <p>Hi,</p>
-        <p>Click the link below to reset the password for your <strong>@${username}</strong> account:</p>
-        <p><a href="${resetLink}" style="font-size:16px">Reset my password</a></p>
-        <p>This link expires in 1 hour. If you didn't request this, you can safely ignore it.</p>
-        <p>— Divel Edu Quiz</p>
-      `,
-    })
-  }
-
-  return { success: true }
-})
 
 /**
  * adminSetPassword — sets a new password for any user.
