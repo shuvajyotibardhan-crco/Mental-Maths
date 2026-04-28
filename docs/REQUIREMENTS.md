@@ -217,7 +217,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 **Acceptance Criteria:**
 1. History screen shall list all sessions in reverse chronological order.
 2. Each entry shall show: operation, difficulty, mode, grade, score, accuracy, date, and a trophy icon if it was a high score.
-3. Filters shall include: date range (All / Today / 7 days / 30 days), grade, and operation.
+3. Filters shall include: date range (All / Today / 7 days / 30 days), grade, and quiz type (Mental Maths, Social Studies, Word-O-Meter, Science).
 4. Summary stats (total games and average accuracy) shall appear at the top.
 5. Sessions older than 6 months shall be automatically purged on app startup.
 
@@ -228,7 +228,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 | Open History after 3 games | 3 entries shown, most recent first |
 | Apply "Today" filter | Only today's sessions shown |
 | Apply grade filter | Only sessions matching selected grade shown |
-| Apply operation filter | Only sessions matching selected operation shown |
+| Apply quiz type filter | Only sessions matching selected quiz type shown |
 | Session with high score | Trophy icon visible on that entry |
 
 ---

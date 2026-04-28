@@ -75,7 +75,7 @@ export interface SessionFilter {
   startDate?: Date
   endDate?: Date
   grade?: Grade
-  operation?: string
+  subject?: string
 }
 
 export async function getSessions(filter: SessionFilter): Promise<SessionRecord[]> {
@@ -114,8 +114,8 @@ export async function getSessions(filter: SessionFilter): Promise<SessionRecord[
   if (filter.grade) {
     results = results.filter((s) => s.grade === filter.grade)
   }
-  if (filter.operation) {
-    results = results.filter((s) => s.operation === filter.operation)
+  if (filter.subject) {
+    results = results.filter((s) => s.subject === filter.subject)
   }
 
   // Sort by timestamp descending

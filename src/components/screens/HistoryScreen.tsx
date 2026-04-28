@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../../context/AuthContext'
 import { getSessions } from '../../firebase/firestore'
-import { OPERATION_LABELS, GRADE_OPTIONS } from '../../constants/gradeConfig'
-import type { SessionRecord, Grade, OperationType } from '../../types'
+import { GRADE_OPTIONS } from '../../constants/gradeConfig'
+import type { SessionRecord, Grade } from '../../types'
 
 type DateFilter = 'all' | 'today' | '7days' | '30days'
+type SubjectFilter = 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science' | ''
+
+const SUBJECT_LABELS: Record<Exclude<SubjectFilter, ''>, string> = {
+  mentalMaths: 'Mental Maths',
+  socialStudies: 'Social Studies',
+  wordOMeter: 'Word-O-Meter',
+  science: 'Science',
+}
 
 export function HistoryScreen() {
   const { profile } = useAuth()
@@ -12,7 +20,7 @@ export function HistoryScreen() {
   const [loading, setLoading] = useState(true)
   const [dateFilter, setDateFilter] = useState<DateFilter>('all')
   const [gradeFilter, setGradeFilter] = useState<Grade | ''>('')
-  const [operationFilter, setOperationFilter] = useState<OperationType | ''>('')
+  const [subjectFilter, setSubjectFilter] = useState<SubjectFilter>('')
 
   useEffect(() => {
     if (!profile) return
@@ -38,14 +46,14 @@ export function HistoryScreen() {
         userId: profile!.uid,
         startDate,
         grade: gradeFilter || undefined,
-        operation: operationFilter || undefined,
+        subject: subjectFilter || undefined,
       })
       setSessions(results)
       setLoading(false)
     }
 
     load().catch(console.error)
-  }, [profile, dateFilter, gradeFilter, operationFilter])
+  }, [profile, dateFilter, gradeFilter, subjectFilter])
 
   const totalGames = sessions.length
   const avgAccuracy = totalGames > 0
@@ -101,12 +109,12 @@ export function HistoryScreen() {
           </select>
 
           <select
-            value={operationFilter}
-            onChange={(e) => setOperationFilter(e.target.value as OperationType | '')}
+            value={subjectFilter}
+            onChange={(e) => setSubjectFilter(e.target.value as SubjectFilter)}
             className="flex-1 px-3 py-2 rounded-xl bg-white/80 text-sm border-0 outline-none cursor-pointer"
           >
-            <option value="">All Operations</option>
-            {Object.entries(OPERATION_LABELS).map(([val, label]) => (
+            <option value="">All Quiz Types</option>
+            {(Object.entries(SUBJECT_LABELS) as [Exclude<SubjectFilter, ''>, string][]).map(([val, label]) => (
               <option key={val} value={val}>{label}</option>
             ))}
           </select>
