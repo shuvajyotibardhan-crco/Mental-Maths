@@ -4,7 +4,6 @@ import {
   signOut,
   updateProfile,
   updatePassword,
-  sendPasswordResetEmail,
   deleteUser,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
@@ -58,7 +57,8 @@ export async function logoutUser(): Promise<void> {
 }
 
 export async function resetPasswordByUsername(recoveryEmail: string): Promise<void> {
-  await sendPasswordResetEmail(auth, recoveryEmail)
+  const fn = httpsCallable(functions, 'sendPasswordResetLink')
+  await fn({ recoveryEmail })
 }
 
 export async function changePassword(newPassword: string): Promise<void> {

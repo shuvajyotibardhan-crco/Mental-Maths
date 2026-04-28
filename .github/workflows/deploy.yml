@@ -45,6 +45,9 @@ jobs:
       - name: Deploy Firebase Functions
         env:
           FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_PASS: ${{ secrets.SMTP_PASS }}
         run: |
           echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa.json
+          printf "SMTP_USER=%s\nSMTP_PASS=%s\n" "$SMTP_USER" "$SMTP_PASS" > functions/.env
           GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa.json npx firebase-tools deploy --only functions --project mental-maths-fabc3 --force
