@@ -7,51 +7,7 @@ DIVEL EDU QUIZ is a single-page React application built with TypeScript and Tail
 
 ## Architecture Diagram
 
-```
-Browser
-  │
-  ├── main.tsx → App.tsx (Provider stack)
-  │     ├── AuthProvider        (Firebase auth state + user profile)
-  │     ├── SettingsProvider    (sound toggle, localStorage)
-  │     └── AppShell            (screen router + GameProvider)
-  │           ├── Header / BottomNav
-  │           └── <ActiveScreen>
-  │
-  ├── Screens (src/components/screens/)
-  │     LoginScreen ──────────────────────────────────────┐
-  │     RegisterScreen ────────────────────────────────── │
-  │     ProfileSetupScreen ─────────────────────────────  │
-  │     HomeScreen                                        │
-  │     GameSetupScreen                                   │ Firebase
-  │     GameScreen ──→ useTimer, QuestionCard,            │ Auth
-  │                    NumberPad, ScoreBar, Timer          │
-  │     ResultsScreen                                     │
-  │     HistoryScreen ──────────────────────────────────  │
-  │     ProfileScreen ──────────────────────────────────  │
-  │     SettingsScreen                                    │
-  │     ChallengeCreateScreen ───────────────────────── │
-  │     JoinChallengeScreen ─────────────────────────── │
-  │     ChallengeLobbyScreen ────── onSnapshot listener │
-  │     ChallengeGameScreen ──→ useChallengeGame,       │
-  │                               QuestionCard, etc.    │
-  │     ChallengeResultsScreen                          │
-  │                                                       │
-  ├── Engine (src/engine/)                                │
-  │     questionGenerator.ts   (pure function)            ▼
-  │     scoring.ts             (pure function)       Firestore
-  │     gameCode.ts            (code generator)         │
-  │                                                       │
-  ├── Firebase (src/firebase/)                            │
-  │     config.ts ────────────────────────────────────── │
-  │     auth.ts   ──────────────────────────────── Auth  │
-  │     firestore.ts ──────────────────────── Firestore  │
-  │     challenge.ts ─────────────────────── Firestore  │
-  │                                                       │
-  └── Context (src/context/)                             │
-        AuthContext.tsx ────── reads profile ────────────┘
-        GameContext.tsx ────── reducer-based game state
-        SettingsContext.tsx ── localStorage
-```
+![Architecture Diagram](architecture.drawio)
 
 ---
 

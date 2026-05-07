@@ -1,0 +1,213 @@
+<mxGraphModel dx="1422" dy="762" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1900" pageHeight="1100" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- CLIENT / BROWSER -->
+    <mxCell id="client" value="Client — React SPA (Browser)" style="swimlane;startSize=32;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=13;rounded=1;arcSize=3;" vertex="1" parent="1">
+      <mxGeometry x="10" y="10" width="1080" height="720" as="geometry" />
+    </mxCell>
+
+    <mxCell id="ctx-row" value="Context Providers" style="swimlane;startSize=24;fillColor=#f5f5f5;strokeColor=#aaa;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="20" y="44" width="1040" height="95" as="geometry" />
+    </mxCell>
+    <mxCell id="auth-ctx" value="AuthContext&#xa;(auth state + UserProfile)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="ctx-row">
+      <mxGeometry x="20" y="30" width="220" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="settings-ctx" value="SettingsContext&#xa;(sound on/off · localStorage)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="ctx-row">
+      <mxGeometry x="260" y="30" width="220" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="game-ctx" value="GameContext — reducer&#xa;(Maths solo game only)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="ctx-row">
+      <mxGeometry x="500" y="30" width="220" height="50" as="geometry" />
+    </mxCell>
+
+    <mxCell id="appshell" value="AppShell — Screen Router  (currentScreen state · no external router · admin check on login · purgeOldSessions on mount)" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="20" y="152" width="1040" height="40" as="geometry" />
+    </mxCell>
+
+    <mxCell id="mm-col" value="Mental Maths" style="swimlane;startSize=24;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="20" y="205" width="193" height="230" as="geometry" />
+    </mxCell>
+    <mxCell id="mm-screens" value="GameSetup / Game / Results" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="mm-col">
+      <mxGeometry x="10" y="34" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="mm-hook" value="GameContext + useTimer" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="mm-col">
+      <mxGeometry x="10" y="76" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="mm-engine" value="questionGenerator + scoring&#xa;(pure fns · local · no Firestore)" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="mm-col">
+      <mxGeometry x="10" y="118" width="173" height="42" as="geometry" />
+    </mxCell>
+    <mxCell id="mm-local" value="localStorage: mm_seen_questions" style="rounded=1;fillColor=#f5f5f5;strokeColor=#aaa;fontSize=8;" vertex="1" parent="mm-col">
+      <mxGeometry x="10" y="170" width="173" height="28" as="geometry" />
+    </mxCell>
+
+    <mxCell id="ss-col" value="Social Studies" style="swimlane;startSize=24;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="223" y="205" width="193" height="230" as="geometry" />
+    </mxCell>
+    <mxCell id="ss-screens" value="SSSetup / SSGame / SSResults" style="rounded=1;fillColor=white;strokeColor=#82b366;fontSize=9;" vertex="1" parent="ss-col">
+      <mxGeometry x="10" y="34" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="ss-hook" value="useSocialStudiesGame" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="ss-col">
+      <mxGeometry x="10" y="76" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="ss-firebase" value="socialStudies.ts&#xa;(fetch · dedup · shuffle options)" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="ss-col">
+      <mxGeometry x="10" y="118" width="173" height="42" as="geometry" />
+    </mxCell>
+    <mxCell id="ss-local" value="localStorage: mm_ss_seen_&lt;grade&gt;" style="rounded=1;fillColor=#f5f5f5;strokeColor=#aaa;fontSize=8;" vertex="1" parent="ss-col">
+      <mxGeometry x="10" y="170" width="173" height="28" as="geometry" />
+    </mxCell>
+
+    <mxCell id="sci-col" value="Science" style="swimlane;startSize=24;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="426" y="205" width="193" height="230" as="geometry" />
+    </mxCell>
+    <mxCell id="sci-screens" value="ScienceSetup / ScienceGame&#xa;/ ScienceResults" style="rounded=1;fillColor=white;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="sci-col">
+      <mxGeometry x="10" y="34" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="sci-hook" value="useScienceGame" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="sci-col">
+      <mxGeometry x="10" y="76" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="sci-firebase" value="science.ts&#xa;(cumulative pool · dedup · shuffle)" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=9;" vertex="1" parent="sci-col">
+      <mxGeometry x="10" y="118" width="173" height="42" as="geometry" />
+    </mxCell>
+    <mxCell id="sci-local" value="localStorage: mm_sci_seen_&lt;grade&gt;" style="rounded=1;fillColor=#f5f5f5;strokeColor=#aaa;fontSize=8;" vertex="1" parent="sci-col">
+      <mxGeometry x="10" y="170" width="173" height="28" as="geometry" />
+    </mxCell>
+
+    <mxCell id="wom-col" value="Word-O-Meter" style="swimlane;startSize=24;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="629" y="205" width="193" height="230" as="geometry" />
+    </mxCell>
+    <mxCell id="wom-screens" value="WOMSetup / WOMGame / WOMResults" style="rounded=1;fillColor=white;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="wom-col">
+      <mxGeometry x="10" y="34" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="wom-hook" value="useWordOMeterGame" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=9;" vertex="1" parent="wom-col">
+      <mxGeometry x="10" y="76" width="173" height="32" as="geometry" />
+    </mxCell>
+    <mxCell id="wom-data" value="wordOMeterData.ts (static ~900 words)&#xa;+ SOWPODS wom-3..8.ts (Vite chunks)" style="rounded=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="wom-col">
+      <mxGeometry x="10" y="118" width="173" height="42" as="geometry" />
+    </mxCell>
+    <mxCell id="wom-local" value="localStorage: mm_wom_seen_&lt;n&gt;" style="rounded=1;fillColor=#f5f5f5;strokeColor=#aaa;fontSize=8;" vertex="1" parent="wom-col">
+      <mxGeometry x="10" y="170" width="173" height="28" as="geometry" />
+    </mxCell>
+
+    <mxCell id="shared-col" value="Shared Screens" style="swimlane;startSize=24;fillColor=#f5f5f5;strokeColor=#666;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="832" y="205" width="228" height="230" as="geometry" />
+    </mxCell>
+    <mxCell id="auth-screens-node" value="Login / Register / ProfileSetup" style="rounded=1;fillColor=white;strokeColor=#666;fontSize=9;" vertex="1" parent="shared-col">
+      <mxGeometry x="10" y="34" width="208" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="profile-node" value="Profile / Settings / History" style="rounded=1;fillColor=white;strokeColor=#666;fontSize=9;" vertex="1" parent="shared-col">
+      <mxGeometry x="10" y="72" width="208" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="admin-node" value="AdminScreen 🛡️ (users · audit · dashboard)" style="rounded=1;fillColor=white;strokeColor=#666;fontSize=9;" vertex="1" parent="shared-col">
+      <mxGeometry x="10" y="110" width="208" height="28" as="geometry" />
+    </mxCell>
+    <mxCell id="challenge-node" value="Challenge Flow&#xa;(Create / Join / Lobby / Game / Results)" style="rounded=1;fillColor=white;strokeColor=#666;fontSize=9;" vertex="1" parent="shared-col">
+      <mxGeometry x="10" y="148" width="208" height="38" as="geometry" />
+    </mxCell>
+    <mxCell id="contact-node" value="ContactScreen" style="rounded=1;fillColor=white;strokeColor=#666;fontSize=9;" vertex="1" parent="shared-col">
+      <mxGeometry x="10" y="196" width="208" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="challenge-hooks" value="Multiplayer Hooks: useChallengeGame · useChallengeSSGame · useChallengeScienceGame · useChallengeWOMGame · useChallengeListener (Firestore onSnapshot)" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="client">
+      <mxGeometry x="20" y="448" width="1040" height="44" as="geometry" />
+    </mxCell>
+
+    <mxCell id="firebase-sdk" value="Firebase SDK Layer  ·  src/firebase / { config · auth · firestore · challenge · socialStudies · science · wordOMeter · admin }.ts" style="rounded=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=10;fontStyle=1;" vertex="1" parent="client">
+      <mxGeometry x="20" y="506" width="1040" height="44" as="geometry" />
+    </mxCell>
+
+    <!-- FIREBASE PLATFORM -->
+    <mxCell id="firebase" value="Firebase Platform" style="swimlane;startSize=32;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;fontSize=13;rounded=1;arcSize=3;" vertex="1" parent="1">
+      <mxGeometry x="1110" y="10" width="660" height="720" as="geometry" />
+    </mxCell>
+
+    <mxCell id="fb-auth" value="Firebase Authentication&#xa;email/password · synthetic email (username@mentalmaths.app)&#xa;recovery email set as auth email → enables sendPasswordResetEmail" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=10;" vertex="1" parent="firebase">
+      <mxGeometry x="20" y="50" width="620" height="70" as="geometry" />
+    </mxCell>
+
+    <mxCell id="fb-firestore" value="Cloud Firestore" style="swimlane;startSize=26;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;fontStyle=1;" vertex="1" parent="firebase">
+      <mxGeometry x="20" y="140" width="620" height="320" as="geometry" />
+    </mxCell>
+    <mxCell id="c-users" value="users/{uid}&#xa;profile + grade" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="10" y="36" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-lookup" value="usernameLookup/{username}&#xa;recoveryEmail (public read)" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="215" y="36" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-sessions" value="sessions/{id}&#xa;all subjects · 6-month TTL" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="420" y="36" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-challenges" value="challenges/{gameCode}&#xa;config + questions + players" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="10" y="104" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-ss" value="socialStudiesQuestions&#xa;800 Qs · Grades 3–12" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="215" y="104" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-sci" value="scienceQuestions&#xa;900 Qs · Grades 5–12" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="420" y="104" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-admins" value="admins/{uid}&#xa;access control (no custom claims)" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="10" y="172" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-audit" value="auditLog/{id}&#xa;every admin action logged" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="215" y="172" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-highscores" value="highScores/{uid}/{op}&#xa;personal bests" style="rounded=1;fillColor=white;strokeColor=#6c8ebf;fontSize=9;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="420" y="172" width="185" height="50" as="geometry" />
+    </mxCell>
+    <mxCell id="c-note" value="All filtering done client-side to avoid composite index requirements" style="text;fontSize=9;fontStyle=2;align=left;" vertex="1" parent="fb-firestore">
+      <mxGeometry x="10" y="240" width="600" height="24" as="geometry" />
+    </mxCell>
+
+    <mxCell id="fb-functions" value="Cloud Functions (Node 22 · onCall v2)" style="swimlane;startSize=26;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=11;fontStyle=1;" vertex="1" parent="firebase">
+      <mxGeometry x="20" y="480" width="620" height="110" as="geometry" />
+    </mxCell>
+    <mxCell id="fn-recovery" value="updateRecoveryEmail&#xa;(sets Firebase Auth email = recovery email)" style="rounded=1;fillColor=white;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="fb-functions">
+      <mxGeometry x="10" y="34" width="190" height="52" as="geometry" />
+    </mxCell>
+    <mxCell id="fn-setpw" value="adminSetPassword&#xa;(admin only · Admin SDK)" style="rounded=1;fillColor=white;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="fb-functions">
+      <mxGeometry x="215" y="34" width="190" height="52" as="geometry" />
+    </mxCell>
+    <mxCell id="fn-deleteuser" value="adminDeleteUser&#xa;(admin only · Admin SDK)" style="rounded=1;fillColor=white;strokeColor=#9673a6;fontSize=9;" vertex="1" parent="fb-functions">
+      <mxGeometry x="420" y="34" width="190" height="52" as="geometry" />
+    </mxCell>
+
+    <mxCell id="fb-hosting" value="Firebase Hosting — CDN · SPA rewrites → index.html · mental-maths-fabc3.web.app" style="rounded=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=11;" vertex="1" parent="firebase">
+      <mxGeometry x="20" y="610" width="620" height="50" as="geometry" />
+    </mxCell>
+
+    <!-- EXTERNAL -->
+    <mxCell id="external" value="External Services &amp; CI/CD" style="swimlane;startSize=32;fillColor=#f5f5f5;strokeColor=#666;fontStyle=1;fontSize=13;rounded=1;arcSize=3;" vertex="1" parent="1">
+      <mxGeometry x="1110" y="750" width="660" height="170" as="geometry" />
+    </mxCell>
+    <mxCell id="emailjs-node" value="EmailJS (@emailjs/browser)&#xa;contact form → app_admin@divel.me" style="rounded=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=11;" vertex="1" parent="external">
+      <mxGeometry x="20" y="50" width="295" height="70" as="geometry" />
+    </mxCell>
+    <mxCell id="gha-node" value="GitHub Actions CI/CD&#xa;push to main → npm build → deploy&#xa;Hosting + Functions (firebase-tools)" style="rounded=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=11;" vertex="1" parent="external">
+      <mxGeometry x="345" y="50" width="295" height="70" as="geometry" />
+    </mxCell>
+
+    <!-- EDGES -->
+    <mxCell id="e-sdk-auth" value="auth calls" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;rounded=0;" edge="1" source="firebase-sdk" target="fb-auth" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e-sdk-fs" value="read / write" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;rounded=0;" edge="1" source="firebase-sdk" target="fb-firestore" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e-sdk-fn" value="httpsCallable" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;rounded=0;" edge="1" source="firebase-sdk" target="fb-functions" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e-fn-auth" value="Admin SDK" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;rounded=0;" edge="1" source="fb-functions" target="fb-auth" parent="firebase">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e-contact-ejs" value="EmailJS API" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;rounded=0;" edge="1" source="contact-node" target="emailjs-node" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e-gha-hosting" value="deploy hosting" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;rounded=0;" edge="1" source="gha-node" target="fb-hosting" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="e-gha-fn" value="deploy functions" style="edgeStyle=orthogonalEdgeStyle;fontSize=9;rounded=0;" edge="1" source="gha-node" target="fb-functions" parent="1">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+  </root>
+</mxGraphModel>
