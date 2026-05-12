@@ -977,7 +977,7 @@ Mental Maths/
     ├── vite-env.d.ts             # import.meta.env types
     │
     ├── types/
-    │   ├── index.ts              # Re-exports all types
+    │   ├── index.ts              # Re-exports all types (incl. womCreator types)
     │   ├── question.ts           # OperationType, Difficulty, Grade, GameMode, Question, AnsweredQuestion
     │   ├── session.ts            # SessionRecord, HighScoreEntry, HighScoreKey
     │   ├── user.ts               # UserProfile

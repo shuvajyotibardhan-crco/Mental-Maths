@@ -31,3 +31,10 @@ export type {
 } from './socialStudies'
 
 export type { WOMWord, WOMSession, WOMTile, WOMTileState, WOMHintType, WOMHintResult } from './wordOMeter'
+
+export type {
+  WOMCreatorRound,
+  WOMCreatorGuessState,
+  WOMCreatorState,
+  WOMCreatorSession,
+} from './womCreator'
