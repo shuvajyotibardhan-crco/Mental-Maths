@@ -24,6 +24,7 @@ const SUBJECTS: { value: ChallengeSubject; label: string; icon: string }[] = [
   { value: 'socialStudies', label: 'Social Studies', icon: '🌍' },
   { value: 'science', label: 'Science', icon: '🔬' },
   { value: 'wordOMeter', label: 'Word-O-Meter', icon: '📝' },
+  { value: 'womCreator', label: 'WOM Creator', icon: '✍️' },
 ]
 
 const DIFFICULTIES: { value: Difficulty; label: string; color: string }[] = [
@@ -52,6 +53,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
   const isSS = subject === 'socialStudies'
   const isSci = subject === 'science'
   const isWOM = subject === 'wordOMeter'
+  const isWOMCreator = subject === 'womCreator'
   const womLetterOptions = GRADE_LETTER_OPTIONS[grade] ?? [3, 4, 5]
 
   function handleSubjectChange(s: ChallengeSubject) {
@@ -95,6 +97,13 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         const gameCode = await createChallenge(
           { subject: 'wordOMeter', grade, operation: null, difficulty: null, mode: 'fixed', letterCount },
           [word],
+          profile,
+        )
+        onChallengeCreated(gameCode)
+      } else if (isWOMCreator) {
+        const gameCode = await createChallenge(
+          { subject: 'womCreator', grade, operation: null, difficulty: null, mode: 'fixed' },
+          [],
           profile,
         )
         onChallengeCreated(gameCode)
@@ -150,7 +159,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         />
       </div>
 
-      {/* Word-O-Meter only: Letter count */}
+      {/* Word-O-Meter only: Letter count (not shown for Creator mode — creator picks in-game) */}
       {isWOM && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Word Length</label>
@@ -173,7 +182,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Operation */}
-      {!isSS && !isSci && !isWOM && (
+      {!isSS && !isSci && !isWOM && !isWOMCreator && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Operation</label>
           <div className="grid grid-cols-2 gap-2">
@@ -205,7 +214,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Difficulty */}
-      {!isSS && !isSci && !isWOM && (
+      {!isSS && !isSci && !isWOM && !isWOMCreator && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Difficulty</label>
           <div className="grid grid-cols-3 gap-2">
@@ -227,7 +236,7 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
       )}
 
       {/* Mental Maths only: Mode */}
-      {!isSS && !isSci && !isWOM && (
+      {!isSS && !isSci && !isWOM && !isWOMCreator && (
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Mode</label>
           <div className="grid grid-cols-2 gap-3">
@@ -272,6 +281,14 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         <div className="bg-violet-50 rounded-2xl p-4 text-sm text-violet-700 space-y-1">
           <p><span className="font-semibold">Guess the same word</span> · Wordle-style</p>
           <p>Score based on attempts, hints used, and time</p>
+        </div>
+      )}
+
+      {/* WOM Creator info card */}
+      {isWOMCreator && (
+        <div className="bg-fuchsia-50 rounded-2xl p-4 text-sm text-fuchsia-700 space-y-1">
+          <p><span className="font-semibold">Each player picks a word</span> · others guess it</p>
+          <p>N players → N rounds · score as guesser + creator bonus</p>
         </div>
       )}
 

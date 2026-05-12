@@ -2,9 +2,10 @@ import type { Grade, OperationType, Difficulty, GameMode, Question } from './que
 import type { SocialStudiesQuestion } from './socialStudies'
 import type { WOMWord } from './wordOMeter'
 import type { ScienceQuestion } from './science'
+import type { WOMCreatorState } from './womCreator'
 
 export type ChallengeStatus = 'waiting' | 'playing' | 'finished'
-export type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science'
+export type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science' | 'womCreator'
 
 export interface ChallengeConfig {
   /**
@@ -49,7 +50,10 @@ export interface Challenge {
    *  'socialStudies' → SocialStudiesQuestion[]
    *  'wordOMeter'    → [WOMWord] (single word)
    *  'science'       → ScienceQuestion[]
+   *  'womCreator'    → [] (empty; words created in-game)
    */
   questions: Question[] | SocialStudiesQuestion[] | WOMWord[] | ScienceQuestion[]
   players: Record<string, ChallengePlayer>
+  /** Only present when config.subject === 'womCreator'. */
+  womCreatorState?: WOMCreatorState
 }

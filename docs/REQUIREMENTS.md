@@ -668,3 +668,47 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 | Tap Home | Home screen shown |
 | Create challenge with Science subject | Challenge created; lobby shows Science |
 | All players complete Science challenge | Results screen with leaderboard |
+
+---
+
+## Feature 21 — Word-O-Meter Creator Mode (Multiplayer)
+
+**User story:** As a player, I want to play a multiplayer Word-O-Meter variant where each player takes turns creating a word for the others to guess, so that we all participate as both creators and guessers.
+
+**Acceptance Criteria:**
+1. A "Word-O-Meter Creator" option shall appear in the subject selector on `ChallengeCreateScreen`, alongside Mental Maths, Social Studies, Science, and Word-O-Meter.
+2. The host must select a grade (KG–12); grade is used as the default hint context and is per-quiz.
+3. The game shall consist of exactly N rounds, where N equals the number of players in the lobby at start time. Each player shall be the creator for exactly one round; the creation order shall be randomised at game start.
+4. At the start of each round, the creator sees a **word input screen**. The creator types a word of 3–8 letters and taps **Submit Word**.
+5. The word submitted by the creator must be validated against the SOWPODS dictionary (same wordlist used by solo Word-O-Meter). If the word is not valid, the creator shall see an error and must try a different word.
+6. While the creator is typing and submitting, all other players shall see a **waiting screen** displaying "[Creator name] is picking a word…".
+7. Once the creator submits a valid word, all non-creator players shall immediately see the Word-O-Meter game board for that word. Standard Word-O-Meter rules apply: the player gets N attempts for an N-letter word, and hints are available (1 hint for 3–4 letters, 2 for 5–6, 3 for 7–8).
+8. Each guesser may also tap **Pass** at any time to skip the round (counts as a loss with 0 points for that round).
+9. The creator shall see a live view showing which guessers have finished (won/lost/passed) and which are still playing.
+10. A round shall advance to the next creator once **all** non-creator players have either won, exhausted their attempts, or passed.
+11. After all N rounds are complete, the game shall end and all players shall be navigated to the results screen.
+12. **Guesser scoring (per round):** Same formula as solo Word-O-Meter — `max(10, 100 − (attemptsUsed − 1) × 12 − hintsUsed × 8)` on a win; 0 on a loss or pass.
+13. **Creator scoring (per round):** 10 points for each non-creator player who fails to guess the word (passes or exhausts all attempts).
+14. **Total player score** = sum of guesser scores across all rounds the player guessed in + sum of creator bonuses across the one round the player created. The live leaderboard shall reflect running totals.
+15. The results screen shall show: final leaderboard (rank, avatar, name, total score), a per-round breakdown (word, creator, each player's result and score for that round), and the word + its definition for each round.
+16. The creator must not be shown the guessing grid during their own creation round. After submitting the word, they see the live guesser-status view only.
+17. An **End Game** button shall be available to the host at all times during any phase. Tapping it shall skip remaining rounds and navigate all players to results with scores accumulated so far.
+18. Each completed game (or host-ended game) shall save one `WOMCreatorSession` record per player to the shared `sessions` Firestore collection with `subject: 'womCreator'`.
+
+**Test Plan:**
+
+| Step | Expected Result |
+|------|----------------|
+| Log in as host, open Create Challenge | "Word-O-Meter Creator" option visible in subject list |
+| Select Word-O-Meter Creator, choose grade, tap Create | Challenge created with `subject: 'womCreator'`; game code shown |
+| 3 players join lobby | Lobby shows 3 players; host can start |
+| Host taps Start | Round 1 begins; one player sees word input, other 2 see waiting screen |
+| Creator types "xyz" (invalid) | Error shown: "Not a valid English word" |
+| Creator types "CAT" (valid) | Word accepted; other 2 players see 3-letter WOM board |
+| Guesser 1 guesses correctly in 2 attempts | Guesser 1 earns 88 points for the round |
+| Guesser 2 taps Pass | Guesser 2 earns 0; creator earns 10 bonus points |
+| Both guessers done | Round 2 starts with next creator |
+| Creator view after submitting word | Live view shows "Guesser 1: Playing", "Guesser 2: Passed ✓" |
+| All 3 rounds complete | Results screen shows leaderboard + per-round breakdown |
+| Host taps End Game mid-round | Game ends; results shown with scores so far |
+| Check Firestore | `sessions` collection has 3 docs with `subject: 'womCreator'` |

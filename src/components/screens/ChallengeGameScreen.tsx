@@ -5,6 +5,7 @@ import { useChallengeGame } from '../../hooks/useChallengeGame'
 import { useChallengeSSGame } from '../../hooks/useChallengeSSGame'
 import { useChallengeWOMGame } from '../../hooks/useChallengeWOMGame'
 import { useChallengeScienceGame } from '../../hooks/useChallengeScienceGame'
+import { useChallengeWOMCreatorGame } from '../../hooks/useChallengeWOMCreatorGame'
 import { useTimer } from '../../hooks/useTimer'
 import { finishChallenge } from '../../firebase/challenge'
 import { QuestionCard } from '../game/QuestionCard'
@@ -136,6 +137,18 @@ export function ChallengeGameScreen({ gameCode, onNavigate }: ChallengeGameScree
         gameCode={gameCode}
         challenge={challenge}
         uid={profile.uid}
+        onNavigate={onNavigate}
+      />
+    )
+  }
+
+  if (subject === 'womCreator') {
+    return (
+      <ChallengeWOMCreatorGameInner
+        gameCode={gameCode}
+        challenge={challenge}
+        uid={profile.uid}
+        isHost={challenge.hostId === profile.uid}
         onNavigate={onNavigate}
       />
     )
@@ -959,6 +972,319 @@ function ChallengeWOMGameInner({
           </div>
         ))}
       </div>
+    </div>
+  )
+}
+
+// ─── Word-O-Meter Creator Mode challenge ──────────────────────────────────────
+
+function ChallengeWOMCreatorGameInner({
+  gameCode,
+  challenge,
+  uid,
+  isHost,
+  onNavigate,
+}: {
+  gameCode: string
+  challenge: Challenge
+  uid: string
+  isHost: boolean
+  onNavigate: (screen: string) => void
+}) {
+  const game = useChallengeWOMCreatorGame({ gameCode, uid, isHost, challenge })
+  const players = challenge.players
+  const sortedPlayers = Object.entries(players).sort(([, a], [, b]) => b.score - a.score)
+
+  // Navigate to results when game finishes
+  useEffect(() => {
+    if (game.phase === 'finished') {
+      onNavigate('challenge-results')
+    }
+  }, [game.phase, onNavigate])
+
+  // Periodic check: navigate to results if challenge doc says finished
+  useEffect(() => {
+    if (challenge.status === 'finished') onNavigate('challenge-results')
+  }, [challenge.status, onNavigate])
+
+  const maxAttempts = game.maxAttempts
+  const word = game.targetWord
+
+  // ── Live leaderboard (shared across all phases) ───────────────────────────
+  function Leaderboard() {
+    return (
+      <div className="overflow-x-auto">
+        <div className="flex gap-2 px-4 py-2">
+          {sortedPlayers.map(([pUid, p], i) => (
+            <div
+              key={pUid}
+              className={`flex flex-col items-center min-w-[64px] rounded-2xl px-3 py-2 ${
+                pUid === uid ? 'bg-fuchsia-100' : 'bg-white/80'
+              }`}
+            >
+              <span className="text-xs text-gray-400">#{i + 1}</span>
+              <span className="text-xl">{p.avatar}</span>
+              <span className="text-xs font-semibold text-gray-700 truncate max-w-[56px]">{p.name}</span>
+              <span className="text-sm font-bold text-fuchsia-700">⭐ {p.score}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Creator: word input phase ─────────────────────────────────────────────
+  if (game.phase === 'creating') {
+    const { input, validating, submitting, error } = game.creatorInput
+    const ALPHA_ROWS = [
+      ['Q','W','E','R','T','Y','U','I','O','P'],
+      ['A','S','D','F','G','H','J','K','L'],
+      ['⌫','Z','X','C','V','B','N','M','✓'],
+    ]
+    return (
+      <div className="flex flex-col h-dvh bg-gradient-to-b from-fuchsia-50 to-purple-50">
+        <Leaderboard />
+
+        <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
+          <p className="text-sm font-medium text-gray-500">Round {game.currentRound + 1} of {game.totalRounds}</p>
+          <p className="text-xl font-bold text-fuchsia-700">Your turn — pick a word!</p>
+          <p className="text-sm text-gray-500 text-center">Type any valid English word (3–8 letters)</p>
+
+          {/* Word display tiles */}
+          <div className="flex gap-2 mt-2">
+            {Array.from({ length: Math.max(input.length, 3) }).map((_, i) => (
+              <div
+                key={i}
+                className="w-12 h-12 rounded-xl border-2 border-fuchsia-300 bg-white flex items-center justify-center text-xl font-bold text-fuchsia-800 uppercase"
+              >
+                {input[i] ?? ''}
+              </div>
+            ))}
+          </div>
+
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {(validating || submitting) && <p className="text-fuchsia-500 text-sm animate-pulse">Checking…</p>}
+
+          {/* End Game (host only) */}
+          {isHost && (
+            <button
+              onClick={game.forceFinish}
+              className="mt-2 px-4 py-2 text-sm text-red-500 border border-red-200 rounded-xl hover:bg-red-50 cursor-pointer"
+            >
+              End Game
+            </button>
+          )}
+        </div>
+
+        {/* Keyboard */}
+        <div className="px-2 pb-3 space-y-1">
+          {ALPHA_ROWS.map((row, ri) => (
+            <div key={ri} className="flex gap-1 justify-center">
+              {row.map((key) => (
+                <button
+                  key={key}
+                  onClick={() => {
+                    if (key === '⌫') game.deleteCreatorLetter()
+                    else if (key === '✓') game.submitWord()
+                    else game.typeCreatorLetter(key)
+                  }}
+                  disabled={validating || submitting}
+                  className={`h-11 rounded-lg font-bold text-sm flex items-center justify-center cursor-pointer disabled:opacity-50 transition-colors ${
+                    key === '✓'
+                      ? 'bg-fuchsia-500 text-white px-3 min-w-[40px]'
+                      : key === '⌫'
+                      ? 'bg-gray-300 text-gray-700 px-3 min-w-[40px]'
+                      : 'bg-gray-200 text-gray-800 w-8'
+                  }`}
+                >
+                  {key}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Creator: waiting for guessers ─────────────────────────────────────────
+  if (game.phase === 'creatorWaiting') {
+    return (
+      <div className="flex flex-col h-dvh bg-gradient-to-b from-fuchsia-50 to-purple-50">
+        <Leaderboard />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
+          <div className="text-4xl animate-pulse">⏳</div>
+          <p className="text-xl font-bold text-fuchsia-700">
+            Waiting for players to guess…
+          </p>
+          <p className="text-gray-500 text-sm">You picked: <span className="font-bold text-fuchsia-700">{word?.word ?? '?'}</span></p>
+          <div className="w-full max-w-sm space-y-2 mt-2">
+            {game.roundsProgress.map((p) => (
+              <div key={p.uid} className="flex items-center justify-between bg-white/80 rounded-2xl px-4 py-3">
+                <span className="flex items-center gap-2">
+                  <span>{p.avatar}</span>
+                  <span className="font-medium text-gray-700">{p.name}</span>
+                </span>
+                <span className={`text-sm font-semibold ${p.done ? (p.won ? 'text-emerald-600' : 'text-red-500') : 'text-fuchsia-600 animate-pulse'}`}>
+                  {p.done ? (p.won ? '✓ Got it!' : p.passed ? 'Passed' : '✗ Missed') : 'Guessing…'}
+                </span>
+              </div>
+            ))}
+          </div>
+          {isHost && (
+            <button onClick={game.forceFinish} className="mt-4 px-4 py-2 text-sm text-red-500 border border-red-200 rounded-xl hover:bg-red-50 cursor-pointer">
+              End Game
+            </button>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Guesser: waiting for word ─────────────────────────────────────────────
+  if (game.phase === 'waitingForWord') {
+    return (
+      <div className="flex flex-col h-dvh bg-gradient-to-b from-fuchsia-50 to-purple-50">
+        <Leaderboard />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
+          <div className="text-4xl animate-pulse">✍️</div>
+          <p className="text-xl font-bold text-fuchsia-700">
+            {game.roundCreatorName} is picking a word…
+          </p>
+          <p className="text-sm text-gray-500">Round {game.currentRound + 1} of {game.totalRounds}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Guesser: done, waiting for others ────────────────────────────────────
+  if (game.phase === 'guesserWaiting') {
+    return (
+      <WaitingForPlayers
+        players={players}
+        uid={uid}
+        score={players[uid]?.score ?? 0}
+        scoreColor="text-fuchsia-700"
+      />
+    )
+  }
+
+  // ── Guesser: active guessing ──────────────────────────────────────────────
+  if (game.phase === 'guessing' && word) {
+    const tileSize = maxAttempts <= 5 ? 'w-12 h-12 text-xl' : 'w-10 h-10 text-lg'
+
+    return (
+      <div className="flex flex-col h-dvh bg-gradient-to-b from-fuchsia-50 to-purple-50">
+        <Leaderboard />
+
+        {/* Round info */}
+        <div className="px-4 py-2 text-center">
+          <p className="text-sm text-gray-500">
+            Round {game.currentRound + 1}/{game.totalRounds} · Guess <span className="font-semibold text-fuchsia-700">{game.roundCreatorName}</span>'s word
+          </p>
+        </div>
+
+        {/* Tile grid */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-1.5 px-4">
+          {Array.from({ length: maxAttempts }).map((_, rowIdx) => {
+            const rowTiles = game.guesses[rowIdx]
+            const isCurrentRow = rowIdx === game.guesses.length && !game.done
+            const shake = isCurrentRow && game.shake
+
+            return (
+              <div key={rowIdx} className={`flex gap-1.5 ${shake ? 'animate-shake' : ''}`}>
+                {Array.from({ length: maxAttempts }).map((_, colIdx) => {
+                  const tile = rowTiles?.[colIdx]
+                  const letter = tile?.letter ?? (isCurrentRow ? (game.currentGuess[colIdx] ?? '') : '')
+                  const state = tile?.state ?? (isCurrentRow && game.currentGuess[colIdx] ? 'filled' : 'empty')
+                  return (
+                    <div key={colIdx} className={`${tileSize} rounded-xl border-2 flex items-center justify-center font-bold uppercase ${womTileClass(state as WOMTileState, tileSize)}`}>
+                      {letter}
+                    </div>
+                  )
+                })}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Error */}
+        {game.error && <p className="text-center text-red-500 text-sm px-4 pb-1">{game.error}</p>}
+        {game.validating && <p className="text-center text-fuchsia-500 text-sm px-4 pb-1 animate-pulse">Checking…</p>}
+
+        {/* Hints */}
+        {game.hintsUsed.length > 0 && (
+          <div className="px-4 pb-1 space-y-1">
+            {game.hintsUsed.map((h) => (
+              <div key={h.type} className="text-xs bg-fuchsia-50 text-fuchsia-700 rounded-xl px-3 py-1.5">{h.text}</div>
+            ))}
+          </div>
+        )}
+
+        {/* Hint + Pass buttons */}
+        <div className="px-4 pb-2 flex gap-2">
+          {game.availableHints.length > 0 && game.hintsUsed.length < game.maxHints && (
+            <div className="flex-1 overflow-x-auto">
+              <div className="flex gap-1">
+                {game.availableHints.map((h) => (
+                  <button
+                    key={h}
+                    onClick={() => game.useHint(h)}
+                    className="px-3 py-1 text-xs bg-fuchsia-100 text-fuchsia-700 rounded-xl whitespace-nowrap cursor-pointer hover:bg-fuchsia-200"
+                  >
+                    {HINT_LABELS[h]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={game.pass}
+            className="px-4 py-1 text-xs bg-gray-100 text-gray-600 rounded-xl cursor-pointer hover:bg-gray-200 shrink-0"
+          >
+            Pass
+          </button>
+        </div>
+
+        {/* Keyboard */}
+        <div className="px-2 pb-3 space-y-1">
+          {WOM_KEYBOARD_ROWS.map((row, ri) => (
+            <div key={ri} className="flex gap-1 justify-center">
+              {row.map((key) => {
+                const letterState = game.letterStates[key]
+                return (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      if (key === '⌫') game.deleteLetter()
+                      else if (key === '✓') game.submitGuess()
+                      else game.typeLetter(key)
+                    }}
+                    disabled={game.done || game.validating}
+                    className={`h-11 rounded-lg font-bold text-sm flex items-center justify-center cursor-pointer disabled:opacity-50 transition-colors ${
+                      key === '✓' ? 'bg-fuchsia-500 text-white px-3 min-w-[40px]' :
+                      key === '⌫' ? 'bg-gray-300 text-gray-700 px-3 min-w-[40px]' :
+                      !letterState ? 'bg-gray-200 text-gray-800 w-8' :
+                      letterState === 'correct' ? 'bg-emerald-500 text-white w-8' :
+                      letterState === 'present' ? 'bg-amber-400 text-white w-8' :
+                      'bg-gray-400 text-white w-8'
+                    }`}
+                  >
+                    {key}
+                  </button>
+                )
+              })}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // ── Initialising / fallback ───────────────────────────────────────────────
+  return (
+    <div className="flex items-center justify-center h-dvh">
+      <div className="text-xl text-gray-500 animate-pulse">Setting up game…</div>
     </div>
   )
 }

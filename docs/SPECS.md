@@ -60,7 +60,7 @@ interface SessionRecord {
   userId: string           // Firebase Auth UID
   timestamp: number        // Date.now()
   grade: Grade
-  subject?: 'mentalMaths' | 'socialStudies' | 'science' | 'wordOMeter'  // absent = mentalMaths (backward compat)
+  subject?: 'mentalMaths' | 'socialStudies' | 'science' | 'wordOMeter' | 'womCreator'  // absent = mentalMaths (backward compat)
   operation: OperationType | null  // null for non-Maths sessions
   difficulty: Difficulty | null    // null for non-Maths sessions
   mode: GameMode           // 'fixed' for non-Maths sessions
@@ -225,8 +225,9 @@ interface Challenge {
   startedAt: number | null
   finishedAt: number | null
   config: ChallengeConfig
-  questions: Question[] | SocialStudiesQuestion[] | ScienceQuestion[] | WOMWord[]  // type depends on subject; WOM = [WOMWord] (single element)
+  questions: Question[] | SocialStudiesQuestion[] | ScienceQuestion[] | WOMWord[]  // type depends on subject; WOM = [WOMWord] (single element); womCreator = []
   players: Record<string, ChallengePlayer>
+  womCreatorState?: WOMCreatorState  // only present when config.subject === 'womCreator'
 }
 ```
 
@@ -251,7 +252,7 @@ interface ChallengePlayer {
 
 ### ChallengeConfig
 ```typescript
-type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'science' | 'wordOMeter'
+type ChallengeSubject = 'mentalMaths' | 'socialStudies' | 'science' | 'wordOMeter' | 'womCreator'
 
 interface ChallengeConfig {
   subject?: ChallengeSubject   // optional for backward compat — absent = 'mentalMaths'
@@ -268,6 +269,69 @@ For Word-O-Meter challenges: `questions` is `[WOMWord]` (single element). `Chall
 WOM challenge score formula: `won ? max(1, round((10000 − secs×10 − (attempts−1)×5 − hints×2) / 100)) : 0` (time-primary; faster solvers always outscore slower ones with same tries/hints)
 WOM solo score formula: `won ? max(10, 100 − (attempts−1)×12 − hints×8) : 0` (no time factor)
 WOM challenge leaderboard sort: solved players first; among solvers: time asc → tries asc → hints asc; unsolved rank last.
+
+For Word-O-Meter Creator challenges: `questions` is `[]` (empty — words are created in-game, not pre-generated). The `womCreatorState` field on the Challenge document drives the game. `ChallengePlayer.score` reflects the player's running total (guesser scores + creator bonuses).
+
+### WOMCreatorRound
+One entry per round; stored inside `WOMCreatorState.rounds` keyed by round index string.
+
+```typescript
+interface WOMCreatorRound {
+  creatorId: string          // UID of this round's word-creator
+  word: string | null        // UPPERCASE; null until creator submits
+  letterCount: number | null // null until creator submits
+  wordObj: WOMWord | null    // full word object (meanings, hints); null until creator submits
+}
+```
+
+### WOMCreatorGuessState
+Per-player, per-round record of a guesser's progress. Stored in `WOMCreatorState.progress[roundIndex][uid]`.
+
+```typescript
+interface WOMCreatorGuessState {
+  guesses: string[]          // UPPERCASE guessed words in submission order
+  won: boolean               // true if any guess was correct
+  passed: boolean            // true if player tapped Pass
+  hintsUsed: WOMHintType[]  // hint types consumed this round
+  score: number              // guesser score for this round (0 if lost/passed)
+  done: boolean              // true when won || passed || guesses.length === letterCount
+}
+```
+
+### WOMCreatorState
+Top-level state for a Creator-mode challenge; stored as `challenge.womCreatorState`.
+
+```typescript
+interface WOMCreatorState {
+  roundOrder: string[]        // UIDs in creation order; shuffled once at game start
+  currentRound: number        // 0-indexed; increments when all guessers for this round are done
+  rounds: Record<string, WOMCreatorRound>      // key = round index as string ("0", "1", …)
+  progress: Record<string, Record<string, WOMCreatorGuessState>>
+  // key = round index string → guesser UID → their guess state
+}
+```
+
+### WOMCreatorSession
+Shape written to `sessions` Firestore collection with `subject: 'womCreator'`.
+
+```typescript
+interface WOMCreatorSession {
+  id: string              // Firestore auto-generated
+  userId: string
+  timestamp: number
+  grade: Grade
+  subject: 'womCreator'
+  challengeId: string     // always present (game code)
+  totalRounds: number     // N = number of players
+  guesserScore: number    // sum of per-round guesser scores
+  creatorBonus: number    // creator bonus earned in the player's own creation round
+  totalScore: number      // guesserScore + creatorBonus
+  roundsWon: number       // rounds where player guessed correctly
+  operation: null
+  difficulty: null
+  mode: 'fixed'
+}
+```
 
 ### HighScoreEntry
 Stored in Firestore collections `highScores` (personal) and `globalHighScores`.
@@ -636,6 +700,68 @@ results:
   HistoryScreen shows Multiplayer badge for any session with challengeId set
 ```
 
+### Word-O-Meter Creator Mode Lifecycle
+```
+createChallenge (womCreator subject):
+  questions = []   // no pre-generated questions; words created in-game
+  womCreatorState = null  // initialised at game start
+  write challenge doc with status='waiting'
+
+startChallenge (womCreator):
+  roundOrder = shuffle(Object.keys(players))  // random creation order
+  womCreatorState = {
+    roundOrder,
+    currentRound: 0,
+    rounds: { "0": { creatorId: roundOrder[0], word: null, letterCount: null, wordObj: null } },
+    progress: {}
+  }
+  set status='playing', startedAt=Date.now()
+  all clients detect via onSnapshot → navigate to game
+
+each round (creator perspective):
+  if uid == womCreatorState.rounds[currentRound].creatorId:
+    show WordInputScreen
+    user types word (3–8 letters), taps Submit
+    validate against SOWPODS wordlist (same async import as solo WOM)
+    if invalid: show error "Not a valid English word"
+    if valid:
+      fetch WOMWord from static pool for this word (or build minimal WOMWord with just the word string)
+      updateDoc challenge: womCreatorState.rounds[currentRound] = { ..., word, letterCount, wordObj }
+    creator then sees live guesser-status view
+
+each round (guesser perspective):
+  listen to challenge via onSnapshot
+  if rounds[currentRound].word === null: show "Waiting for [creator] to pick a word…"
+  once word is set: show WOM game board for that word
+  game board uses standard WOM rules: N attempts for N-letter word, hints allowed
+  "Pass" button available at any time (sets done=true, won=false, passed=true, score=0)
+  on each guess: validate against SOWPODS, evaluate tiles (same 2-pass algorithm as solo WOM)
+  on win: score = max(10, 100 − (attemptsUsed−1)×12 − hintsUsed×8)
+  on loss (attempts exhausted) or pass: score = 0
+  write to womCreatorState.progress[currentRound][uid] = { guesses, won, passed, hintsUsed, score, done }
+
+round advancement:
+  after each guesser write, check if ALL non-creator players have done=true
+  if yes:
+    creatorBonus = (guessers with won=false) × 10
+    add creatorBonus to creators ChallengePlayer.score via updatePlayerProgress
+    add each guessers round score to their ChallengePlayer.score
+    if currentRound + 1 < roundOrder.length:
+      next = currentRound + 1
+      updateDoc: womCreatorState.currentRound = next,
+                 womCreatorState.rounds[next] = { creatorId: roundOrder[next], word:null, ... }
+    else:
+      finishChallenge(gameCode)  // all rounds done
+
+disconnect handling (womCreator):
+  guesser: if lastActiveAt > 120s stale, mark as done=true, passed=true, score=0
+  creator: if lastActiveAt > 120s stale AND word is still null after 60s, host auto-submits a fallback word
+
+results (womCreator):
+  each player saves WOMCreatorSession to sessions collection with subject='womCreator'
+  results screen shows: final leaderboard (total score), per-round table (word, creator, each player outcome + score)
+```
+
 ### Session Purge
 ```
 purgeOldSessions(userId):
@@ -781,6 +907,18 @@ Curriculum:             US national + Colorado state standards
 Question bank size:     800 total (80 per grade, grades 3–12)
 ```
 
+### Word-O-Meter Creator Constants
+```
+Eligible grades:        KG–12
+Word length range:      3–8 letters
+Guesser attempts:       N (same as letter count — standard WOM rule)
+Guesser hints:          1 for 3–4 letters, 2 for 5–6, 3 for 7–8 (same as solo WOM)
+Guesser score (win):    max(10, 100 − (attemptsUsed−1) × 12 − hintsUsed × 8)
+Guesser score (loss):   0
+Creator bonus:          10 × (number of guessers who did not win)
+Disconnect timeout:     120 s (guesser auto-passes; creator auto-skipped by host after 60 s with null word)
+```
+
 ---
 
 ## File Inventory
@@ -847,7 +985,8 @@ Mental Maths/
     │   ├── admin.ts              # AuditEntry, AdminActionType
     │   ├── socialStudies.ts      # SocialStudiesQuestion, SocialStudiesAnsweredQuestion, SocialStudiesSession
     │   ├── science.ts            # ScienceQuestion, ScienceAnsweredQuestion, ScienceSession
-    │   └── wordOMeter.ts         # WOMWord, WOMSession, WOMTile, WOMTileState, WOMHintType, WOMHintResult
+    │   ├── wordOMeter.ts         # WOMWord, WOMSession, WOMTile, WOMTileState, WOMHintType, WOMHintResult
+    │   └── womCreator.ts         # WOMCreatorRound, WOMCreatorGuessState, WOMCreatorState, WOMCreatorSession
     │
     ├── data/
     │   ├── wordOMeterData.ts     # Static word bank; GRADE_LETTER_OPTIONS; getWordPool(grade, letterCount)
@@ -867,7 +1006,8 @@ Mental Maths/
     │   ├── admin.ts              # Admin ops: isAdmin check, user search, reset/merge/move, audit log
     │   ├── socialStudies.ts      # fetchSocialStudiesQuestions, saveSocialStudiesSession
     │   ├── science.ts            # fetchScienceQuestions (cumulative pool), saveScienceSession, dedup helpers
-    │   └── wordOMeter.ts         # pickWord, saveSeenWordToStorage, saveWordOMeterSession
+    │   ├── wordOMeter.ts         # pickWord, saveSeenWordToStorage, saveWordOMeterSession
+    │   └── womCreator.ts         # initCreatorState, submitCreatorWord, updateGuesserProgress, advanceRound, saveWOMCreatorSession
     │
     ├── context/
     │   ├── AuthContext.tsx       # onAuthStateChanged → profile fetch
@@ -881,8 +1021,9 @@ Mental Maths/
     │   ├── useChallengeGame.ts       # Mental Maths multiplayer logic (pre-gen questions + Firestore sync)
     │   ├── useChallengeSSGame.ts     # SS multiplayer logic (MC questions + Firestore sync)
     │   ├── useChallengeWOMGame.ts      # Word-O-Meter multiplayer logic (single shared word + Firestore sync)
-    │   ├── useChallengeScienceGame.ts  # Science multiplayer logic (multi-select MC + Firestore sync)
-    │   ├── useSocialStudiesGame.ts     # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
+    │   ├── useChallengeScienceGame.ts      # Science multiplayer logic (multi-select MC + Firestore sync)
+    │   ├── useChallengeWOMCreatorGame.ts   # WOM Creator multiplayer logic (word input + guessing + round management)
+    │   ├── useSocialStudiesGame.ts         # SS solo quiz (grade at startGame(), forceFinish, dedup, save)
     │   ├── useScienceGame.ts           # Science solo quiz (multi-select, cumulative pool, dedup, save)
     │   └── useWordOMeterGame.ts        # WOM solo game (guess eval, hints, score, dedup, save)
     │
@@ -921,8 +1062,8 @@ Mental Maths/
         │   ├── ChallengeCreateScreen.tsx        # Host configures and creates challenge
         │   ├── JoinChallengeScreen.tsx           # Enter 7-digit code to join
         │   ├── ChallengeLobbyScreen.tsx          # Waiting room with player list
-        │   ├── ChallengeGameScreen.tsx           # Multiplayer gameplay + live leaderboard
-        │   ├── ChallengeResultsScreen.tsx        # Leaderboard + stats + session save
+        │   ├── ChallengeGameScreen.tsx           # Multiplayer gameplay + live leaderboard; branches on subject (incl. womCreator)
+        │   ├── ChallengeResultsScreen.tsx        # Leaderboard + stats + session save; womCreator shows per-round breakdown
         │   ├── SocialStudiesSetupScreen.tsx      # Grade info + Start Quiz button
         │   ├── SocialStudiesGameScreen.tsx       # MCQ gameplay with reveal + auto-advance
         │   ├── SocialStudiesResultsScreen.tsx    # Score, accuracy, streak, incorrect review

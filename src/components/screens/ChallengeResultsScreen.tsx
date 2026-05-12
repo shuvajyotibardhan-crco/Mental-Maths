@@ -4,6 +4,7 @@ import { useChallengeListener } from '../../hooks/useChallengeListener'
 import { saveSession, checkAndUpdateHighScore, checkAndUpdateGlobalHighScore, getHighScores, getGlobalHighScore } from '../../firebase/firestore'
 import { saveSocialStudiesSession } from '../../firebase/socialStudies'
 import { saveWordOMeterSession } from '../../firebase/wordOMeter'
+import { saveWOMCreatorSession } from '../../firebase/womCreator'
 import { OPERATION_LABELS } from '../../constants/gradeConfig'
 import type { SessionRecord, HighScoreKey } from '../../types'
 import type { WOMWord } from '../../types/wordOMeter'
@@ -25,6 +26,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
   const subject = challenge?.config.subject ?? 'mentalMaths'
   const isSS = subject === 'socialStudies'
   const isWOM = subject === 'wordOMeter'
+  const isWOMCreator = subject === 'womCreator'
 
   // Save session + (maths only) check high scores
   useEffect(() => {
@@ -79,6 +81,53 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
         return
       }
 
+      if (isWOMCreator) {
+        const wcs = challenge!.womCreatorState
+        if (wcs) {
+          const uid = profile!.uid
+          let guesserScore = 0
+          let creatorBonus = 0
+          let roundsWon = 0
+          const totalRounds = wcs.roundOrder.length
+
+          for (let i = 0; i < totalRounds; i++) {
+            const round = wcs.rounds[String(i)]
+            if (!round) continue
+            if (round.creatorId === uid) {
+              // Compute creator bonus from guesser results
+              const roundProgress = wcs.progress[String(i)] ?? {}
+              const nonCreators = wcs.roundOrder.filter((p) => p !== uid)
+              const failCount = nonCreators.filter((p) => !roundProgress[p]?.won).length
+              creatorBonus += failCount * 10
+            } else {
+              const myProgress = wcs.progress[String(i)]?.[uid]
+              if (myProgress) {
+                guesserScore += myProgress.score
+                if (myProgress.won) roundsWon++
+              }
+            }
+          }
+
+          await saveWOMCreatorSession({
+            userId: uid,
+            timestamp: Date.now(),
+            grade: challenge!.config.grade,
+            subject: 'womCreator',
+            challengeId: gameCode,
+            totalRounds,
+            guesserScore,
+            creatorBonus,
+            totalScore: me!.score,
+            roundsWon,
+            operation: null,
+            difficulty: null,
+            mode: 'fixed',
+          })
+        }
+        setSaved(true)
+        return
+      }
+
       // Mental Maths challenge — save + high score check
       const accuracy = me!.totalAnswered > 0
         ? parseFloat(((me!.correctAnswers / me!.totalAnswered) * 100).toFixed(2))
@@ -119,7 +168,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
     }
 
     save().catch(console.error)
-  }, [profile, challenge, me, saved, gameCode, isSS, isWOM])
+  }, [profile, challenge, me, saved, gameCode, isSS, isWOM, isWOMCreator])
 
   if (!challenge || challenge.status !== 'finished') {
     return (
@@ -160,6 +209,7 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
   function gameSubtitle() {
     if (isSS) return `Social Studies · Grade ${challenge!.config.grade} · 20 Questions`
     if (isWOM) return `Word-O-Meter · ${challenge!.config.letterCount ?? '?'}-letter · Grade ${challenge!.config.grade}`
+    if (isWOMCreator) return `WOM Creator · Grade ${challenge!.config.grade} · ${Object.keys(challenge!.players).length} rounds`
     const op = challenge!.config.operation ? OPERATION_LABELS[challenge!.config.operation] : '—'
     const mode = challenge!.config.mode === 'timed' ? '2 min' : '20 Qs'
     return `${op} · ${challenge!.config.difficulty ?? '—'} · ${mode}`
@@ -177,6 +227,9 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
           {player.timeTakenSeconds != null && ` · ${Math.floor(player.timeTakenSeconds / 60)}:${(player.timeTakenSeconds % 60).toString().padStart(2, '0')}`}
         </p>
       )
+    }
+    if (isWOMCreator) {
+      return <p className="text-xs text-gray-500">⭐ {player.score} total points</p>
     }
     const accuracy = player.totalAnswered > 0
       ? parseFloat(((player.correctAnswers / player.totalAnswered) * 100).toFixed(2))
@@ -244,8 +297,8 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
                     {renderPlayerStats(player)}
                   </div>
                   <div className="text-right">
-                    <p className={`text-lg font-bold ${isWOM ? 'text-violet-600' : 'text-primary'}`}>⭐ {player.score}</p>
-                    {!isWOM && player.bestStreak >= 3 && (
+                    <p className={`text-lg font-bold ${isWOM ? 'text-violet-600' : isWOMCreator ? 'text-fuchsia-600' : 'text-primary'}`}>⭐ {player.score}</p>
+                    {!isWOM && !isWOMCreator && player.bestStreak >= 3 && (
                       <p className="text-xs text-orange-500">🔥 {player.bestStreak}</p>
                     )}
                   </div>
@@ -278,7 +331,47 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
                   <p className="text-2xl font-bold text-purple-600">⭐ {me.score}</p>
                 </div>
               </div>
-            ) : (
+            ) : isWOMCreator ? (() => {
+              const wcs = challenge.womCreatorState
+              let guesserScore = 0
+              let creatorBonus = 0
+              let roundsWon = 0
+              const totalRounds = wcs?.roundOrder.length ?? 0
+              if (wcs && profile) {
+                for (let i = 0; i < totalRounds; i++) {
+                  const round = wcs.rounds[String(i)]
+                  if (!round) continue
+                  if (round.creatorId === profile.uid) {
+                    const rp = wcs.progress[String(i)] ?? {}
+                    const nonCreators = wcs.roundOrder.filter((p) => p !== profile.uid)
+                    creatorBonus += nonCreators.filter((p) => !rp[p]?.won).length * 10
+                  } else {
+                    const myP = wcs.progress[String(i)]?.[profile.uid]
+                    if (myP) { guesserScore += myP.score; if (myP.won) roundsWon++ }
+                  }
+                }
+              }
+              return (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-emerald-50 rounded-2xl p-3 text-center">
+                    <p className="text-xs text-gray-500">Rank</p>
+                    <p className="text-2xl font-bold text-emerald-600">#{myRank}</p>
+                  </div>
+                  <div className="bg-fuchsia-50 rounded-2xl p-3 text-center">
+                    <p className="text-xs text-gray-500">Rounds Won</p>
+                    <p className="text-2xl font-bold text-fuchsia-600">{roundsWon}/{totalRounds - 1}</p>
+                  </div>
+                  <div className="bg-blue-50 rounded-2xl p-3 text-center">
+                    <p className="text-xs text-gray-500">Guesser Pts</p>
+                    <p className="text-2xl font-bold text-blue-600">⭐ {guesserScore}</p>
+                  </div>
+                  <div className="bg-purple-50 rounded-2xl p-3 text-center">
+                    <p className="text-xs text-gray-500">Creator Bonus</p>
+                    <p className="text-2xl font-bold text-purple-600">+{creatorBonus}</p>
+                  </div>
+                </div>
+              )
+            })() : (
               <div className="grid grid-cols-2 gap-3">
                 <div className="bg-emerald-50 rounded-2xl p-3 text-center">
                   <p className="text-xs text-gray-500">Rank</p>
@@ -302,6 +395,59 @@ export function ChallengeResultsScreen({ gameCode, onNavigate }: ChallengeResult
             )}
           </div>
         )}
+
+        {/* WOM Creator per-round breakdown */}
+        {isWOMCreator && challenge.womCreatorState && (() => {
+          const wcs = challenge.womCreatorState!
+          const totalRounds = wcs.roundOrder.length
+          return (
+            <div className="bg-white/90 backdrop-blur rounded-3xl shadow-lg p-6">
+              <h3 className="font-bold text-gray-700 text-center mb-4">Round Breakdown</h3>
+              <div className="space-y-4">
+                {Array.from({ length: totalRounds }).map((_, i) => {
+                  const round = wcs.rounds[String(i)]
+                  if (!round) return null
+                  const creator = challenge.players[round.creatorId]
+                  const nonCreators = wcs.roundOrder.filter((p) => p !== round.creatorId)
+                  const roundProgress = wcs.progress[String(i)] ?? {}
+                  return (
+                    <div key={i} className="rounded-2xl bg-fuchsia-50 p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-fuchsia-700 text-sm">Round {i + 1}</span>
+                        <span className="font-bold text-gray-800 tracking-widest">{round.word ?? '—'}</span>
+                      </div>
+                      <p className="text-xs text-gray-500">Creator: {creator?.avatar} {creator?.name ?? 'Unknown'}</p>
+                      {round.wordObj?.meanings[0] && (
+                        <p className="text-xs text-gray-500 italic">"{round.wordObj.meanings[0]}"</p>
+                      )}
+                      <div className="space-y-1">
+                        {nonCreators.map((pUid) => {
+                          const p = challenge.players[pUid]
+                          const progress = roundProgress[pUid]
+                          return (
+                            <div key={pUid} className="flex items-center justify-between text-xs">
+                              <span className="flex items-center gap-1">
+                                <span>{p?.avatar}</span>
+                                <span className="text-gray-700">{p?.name ?? 'Unknown'}</span>
+                              </span>
+                              <span className={`font-semibold ${progress?.won ? 'text-emerald-600' : progress?.passed ? 'text-gray-400' : 'text-red-500'}`}>
+                                {progress?.won
+                                  ? `✓ +${progress.score} pts`
+                                  : progress?.passed
+                                  ? 'Passed'
+                                  : '✗ +0 pts'}
+                              </span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Actions */}
         <div className="space-y-3">
