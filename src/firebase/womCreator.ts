@@ -102,6 +102,7 @@ export async function saveWOMCreatorSession(
 ): Promise<string> {
   const docRef = await addDoc(collection(db, 'sessions'), {
     ...session,
+    score: session.totalScore,   // SessionRecord uses 'score'; totalScore is womCreator-specific
     timestamp: Timestamp.fromMillis(session.timestamp),
     totalQuestions: session.totalRounds,
     correctAnswers: session.roundsWon,

@@ -1050,17 +1050,28 @@ function ChallengeWOMCreatorGameInner({
           <p className="text-xl font-bold text-fuchsia-700">Your turn — pick a word!</p>
           <p className="text-sm text-gray-500 text-center">Type any valid English word (3–8 letters)</p>
 
-          {/* Word display tiles */}
-          <div className="flex gap-2 mt-2">
-            {Array.from({ length: Math.max(input.length, 3) }).map((_, i) => (
-              <div
-                key={i}
-                className="w-12 h-12 rounded-xl border-2 border-fuchsia-300 bg-white flex items-center justify-center text-xl font-bold text-fuchsia-800 uppercase"
-              >
-                {input[i] ?? ''}
-              </div>
-            ))}
+          {/* Word display — 8 slots, filled as creator types */}
+          <div className="flex gap-1.5 mt-2">
+            {Array.from({ length: 8 }).map((_, i) => {
+              const filled = i < input.length
+              const active = i === input.length
+              return (
+                <div
+                  key={i}
+                  className={`w-10 h-10 rounded-lg border-2 flex items-center justify-center text-base font-bold uppercase transition-colors ${
+                    filled
+                      ? 'border-fuchsia-500 bg-fuchsia-50 text-fuchsia-800'
+                      : active
+                        ? 'border-fuchsia-400 bg-white text-fuchsia-800 animate-pulse'
+                        : 'border-gray-200 bg-white/40 text-gray-300'
+                  }`}
+                >
+                  {input[i] ?? (i < 3 ? '·' : '')}
+                </div>
+              )
+            })}
           </div>
+          <p className="text-xs text-gray-400">{input.length}/8 letters {input.length >= 3 ? '· tap ✓ to submit' : '· min 3'}</p>
 
           {error && <p className="text-red-500 text-sm">{error}</p>}
           {(validating || submitting) && <p className="text-fuchsia-500 text-sm animate-pulse">Checking…</p>}

@@ -5,13 +5,14 @@ import { OPERATION_LABELS, GRADE_OPTIONS } from '../../constants/gradeConfig'
 import type { SessionRecord, Grade } from '../../types'
 
 type DateFilter = 'all' | 'today' | '7days' | '30days'
-type SubjectFilter = 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science' | ''
+type SubjectFilter = 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science' | 'womCreator' | ''
 
 const SUBJECT_LABELS: Record<Exclude<SubjectFilter, ''>, string> = {
   mentalMaths: 'Mental Maths',
   socialStudies: 'Social Studies',
   wordOMeter: 'Word-O-Meter',
   science: 'Science',
+  womCreator: 'WOM Creator',
 }
 
 export function HistoryScreen() {
@@ -140,9 +141,11 @@ export function HistoryScreen() {
                       ? 'Word-O-Meter'
                       : s.subject === 'science'
                         ? 'Science'
-                        : s.operation
-                          ? OPERATION_LABELS[s.operation]
-                          : 'Social Studies'}
+                        : s.subject === 'womCreator'
+                          ? 'WOM Creator'
+                          : s.operation
+                            ? OPERATION_LABELS[s.operation]
+                            : 'Social Studies'}
                   </span>
                   {s.challengeId && (
                     <span className="text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full font-medium">
@@ -156,9 +159,11 @@ export function HistoryScreen() {
                     ? `"${s.word ?? ''}" • Grade ${s.grade}`
                     : s.subject === 'science'
                       ? `Grade ${s.grade} • 20 Qs`
-                      : s.operation
-                        ? `${s.difficulty} • ${s.mode === 'timed' ? '2 min' : '20 Qs'} • Grade ${s.grade}`
-                        : `Grade ${s.grade}`}
+                      : s.subject === 'womCreator'
+                        ? `Grade ${s.grade} • Multiplayer`
+                        : s.operation
+                          ? `${s.difficulty} • ${s.mode === 'timed' ? '2 min' : '20 Qs'} • Grade ${s.grade}`
+                          : `Grade ${s.grade}`}
                 </p>
                 <p className="text-xs text-gray-400 mt-0.5">
                   {new Date(s.timestamp).toLocaleDateString()}
@@ -170,6 +175,8 @@ export function HistoryScreen() {
                   <p className="text-xs font-medium mt-0.5" style={{ color: s.won ? '#10b981' : '#ef4444' }}>
                     {s.won ? '✓ Solved' : '✗ Not solved'}
                   </p>
+                ) : s.subject === 'womCreator' ? (
+                  <p className="text-xs text-gray-500">{s.correctAnswers}/{s.totalQuestions} rounds won</p>
                 ) : (
                   <p className="text-xs text-gray-500">
                     {s.correctAnswers}/{s.totalQuestions} ({s.accuracy}%)
