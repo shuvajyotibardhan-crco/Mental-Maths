@@ -149,15 +149,17 @@ export function ChallengeCreateScreen({ onNavigate, onChallengeCreated }: Challe
         </div>
       </div>
 
-      {/* Grade Selection */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
-        <GradeSelector
-          value={grade}
-          onChange={handleGradeChange}
-          allowedGrades={isSS ? SS_GRADES : isSci ? SCI_GRADES : undefined}
-        />
-      </div>
+      {/* Grade Selection — not shown for WOM Creator (words are player-chosen, not grade-filtered) */}
+      {!isWOMCreator && (
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Grade</label>
+          <GradeSelector
+            value={grade}
+            onChange={handleGradeChange}
+            allowedGrades={isSS ? SS_GRADES : isSci ? SCI_GRADES : undefined}
+          />
+        </div>
+      )}
 
       {/* Word-O-Meter only: Letter count (not shown for Creator mode — creator picks in-game) */}
       {isWOM && (
