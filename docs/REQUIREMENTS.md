@@ -677,7 +677,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 
 **Acceptance Criteria:**
 1. A "Word-O-Meter Creator" option shall appear in the subject selector on `ChallengeCreateScreen`, alongside Mental Maths, Social Studies, Science, and Word-O-Meter.
-2. The host must select a grade (KG–12); grade is used as the default hint context and is per-quiz.
+2. The grade selector must not be shown for WOM Creator; grade is irrelevant because words are chosen by players in-game, not drawn from a grade-filtered pool.
 3. The game shall consist of exactly N rounds, where N equals the number of players in the lobby at start time. Each player shall be the creator for exactly one round; the creation order shall be randomised at game start.
 4. At the start of each round, the creator sees a **word input screen**. The creator types a word of 3–8 letters and taps **Submit Word**.
 5. The word submitted by the creator must be validated against the SOWPODS dictionary (same wordlist used by solo Word-O-Meter). If the word is not valid, the creator shall see an error and must try a different word.
@@ -700,7 +700,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 | Step | Expected Result |
 |------|----------------|
 | Log in as host, open Create Challenge | "Word-O-Meter Creator" option visible in subject list |
-| Select Word-O-Meter Creator, choose grade, tap Create | Challenge created with `subject: 'womCreator'`; game code shown |
+| Select Word-O-Meter Creator, tap Create (no grade selector shown) | Challenge created with `subject: 'womCreator'`; game code shown |
 | 3 players join lobby | Lobby shows 3 players; host can start |
 | Host taps Start | Round 1 begins; one player sees word input, other 2 see waiting screen |
 | Creator types "xyz" (invalid) | Error shown: "Not a valid English word" |
