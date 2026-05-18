@@ -1120,15 +1120,34 @@ function ChallengeWOMCreatorGameInner({
 
   // ── Creator: waiting for guessers ─────────────────────────────────────────
   if (game.phase === 'creatorWaiting') {
+    const allGuessersDone = game.roundsProgress.length > 0 && game.roundsProgress.every((p) => p.done)
+    const failCount = game.roundsProgress.filter((p) => !p.won).length
+    const creatorBonus = failCount * 20
     return (
       <div className="flex flex-col h-dvh bg-gradient-to-b from-fuchsia-50 to-purple-50">
         <Leaderboard />
         <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
-          <div className="text-4xl animate-pulse">⏳</div>
-          <p className="text-xl font-bold text-fuchsia-700">
-            Waiting for players to guess…
-          </p>
-          <p className="text-gray-500 text-sm">You picked: <span className="font-bold text-fuchsia-700">{word?.word ?? '?'}</span></p>
+          {allGuessersDone ? (
+            <>
+              <div className="text-5xl">🎯</div>
+              <p className="text-xl font-bold text-fuchsia-700">Round complete!</p>
+              <div className="bg-white/80 rounded-2xl px-6 py-4 text-center space-y-1 w-full max-w-xs">
+                <p className="text-3xl font-bold text-fuchsia-700">⭐ +{creatorBonus}</p>
+                <p className="text-xs text-gray-500">creator bonus</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  {failCount === 0
+                    ? 'Everyone solved it — no bonus'
+                    : `${failCount} player${failCount !== 1 ? 's' : ''} didn't solve it · 20 pts each`}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-4xl animate-pulse">⏳</div>
+              <p className="text-xl font-bold text-fuchsia-700">Waiting for players to guess…</p>
+              <p className="text-gray-500 text-sm">You picked: <span className="font-bold text-fuchsia-700">{word?.word ?? '?'}</span></p>
+            </>
+          )}
           <div className="w-full max-w-sm space-y-2 mt-2">
             {game.roundsProgress.map((p) => (
               <div key={p.uid} className="flex items-center justify-between bg-white/80 rounded-2xl px-4 py-3">
@@ -1170,13 +1189,32 @@ function ChallengeWOMCreatorGameInner({
 
   // ── Guesser: done, waiting for others ────────────────────────────────────
   if (game.phase === 'guesserWaiting') {
+    const attemptsUsed = game.guesses.length
+    const hintsUsed = game.hintsUsed.length
+    const roundScore = game.won
+      ? Math.max(10, 100 - (attemptsUsed - 1) * 12 - hintsUsed * 8)
+      : 0
     return (
-      <WaitingForPlayers
-        players={players}
-        uid={uid}
-        score={players[uid]?.score ?? 0}
-        scoreColor="text-fuchsia-700"
-      />
+      <div className="flex flex-col h-dvh bg-gradient-to-b from-fuchsia-50 to-purple-50">
+        <Leaderboard />
+        <div className="flex-1 flex flex-col items-center justify-center px-4 gap-4">
+          <div className="text-5xl">{game.won ? '✅' : game.passed ? '⏭️' : '❌'}</div>
+          <p className="text-xl font-bold text-fuchsia-700">
+            {game.won ? 'Solved!' : game.passed ? 'Passed' : 'Not solved'}
+          </p>
+          <div className="bg-white/80 rounded-2xl px-6 py-4 text-center space-y-1 w-full max-w-xs">
+            <p className="text-3xl font-bold text-fuchsia-700">⭐ {roundScore}</p>
+            <p className="text-xs text-gray-500">this round</p>
+            {game.won && (
+              <p className="text-sm text-gray-600 mt-1">
+                {attemptsUsed} attempt{attemptsUsed !== 1 ? 's' : ''}
+                {hintsUsed > 0 ? ` · ${hintsUsed} hint${hintsUsed !== 1 ? 's' : ''}` : ''}
+              </p>
+            )}
+          </div>
+          <p className="text-sm text-gray-400 animate-pulse">Waiting for other players…</p>
+        </div>
+      </div>
     )
   }
 

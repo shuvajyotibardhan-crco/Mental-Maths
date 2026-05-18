@@ -88,10 +88,8 @@ function generateHintText(type: WOMHintType, word: WOMWord): string {
   }
 }
 
-function calcScore(attemptsUsed: number, hintsUsed: number, timeSecs: number): number {
-  // Time is the primary factor: each second costs 10 raw pts, vs 5 per extra try and 2 per hint.
-  // Max penalty from tries+hints ≈ 36 raw pts → ~4 s of time advantage always wins.
-  return Math.max(1, Math.round((10000 - timeSecs * 10 - (attemptsUsed - 1) * 5 - hintsUsed * 2) / 100))
+function calcScore(attemptsUsed: number, hintsUsed: number): number {
+  return Math.max(10, 100 - (attemptsUsed - 1) * 12 - hintsUsed * 8)
 }
 
 interface UseChallengeWOMGameOptions {
@@ -201,7 +199,7 @@ export function useChallengeWOMGame({ gameCode, uid, word }: UseChallengeWOMGame
 
     if (done) {
       const timeSecs = Math.round((Date.now() - startTimeRef.current) / 1000)
-      const score = won ? calcScore(newGuesses.length, cur.hintsUsed.length, timeSecs) : 0
+      const score = won ? calcScore(newGuesses.length, cur.hintsUsed.length) : 0
       syncProgress(score, won, newGuesses.length, cur.hintsUsed.length, true, timeSecs)
       setState((prev) => ({
         ...prev,

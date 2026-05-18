@@ -109,6 +109,7 @@ interface GuessingState {
   validating: boolean
   done: boolean
   won: boolean
+  passed: boolean
 }
 
 const initialGuessingState = (): GuessingState => ({
@@ -122,6 +123,7 @@ const initialGuessingState = (): GuessingState => ({
   validating: false,
   done: false,
   won: false,
+  passed: false,
 })
 
 // Local creator input state
@@ -262,7 +264,7 @@ export function useChallengeWOMCreatorGame({
     // Creator bonus: 10 per guesser who did not win
     const failCount = nonCreators.filter((p) => !roundProgress[p]?.won).length
     const creatorId = round.creatorId
-    cumulativeScores[creatorId] = (cumulativeScores[creatorId] ?? 0) + failCount * 10
+    cumulativeScores[creatorId] = (cumulativeScores[creatorId] ?? 0) + failCount * 20
 
     const totalRounds = wcs.roundOrder.length
     const nextRound = wcs.currentRound + 1
@@ -485,7 +487,7 @@ export function useChallengeWOMCreatorGame({
         score: 0,
         done: true,
       })
-      return { ...s, done: true, won: false }
+      return { ...s, done: true, won: false, passed: true }
     })
   }, [writeGuesserProgress])
 

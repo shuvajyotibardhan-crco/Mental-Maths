@@ -307,7 +307,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 16. Once all players finish, a leaderboard screen shall rank players by score. For Mental Maths: score desc, tiebreak by time asc in fixed mode only (timed mode uses score only). For Social Studies: score desc only. For Word-O-Meter: solved players rank above unsolved; among solvers, ranked by time asc, then tries asc, then hints asc.
 17. Mental Maths challenge sessions shall be saved with high-score checking; Social Studies challenge sessions shall be saved as SS sessions; Word-O-Meter challenge sessions shall be saved as WOM sessions — none have a challenge high-score system.
 18. Challenge sessions in History shall display a "Multiplayer" badge.
-19. For Word-O-Meter challenges: challenge score = `max(1, round((10000 − secs×10 − (attempts−1)×5 − hints×2) / 100))` if won; 0 if not solved (time is the primary factor so faster solvers always rank higher). Solo score formula is different: `max(10, 100 − (attempts−1)×12 − hints×8)` (no time factor). The revealed word shall be displayed on the results screen.
+19. For Word-O-Meter challenges: challenge score shall use the same formula as solo — `max(10, 100 − (attempts−1)×12 − hints×8)` if won; 0 if not solved. The revealed word shall be displayed on the results screen.
 
 **Test Plan:**
 
@@ -688,7 +688,7 @@ DIVEL EDU QUIZ is a web-based educational practice app for kids and students (KG
 10. A round shall advance to the next creator once **all** non-creator players have either won, exhausted their attempts, or passed.
 11. After all N rounds are complete, the game shall end and all players shall be navigated to the results screen.
 12. **Guesser scoring (per round):** Same formula as solo Word-O-Meter — `max(10, 100 − (attemptsUsed − 1) × 12 − hintsUsed × 8)` on a win; 0 on a loss or pass.
-13. **Creator scoring (per round):** 10 points for each non-creator player who fails to guess the word (passes or exhausts all attempts).
+13. **Creator scoring (per round):** 20 points for each non-creator player who fails to guess the word (passes or exhausts all attempts).
 14. **Total player score** = sum of guesser scores across all rounds the player guessed in + sum of creator bonuses across the one round the player created. The live leaderboard shall reflect running totals.
 15. The results screen shall show: final leaderboard (rank, avatar, name, total score), a per-round breakdown (word, creator, each player's result and score for that round), and the word + its definition for each round.
 16. The creator must not be shown the guessing grid during their own creation round. After submitting the word, they see the live guesser-status view only.

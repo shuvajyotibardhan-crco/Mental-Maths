@@ -596,11 +596,10 @@ calcScore(won, attemptsUsed, hintsUsed):
   return max(10, 100 − (attemptsUsed − 1) × 12 − hintsUsed × 8)
 // Examples: win in 1 attempt, 0 hints → 100; win in 3 attempts, 1 hint → 68; loss → 0
 
-// Challenge (time is primary so faster solver always ranks #1)
-calcScore(won, attemptsUsed, hintsUsed, timeSecs):
+// Challenge (same formula as solo — attempts + hints, no time factor)
+calcScore(won, attemptsUsed, hintsUsed):
   if !won: return 0
-  return max(1, round((10000 − timeSecs × 10 − (attemptsUsed − 1) × 5 − hintsUsed × 2) / 100))
-// Max penalty from tries+hints ≈ 36 raw pts → ~4 s of time advantage always wins
+  return max(10, 100 − (attemptsUsed − 1) × 12 − hintsUsed × 8)
 ```
 
 ### Word-O-Meter Word Selection
@@ -743,7 +742,7 @@ each round (guesser perspective):
 round advancement:
   after each guesser write, check if ALL non-creator players have done=true
   if yes:
-    creatorBonus = (guessers with won=false) × 10
+    creatorBonus = (guessers with won=false) × 20
     add creatorBonus to creators ChallengePlayer.score via updatePlayerProgress
     add each guessers round score to their ChallengePlayer.score
     if currentRound + 1 < roundOrder.length:
