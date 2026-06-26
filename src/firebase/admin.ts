@@ -386,7 +386,7 @@ export interface DashboardFilters {
   grade?: string
   operation?: string
   difficulty?: string
-  subject?: 'mentalMaths' | 'socialStudies'
+  subject?: 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science' | 'womCreator'
 }
 
 export async function getDashboardSessions(
@@ -416,9 +416,9 @@ export async function getDashboardSessions(
   if (filters.difficulty) sessions = sessions.filter((s) => s.difficulty === filters.difficulty)
   if (filters.subject) {
     sessions = sessions.filter((s) =>
-      filters.subject === 'socialStudies'
-        ? s.subject === 'socialStudies'
-        : s.subject === 'mentalMaths' || !s.subject,  // backward compat: absent = mentalMaths
+      filters.subject === 'mentalMaths'
+        ? s.subject === 'mentalMaths' || !s.subject  // backward compat: absent = mentalMaths
+        : s.subject === filters.subject,
     )
   }
 

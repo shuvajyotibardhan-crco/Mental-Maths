@@ -42,6 +42,14 @@ const GRADE_OPTIONS: Grade[] = ['KG', '1', '2', '3', '4', '5', '6', '7', '8', '9
 const DIFFICULTY_OPTIONS: Difficulty[] = ['easy', 'medium', 'hard']
 const OPERATION_OPTIONS = Object.keys(OPERATION_LABELS) as OperationType[]
 
+const SUBJECT_LABELS: Record<string, string> = {
+  mentalMaths: 'Mental Maths',
+  socialStudies: 'Social Studies',
+  wordOMeter: 'Word-O-Meter',
+  science: 'Science',
+  womCreator: 'WOM Creator',
+}
+
 function toDateInputValue(ms: number) {
   return new Date(ms).toISOString().slice(0, 10)
 }
@@ -156,7 +164,7 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
         grade: dashGrade || undefined,
         operation: dashOperation || undefined,
         difficulty: dashDifficulty || undefined,
-        subject: (dashSubject as 'mentalMaths' | 'socialStudies') || undefined,
+        subject: (dashSubject as 'mentalMaths' | 'socialStudies' | 'wordOMeter' | 'science' | 'womCreator') || undefined,
       }
 
       const { sessions, userMap } = await getDashboardSessions(filters)
@@ -349,6 +357,7 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
     passwordValid
 
   // Dashboard stats
+  const availableSubjects = [...new Set(dashSessions.map((s) => s.subject ?? 'mentalMaths'))]
   const uniqueUsers = new Set(dashSessions.map((s) => s.userId)).size
   const avgScore = dashSessions.length
     ? Math.round(dashSessions.reduce((sum, s) => sum + s.score, 0) / dashSessions.length)
@@ -660,8 +669,9 @@ export function AdminScreen({ onNavigate, isSuperAdmin = false }: AdminScreenPro
                 className="px-2 py-2 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
               >
                 <option value="">All subjects</option>
-                <option value="mentalMaths">Mental Maths</option>
-                <option value="socialStudies">Social Studies</option>
+                {availableSubjects.map((s) => (
+                  <option key={s} value={s}>{SUBJECT_LABELS[s] ?? s}</option>
+                ))}
               </select>
             </div>
 
