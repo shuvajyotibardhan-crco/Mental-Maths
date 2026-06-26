@@ -35,12 +35,19 @@ jobs:
         run: npm run build
 
       - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          projectId: mental-maths-fabc3
+        env:
+          FIREBASE_SA_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          echo "$FIREBASE_SA_JSON" > /tmp/firebase-sa-hosting.json
+          GOOGLE_APPLICATION_CREDENTIALS=/tmp/firebase-sa-hosting.json \
+            npx firebase-tools@latest deploy --only hosting --project mental-maths-fabc3 \
+            2>&1 | tee /tmp/hosting-out.log
+          RC=${PIPESTATUS[0]}
+          if [ $RC -ne 0 ] && grep -q "current active version" /tmp/hosting-out.log; then
+            echo "Hosting content unchanged; already live."
+            exit 0
+          fi
+          exit $RC
 
       - name: Deploy Firebase Functions
         env:
